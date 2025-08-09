@@ -1,0 +1,62 @@
+{
+    "alarms": [
+        {
+            "name": "HighCPUUtilization",
+            "namespace": "AWS/EC2",
+            "metric": "CPUUtilization",
+            "statistic": "Average",
+            "period": 300,
+            "evaluationPeriods": 2,
+            "threshold": 80,
+            "comparisonOperator": "GreaterThanThreshold",
+            "alarmDescription": "CPU utilization is too high"
+        },
+        {
+            "name": "HighMemoryUtilization",
+            "namespace": "CWAgent",
+            "metric": "mem_used_percent",
+            "statistic": "Average",
+            "period": 300,
+            "evaluationPeriods": 2,
+            "threshold": 85,
+            "comparisonOperator": "GreaterThanThreshold",
+            "alarmDescription": "Memory utilization is too high"
+        },
+        {
+            "name": "HighErrorRate",
+            "namespace": "CWAgent",
+            "metric": "http_requests_total",
+            "dimensions": {
+                "status": "5xx"
+            },
+            "statistic": "Sum",
+            "period": 300,
+            "evaluationPeriods": 2,
+            "threshold": 10,
+            "comparisonOperator": "GreaterThanThreshold",
+            "alarmDescription": "High number of 5xx errors"
+        },
+        {
+            "name": "APILatency",
+            "namespace": "CWAgent",
+            "metric": "http_request_duration_seconds",
+            "statistic": "p95",
+            "period": 300,
+            "evaluationPeriods": 2,
+            "threshold": 2,
+            "comparisonOperator": "GreaterThanThreshold",
+            "alarmDescription": "API latency is too high"
+        },
+        {
+            "name": "DiskSpaceUtilization",
+            "namespace": "CWAgent",
+            "metric": "disk_used_percent",
+            "statistic": "Average",
+            "period": 300,
+            "evaluationPeriods": 2,
+            "threshold": 85,
+            "comparisonOperator": "GreaterThanThreshold",
+            "alarmDescription": "Disk space utilization is too high"
+        }
+    ]
+} 

@@ -1,0 +1,62 @@
+{
+    "TargetTrackingScalingPolicies": [
+        {
+            "PolicyName": "CPUUtilizationScaling",
+            "ServiceNamespace": "ecs",
+            "ScalableDimension": "ecs:service:DesiredCount",
+            "ResourceId": "service/gitee-notion-sync-cluster/gitee-notion-sync-service",
+            "TargetTrackingScalingPolicyConfiguration": {
+                "TargetValue": 75.0,
+                "PredefinedMetricSpecification": {
+                    "PredefinedMetricType": "ECSServiceAverageCPUUtilization"
+                },
+                "ScaleOutCooldown": 300,
+                "ScaleInCooldown": 300
+            }
+        },
+        {
+            "PolicyName": "MemoryUtilizationScaling",
+            "ServiceNamespace": "ecs",
+            "ScalableDimension": "ecs:service:DesiredCount",
+            "ResourceId": "service/gitee-notion-sync-cluster/gitee-notion-sync-service",
+            "TargetTrackingScalingPolicyConfiguration": {
+                "TargetValue": 80.0,
+                "PredefinedMetricSpecification": {
+                    "PredefinedMetricType": "ECSServiceAverageMemoryUtilization"
+                },
+                "ScaleOutCooldown": 300,
+                "ScaleInCooldown": 300
+            }
+        },
+        {
+            "PolicyName": "RequestCountScaling",
+            "ServiceNamespace": "ecs",
+            "ScalableDimension": "ecs:service:DesiredCount",
+            "ResourceId": "service/gitee-notion-sync-cluster/gitee-notion-sync-service",
+            "TargetTrackingScalingPolicyConfiguration": {
+                "TargetValue": 1000.0,
+                "CustomizedMetricSpecification": {
+                    "MetricName": "RequestCount",
+                    "Namespace": "AWS/ApplicationELB",
+                    "Dimensions": [
+                        {
+                            "Name": "TargetGroup",
+                            "Value": "gitee-notion-sync-tg"
+                        }
+                    ],
+                    "Statistic": "Sum",
+                    "Unit": "Count"
+                },
+                "ScaleOutCooldown": 300,
+                "ScaleInCooldown": 300
+            }
+        }
+    ],
+    "ScalableTargetConfiguration": {
+        "ServiceNamespace": "ecs",
+        "ScalableDimension": "ecs:service:DesiredCount",
+        "ResourceId": "service/gitee-notion-sync-cluster/gitee-notion-sync-service",
+        "MinCapacity": 1,
+        "MaxCapacity": 10
+    }
+} 

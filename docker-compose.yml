@@ -1,0 +1,26 @@
+version: '3.8'
+services:
+  app:
+    build: .
+    container_name: gitee-notion-sync
+    env_file:
+      - .env
+    environment:
+      - APP_PORT=${APP_PORT:-8000}
+    ports:
+      - "${APP_PORT:-8000}:8000"
+    volumes:
+      - ./data:/app/data
+    restart: unless-stopped
+
+  backup:
+    image: alpine:3.20
+    container_name: gns-backup
+    volumes:
+      - ./data:/app/data:ro
+      - ./backups:/app/backups
+      - ./scripts/backup_sqlite.sh:/app/backup_sqlite.sh:ro
+    working_dir: /app
+    entrypoint: ["/bin/sh","-c"]
+    command: ["crond -f -l 8 -L /dev/stdout & echo '0 3 * * * /bin/sh /app/backup_sqlite.sh DB_PATH=/app/data/sync.db BACKUP_DIR=/app/backups >> /proc/1/fd/1 2>&1' | crontab - && tail -f /dev/null"]
+    restart: unless-stopped

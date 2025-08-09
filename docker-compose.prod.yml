@@ -1,0 +1,18 @@
+version: '3.8'
+services:
+  app:
+    image: ${IMAGE_REF:-${REGISTRY_HOST}:latest}
+    env_file: .env
+    environment:
+      - APP_PORT=${APP_PORT:-8000}
+      - NOTION_TOKEN=${NOTION_TOKEN}
+      - NOTION_DATABASE_ID=${NOTION_DATABASE_ID}
+      - GITEE_TOKEN=${GITEE_TOKEN}
+      - GITEE_WEBHOOK_SECRET=${GITEE_WEBHOOK_SECRET}
+      - DB_URL=${DB_URL}
+    ports:
+      - "8000:8000"
+    volumes:
+      - /opt/gitee-notion-sync/data:/app/data
+    restart: unless-stopped
+

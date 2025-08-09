@@ -1,0 +1,7 @@
+# 默认字段映射配置
+mapping:
+  title: "Task"
+  state: "Status"
+  labels.0.name: "Module"
+  user.name: "Owner"
+  body: "Output"

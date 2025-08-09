@@ -1,0 +1,19 @@
+version: '3.8'
+services:
+  app:
+    ports: []
+
+  proxy:
+    image: caddy:2.7
+    container_name: gns-proxy
+    depends_on:
+      - app
+    environment:
+      - DOMAIN_NAME=${DOMAIN_NAME}
+      - EMAIL_FOR_SSL=${EMAIL_FOR_SSL}
+    volumes:
+      - ./reverse-proxy/Caddyfile:/etc/caddy/Caddyfile:ro
+    ports:
+      - "443:443"
+    restart: unless-stopped
+

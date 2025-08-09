@@ -1,0 +1,115 @@
+{
+    "widgets": [
+        {
+            "type": "metric",
+            "properties": {
+                "title": "应用健康状态",
+                "view": "timeSeries",
+                "metrics": [
+                    ["GiteeNotionSync", "HealthCheckSuccess", "Service", "API"],
+                    [".", "APILatency", ".", "."]
+                ],
+                "period": 300,
+                "stat": "Average",
+                "region": "ap-northeast-1"
+            }
+        },
+        {
+            "type": "metric",
+            "properties": {
+                "title": "Webhook 处理统计",
+                "view": "timeSeries",
+                "metrics": [
+                    ["GiteeNotionSync", "GiteeWebhookReceived", "Type", "Issue"],
+                    [".", "GiteeWebhookProcessed", ".", "."],
+                    [".", "NotionWebhookReceived", ".", "Page"],
+                    [".", "NotionWebhookProcessed", ".", "."]
+                ],
+                "period": 300,
+                "stat": "Sum",
+                "region": "ap-northeast-1"
+            }
+        },
+        {
+            "type": "metric",
+            "properties": {
+                "title": "错误率",
+                "view": "timeSeries",
+                "metrics": [
+                    ["GiteeNotionSync", "ErrorCount", "ErrorType", "Webhook"],
+                    [".", ".", ".", "API"],
+                    [".", ".", ".", "Authentication"]
+                ],
+                "period": 300,
+                "stat": "Sum",
+                "region": "ap-northeast-1"
+            }
+        },
+        {
+            "type": "metric",
+            "properties": {
+                "title": "资源使用率",
+                "view": "timeSeries",
+                "metrics": [
+                    ["AWS/ECS", "CPUUtilization", "ServiceName", "gitee-notion-sync"],
+                    [".", "MemoryUtilization", ".", "."]
+                ],
+                "period": 300,
+                "stat": "Average",
+                "region": "ap-northeast-1"
+            }
+        },
+        {
+            "type": "metric",
+            "properties": {
+                "title": "API 响应时间分布",
+                "view": "timeSeries",
+                "metrics": [
+                    ["GiteeNotionSync", "APILatency", "Endpoint", "gitee_webhook", {"stat": "p50"}],
+                    ["...", {"stat": "p90"}],
+                    ["...", {"stat": "p99"}]
+                ],
+                "period": 300,
+                "region": "ap-northeast-1"
+            }
+        },
+        {
+            "type": "metric",
+            "properties": {
+                "title": "同步延迟",
+                "view": "timeSeries",
+                "metrics": [
+                    ["GiteeNotionSync", "SyncLatency", "Direction", "GiteeToNotion"],
+                    [".", ".", ".", "NotionToGitee"]
+                ],
+                "period": 300,
+                "stat": "Average",
+                "region": "ap-northeast-1"
+            }
+        },
+        {
+            "type": "log",
+            "properties": {
+                "title": "错误日志",
+                "query": "SOURCE '/aws/ecs/gitee-notion-sync' | fields @timestamp, @message | filter @message like /ERROR/",
+                "region": "ap-northeast-1",
+                "view": "table"
+            }
+        },
+        {
+            "type": "metric",
+            "properties": {
+                "title": "网络流量",
+                "view": "timeSeries",
+                "metrics": [
+                    ["AWS/ApplicationELB", "RequestCount", "LoadBalancer", "gitee-notion-sync-alb"],
+                    [".", "HTTPCode_Target_4XX_Count", ".", "."],
+                    [".", "HTTPCode_Target_5XX_Count", ".", "."]
+                ],
+                "period": 300,
+                "stat": "Sum",
+                "region": "ap-northeast-1"
+            }
+        }
+    ]
+} 

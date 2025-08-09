@@ -1,0 +1,12 @@
+# Project ignores
+.env
+*.env
+__pycache__/
+*.pyc
+logs/
+.data/
+/data/
+
+data/
+backups/
+node_modules/

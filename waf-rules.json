@@ -1,0 +1,139 @@
+{
+    "Name": "GiteeNotionSyncWAFRules",
+    "Rules": [
+        {
+            "Name": "RateLimit",
+            "Priority": 1,
+            "Statement": {
+                "RateBasedStatement": {
+                    "Limit": 2000,
+                    "AggregateKeyType": "IP"
+                }
+            },
+            "Action": {
+                "Block": {}
+            }
+        },
+        {
+            "Name": "BlockBadBots",
+            "Priority": 2,
+            "Statement": {
+                "ByteMatchStatement": {
+                    "SearchString": "bad-bot",
+                    "FieldToMatch": {
+                        "SingleHeader": {
+                            "Name": "user-agent"
+                        }
+                    },
+                    "TextTransformations": [
+                        {
+                            "Priority": 1,
+                            "Type": "LOWERCASE"
+                        }
+                    ],
+                    "PositionalConstraint": "CONTAINS"
+                }
+            },
+            "Action": {
+                "Block": {}
+            }
+        },
+        {
+            "Name": "BlockSQLInjection",
+            "Priority": 3,
+            "Statement": {
+                "SqliMatchStatement": {
+                    "FieldToMatch": {
+                        "Body": {}
+                    },
+                    "TextTransformations": [
+                        {
+                            "Priority": 1,
+                            "Type": "URL_DECODE"
+                        },
+                        {
+                            "Priority": 2,
+                            "Type": "HTML_ENTITY_DECODE"
+                        }
+                    ]
+                }
+            },
+            "Action": {
+                "Block": {}
+            }
+        },
+        {
+            "Name": "BlockXSS",
+            "Priority": 4,
+            "Statement": {
+                "XssMatchStatement": {
+                    "FieldToMatch": {
+                        "Body": {}
+                    },
+                    "TextTransformations": [
+                        {
+                            "Priority": 1,
+                            "Type": "URL_DECODE"
+                        },
+                        {
+                            "Priority": 2,
+                            "Type": "HTML_ENTITY_DECODE"
+                        }
+                    ]
+                }
+            },
+            "Action": {
+                "Block": {}
+            }
+        },
+        {
+            "Name": "AllowOnlyWebhookEndpoints",
+            "Priority": 5,
+            "Statement": {
+                "AndStatement": {
+                    "Statements": [
+                        {
+                            "ByteMatchStatement": {
+                                "SearchString": "/gitee_webhook",
+                                "FieldToMatch": {
+                                    "UriPath": {}
+                                },
+                                "TextTransformations": [
+                                    {
+                                        "Priority": 1,
+                                        "Type": "LOWERCASE"
+                                    }
+                                ],
+                                "PositionalConstraint": "EXACTLY"
+                            }
+                        },
+                        {
+                            "ByteMatchStatement": {
+                                "SearchString": "/notion_webhook",
+                                "FieldToMatch": {
+                                    "UriPath": {}
+                                },
+                                "TextTransformations": [
+                                    {
+                                        "Priority": 1,
+                                        "Type": "LOWERCASE"
+                                    }
+                                ],
+                                "PositionalConstraint": "EXACTLY"
+                            }
+                        }
+                    ]
+                }
+            },
+            "Action": {
+                "Allow": {}
+            }
+        }
+    ],
+    "DefaultAction": {
+        "Block": {}
+    },
+    "Description": "WAF rules for Gitee-Notion Sync application",
+    "Scope": "REGIONAL",
+    "CloudWatchMetricsEnabled": true
+} 

@@ -1,0 +1,170 @@
+apiVersion: appmesh.k8s.aws/v1beta2
+kind: Mesh
+metadata:
+  name: gitee-notion-sync-mesh
+spec:
+  namespaceSelector:
+    matchLabels:
+      mesh: gitee-notion-sync
+
+---
+apiVersion: appmesh.k8s.aws/v1beta2
+kind: VirtualNode
+metadata:
+  name: gitee-notion-sync-node
+  namespace: default
+spec:
+  podSelector:
+    matchLabels:
+      app: gitee-notion-sync
+  listeners:
+    - portMapping:
+        port: 8787
+        protocol: http
+      healthCheck:
+        protocol: http
+        path: /health
+        healthyThreshold: 2
+        unhealthyThreshold: 3
+        timeoutMillis: 2000
+        intervalMillis: 5000
+  backends:
+    - virtualService:
+        virtualServiceRef:
+          name: notion-api
+    - virtualService:
+        virtualServiceRef:
+          name: gitee-api
+  serviceDiscovery:
+    awsCloudMap:
+      namespaceName: gitee-notion-sync.local
+      serviceName: api
+
+---
+apiVersion: appmesh.k8s.aws/v1beta2
+kind: VirtualService
+metadata:
+  name: gitee-notion-sync
+  namespace: default
+spec:
+  provider:
+    virtualRouter:
+      virtualRouterRef:
+        name: gitee-notion-sync-router
+
+---
+apiVersion: appmesh.k8s.aws/v1beta2
+kind: VirtualRouter
+metadata:
+  name: gitee-notion-sync-router
+  namespace: default
+spec:
+  listeners:
+    - portMapping:
+        port: 8787
+        protocol: http
+  routes:
+    - name: primary-route
+      httpRoute:
+        match:
+          prefix: /
+        action:
+          weightedTargets:
+            - virtualNodeRef:
+                name: gitee-notion-sync-node
+              weight: 100
+        retryPolicy:
+          maxRetries: 3
+          perRetryTimeout:
+            unit: ms
+            value: 2000
+          httpRetryEvents:
+            - server-error
+            - client-error
+            - gateway-error
+        timeout:
+          perRequest:
+            unit: ms
+            value: 5000
+
+---
+apiVersion: appmesh.k8s.aws/v1beta2
+kind: VirtualGateway
+metadata:
+  name: gitee-notion-sync-gateway
+  namespace: default
+spec:
+  listeners:
+    - portMapping:
+        port: 8787
+        protocol: http
+  logging:
+    accessLog:
+      file:
+        path: /dev/stdout
+  meshRef:
+    name: gitee-notion-sync-mesh
+
+---
+apiVersion: appmesh.k8s.aws/v1beta2
+kind: GatewayRoute
+metadata:
+  name: gitee-webhook-route
+  namespace: default
+spec:
+  httpRoute:
+    match:
+      prefix: /gitee_webhook
+    action:
+      target:
+        virtualService:
+          virtualServiceRef:
+            name: gitee-notion-sync
+
+---
+apiVersion: appmesh.k8s.aws/v1beta2
+kind: GatewayRoute
+metadata:
+  name: notion-webhook-route
+  namespace: default
+spec:
+  httpRoute:
+    match:
+      prefix: /notion_webhook
+    action:
+      target:
+        virtualService:
+          virtualServiceRef:
+            name: gitee-notion-sync
+
+---
+apiVersion: appmesh.k8s.aws/v1beta2
+kind: VirtualNode
+metadata:
+  name: notion-api
+  namespace: default
+spec:
+  serviceDiscovery:
+    dns:
+      hostname: api.notion.com
+  listeners:
+    - portMapping:
+        port: 443
+        protocol: http
+  backends: []
+
+---
+apiVersion: appmesh.k8s.aws/v1beta2
+kind: VirtualNode
+metadata:
+  name: gitee-api
+  namespace: default
+spec:
+  serviceDiscovery:
+    dns:
+      hostname: api.gitee.com
+  listeners:
+    - portMapping:
+        port: 443
+        protocol: http
+  backends: [] 
