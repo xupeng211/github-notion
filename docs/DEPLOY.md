@@ -85,6 +85,23 @@ EOF
 部署成功后：
 - 浏览器访问 http://<EC2_HOST>:8000/health 返回 200
 
+## 死信重放与管理接口（生产验证）
+
+- 环境变量：
+  - DEADLETTER_REPLAY_TOKEN（建议设置为强随机字符串）
+  - DEADLETTER_REPLAY_INTERVAL_MINUTES（默认 10 分钟，可按需调整）
+- 在线验证：
+
+```bash
+curl -sS -X POST -H "Authorization: Bearer $DEADLETTER_REPLAY_TOKEN" https://$DOMAIN_NAME/replay-deadletters
+curl -sS https://$DOMAIN_NAME/metrics | grep deadletter_replay_total
+```
+
+- 预期：
+  - 第一个命令返回 {"replayed": N}
+  - 第二个命令显示 deadletter_replay_total 指标，数值与重放次数相符
+
+
 ## 六、配置 Gitee Webhook（同步验证）
 
 - 仓库 → 管理 → Webhook → 新增

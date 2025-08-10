@@ -32,6 +32,23 @@ curl -sS -X POST -H "Authorization: Bearer $DEADLETTER_REPLAY_TOKEN" https://$DO
 ```
 
 更多细节见 docs/DEPLOY.md
+## 死信重放与管理接口
+
+- 环境变量：
+  - DEADLETTER_REPLAY_TOKEN（默认 changeme-secure-token，本地可直接使用）
+  - DEADLETTER_REPLAY_INTERVAL_MINUTES（默认 10 分钟）
+- 管理接口（需鉴权）：
+
+```bash
+curl -sS -X POST -H "Authorization: Bearer $DEADLETTER_REPLAY_TOKEN" http://localhost:8000/replay-deadletters
+```
+
+- 指标验证：
+
+```bash
+curl -sS http://localhost:8000/metrics | grep deadletter_replay_total
+```
+
 
 
 # 生产就绪的 Gitee ↔ Notion 同步服务
