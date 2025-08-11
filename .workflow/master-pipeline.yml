@@ -2,49 +2,53 @@ version: '1.0'
 name: master-pipeline
 displayName: MasterPipeline
 stages:
-  - stage: 
-    name: compile
-    displayName: 编译
+  - stage:
+    name: build_and_push
+    displayName: 构建与推送镜像
     steps:
       - step: build@python
-        name: build_python
-        displayName: Python 构建
-        pythonVersion: '3.9'
-        # 非必填字段，开启后表示将构建产物暂存，但不会上传到制品库中，7天后自动清除
-        artifacts:
-            # 构建产物名字，作为产物的唯一标识可向下传递，支持自定义，默认为BUILD_ARTIFACT。在下游可以通过${BUILD_ARTIFACT}方式引用来获取构建物地址
-          - name: BUILD_ARTIFACT
-            # 构建产物获取路径，是指代码编译完毕之后构建物的所在路径
-            path:
-              - ./
+        name: docker_build_and_push
+        displayName: Docker 构建与推送 + 冒烟
+        pythonVersion: '3.11'
         commands:
-          - python3 -m pip install --upgrade pip
-          - pip3 config set global.index-url https://pypi.tuna.tsinghua.edu.cn/simple
-          - pip3 install -r requirements.txt
-          - python3 ./main.py
-      - step: publish@general_artifacts
-        name: publish_general_artifacts
-        displayName: 上传制品
-        # 上游构建任务定义的产物名，默认BUILD_ARTIFACT
-        dependArtifact: BUILD_ARTIFACT
-        # 上传到制品库时的制品命名，默认output
-        artifactName: output
-        dependsOn: build_python
-  - stage: 
-    name: release
-    displayName: 发布
-    steps:
-      - step: publish@release_artifacts
-        name: publish_release_artifacts
-        displayName: '发布'
-        # 上游上传制品任务的产出
-        dependArtifact: output
-        # 发布制品版本号
-        version: '1.0.0.0'
-        # 是否开启版本号自增，默认开启
-        autoIncrement: true
+          - python3 -V
+          - echo "Login to registry ${REGISTRY} as ${REGISTRY_USERNAME}"
+          - echo "${REGISTRY_PASSWORD}" | docker login "${REGISTRY}" -u "${REGISTRY_USERNAME}" --password-stdin
+          - |
+            VERSION=$(git rev-parse --short HEAD)
+            IMAGE_FULL="${REGISTRY}/${IMAGE_NAME}"
+            echo "Building image ${IMAGE_FULL}:${VERSION} and :latest"
+            docker build -f Dockerfile -t "${IMAGE_FULL}:${VERSION}" -t "${IMAGE_FULL}:latest" .
+          - |
+            echo "Run container for smoke test"
+            docker run -d --name ci-app -p 8000:8000 \
+              -e APP_PORT=8000 \
+              -e LOG_LEVEL=INFO \
+              -e GITEE_WEBHOOK_SECRET=ci-secret \
+              -e DB_URL=sqlite:///data/sync.db \
+              "${REGISTRY}/${IMAGE_NAME}:latest"
+            sleep 2
+            curl -fsS http://127.0.0.1:8000/health
+            code=$(curl -sS -o /dev/null -w "%{http_code}" http://127.0.0.1:8000/metrics/)
+            if [ "$code" != "200" ]; then echo "metrics failed $code" && docker logs ci-app && exit 1; fi
+            BODY='{"issue":{"id":9001,"number":9001,"title":"gitee-ci"}}'
+            SIG=$(python3 - <<'PY'
+import hmac,hashlib
+sec=b"ci-secret"; body=b'{"issue":{"id":9001,"number":9001,"title":"gitee-ci"}}'
+print(hmac.new(sec, body, hashlib.sha256).hexdigest())
+PY
+            )
+            curl -fsS -H "X-Gitee-Token: $SIG" -H "X-Gitee-Event: Issue Hook" -H "Content-Type: application/json" -d "$BODY" http://127.0.0.1:8000/gitee_webhook >/dev/null
+            docker logs --tail 50 ci-app
+            docker rm -f ci-app
+          - |
+            echo "Pushing image"
+            VERSION=$(git rev-parse --short HEAD)
+            IMAGE_FULL="${REGISTRY}/${IMAGE_NAME}"
+            docker push "${IMAGE_FULL}:${VERSION}"
+            docker push "${IMAGE_FULL}:latest"
 triggers:
   push:
     branches:
       include:
-        - master
+        - main
