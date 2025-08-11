@@ -10,3 +10,4 @@ logs/
 data/
 backups/
 node_modules/
+/.pytest_cache/

@@ -21,18 +21,38 @@ from app.models import (
     event_hash_from_bytes, deadletter_enqueue, deadletter_count
 )
 
-# Metrics
-EVENTS_TOTAL = Counter("events_total", "Total events processed", ["result"])  # result: success|skip|fail
-RETRIES_TOTAL = Counter("retries_total", "Total retry attempts")
-PROCESS_LATENCY = Histogram("process_latency_seconds", "Processing latency seconds")
-DEADLETTER_SIZE = Gauge("deadletter_size", "Current deadletter size")
-PROCESS_P95_MS = Gauge("process_p95_ms", "Approx p95 of processing latency in ms (sliding window)")
-DEADLETTER_REPLAY_TOTAL = Counter("deadletter_replay_total", "Total deadletters replayed")
+# Metrics (allow disabling in tests to avoid duplicate registration)
+DISABLE_METRICS = os.getenv("DISABLE_METRICS", "").lower() in ("1", "true", "yes")
+
+if DISABLE_METRICS:
+    class _Noop:
+        def labels(self, *args, **kwargs):
+            return self
+        def inc(self, *args, **kwargs):
+            pass
+        def observe(self, *args, **kwargs):
+            pass
+        def set(self, *args, **kwargs):
+            pass
+    EVENTS_TOTAL = _Noop()
+    RETRIES_TOTAL = _Noop()
+    PROCESS_LATENCY = _Noop()
+    DEADLETTER_SIZE = _Noop()
+    PROCESS_P95_MS = _Noop()
+    DEADLETTER_REPLAY_TOTAL = _Noop()
+else:
+    EVENTS_TOTAL = Counter("events_total", "Total events processed", ["result"])  # result: success|skip|fail
+    RETRIES_TOTAL = Counter("retries_total", "Total retry attempts")
+    PROCESS_LATENCY = Histogram("process_latency_seconds", "Processing latency seconds")
+    DEADLETTER_SIZE = Gauge("deadletter_size", "Current deadletter size")
+    PROCESS_P95_MS = Gauge("process_p95_ms", "Approx p95 of processing latency in ms (sliding window)")
+    DEADLETTER_REPLAY_TOTAL = Counter("deadletter_replay_total", "Total deadletters replayed")
 
 logger = logging.getLogger("service")
 
 NOTION_TOKEN = os.getenv("NOTION_TOKEN", "")
 NOTION_DATABASE_ID = os.getenv("NOTION_DATABASE_ID", "")
+DISABLE_NOTION = os.getenv("DISABLE_NOTION", "").lower() not in ("", "0", "false")
 GITEE_TOKEN = os.getenv("GITEE_TOKEN", "")
 
 _issue_locks: Dict[str, Lock] = {}
@@ -89,6 +109,11 @@ def exponential_backoff_request(method: str, url: str, headers: Dict[str, str] =
 
 
 def notion_upsert_page(issue: Dict[str, Any]) -> Tuple[bool, str]:
+    # Optional bypass for local testing without external dependency
+    if DISABLE_NOTION:
+        title = issue.get("title", "")
+        # Return a synthetic page id to allow downstream mapping/upsert
+        return True, f"DRYRUN_PAGE_{title or 'untitled'}"
     headers = {
         "Authorization": f"Bearer {NOTION_TOKEN}",
         "Notion-Version": "2022-06-28",

@@ -1,9 +1,8 @@
-from pydantic import BaseSettings, Field
+"""
+Archived module: legacy pydantic settings used by the old entrypoint.
 
-class Settings(BaseSettings):
-    gitee_webhook_secret: str = Field(..., env="GITEE_WEBHOOK_SECRET")
-    notion_token: str = Field(..., env="NOTION_TOKEN")
-    sqlite_path: str = Field(default="mapping.db", env="SQLITE_PATH")
-    
-    class Config:
-        env_file = ".env"  # To load environment variables from a .env file
+Active configuration is read directly from environment variables in the
+current code path. This module is intentionally disabled to avoid confusion.
+"""
+
+raise SystemExit("This module is archived. Use environment variables directly.")

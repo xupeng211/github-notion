@@ -1,4 +1,99 @@
 name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build-test:
+    runs-on: ubuntu-latest
+    env:
+      IMAGE_LOCAL: gitee-notion:ci
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Lint (flake8)
+        run: |
+          flake8 app
+
+      - name: Run unit tests (minimal)
+        env:
+          PYTHONPATH: ${{ github.workspace }}
+        run: |
+          pytest -q tests/test_mapping.py tests/test_service_flow.py
+
+      - name: Build Docker image
+        run: |
+          docker build -f Dockerfile -t "$IMAGE_LOCAL" .
+
+      - name: Security scan (Trivy)
+        if: github.event_name == 'push'
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          image-ref: ${{ env.IMAGE_LOCAL }}
+          format: table
+          exit-code: '0'
+          ignore-unfixed: true
+          vuln-type: 'os,library'
+
+      - name: Container smoke test
+        run: |
+          docker run -d --name ci-app -p 8000:8000 \
+            -e APP_PORT=8000 \
+            -e LOG_LEVEL=INFO \
+            -e GITEE_WEBHOOK_SECRET=ci-secret \
+            -e DB_URL=sqlite:///data/sync.db \
+            "$IMAGE_LOCAL"
+          echo "Waiting for app..." && sleep 2
+          curl -fsS http://127.0.0.1:8000/health >/dev/null
+          code=$(curl -sS -o /dev/null -w "%{http_code}" http://127.0.0.1:8000/metrics/)
+          if [ "$code" != "200" ]; then echo "metrics failed $code" && exit 1; fi
+          BODY='{"issue":{"id":777,"number":777,"title":"ci-demo"}}'
+          SIG=$(python3 - <<'PY'
+import hmac,hashlib,os
+sec=b"ci-secret"; body=b'{"issue":{"id":777,"number":777,"title":"ci-demo"}}'
+print(hmac.new(sec, body, hashlib.sha256).hexdigest())
+PY
+          )
+          curl -fsS -H "X-Gitee-Token: $SIG" -H "X-Gitee-Event: Issue Hook" -H "Content-Type: application/json" -d "$BODY" http://127.0.0.1:8000/gitee_webhook >/dev/null
+          docker logs --tail 50 ci-app
+          docker rm -f ci-app
+
+      - name: Prepare env for push (optional)
+        if: github.event_name == 'push'
+        run: |
+          echo "REGISTRY=${{ secrets.REGISTRY }}" >> $GITHUB_ENV
+          echo "REGISTRY_USERNAME=${{ secrets.REGISTRY_USERNAME }}" >> $GITHUB_ENV
+          echo "REGISTRY_PASSWORD=${{ secrets.REGISTRY_PASSWORD }}" >> $GITHUB_ENV
+          echo "IMAGE_NAME=${{ secrets.IMAGE_NAME }}" >> $GITHUB_ENV
+
+      - name: Docker login (optional)
+        if: github.event_name == 'push' && env.REGISTRY != '' && env.REGISTRY_USERNAME != '' && env.REGISTRY_PASSWORD != ''
+        run: |
+          echo "$REGISTRY_PASSWORD" | docker login "$REGISTRY" -u "$REGISTRY_USERNAME" --password-stdin
+
+      - name: Tag and push image (optional)
+        if: github.event_name == 'push' && env.REGISTRY != '' && env.IMAGE_NAME != ''
+        run: |
+          IMAGE_FULL="$REGISTRY/$IMAGE_NAME"
+          docker tag "$IMAGE_LOCAL" "$IMAGE_FULL:${GITHUB_SHA}"
+          docker tag "$IMAGE_LOCAL" "$IMAGE_FULL:latest"
+          docker push "$IMAGE_FULL:${GITHUB_SHA}"
+          docker push "$IMAGE_FULL:latest"
+name: CI
 on: [push, pull_request]
 jobs:
   test:

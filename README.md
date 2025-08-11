@@ -102,7 +102,17 @@ uvicorn app.server:app --port ${APP_PORT:-8000}
 make env && make check-env && docker compose up -d && curl -sS :8000/health
 ```
 
-- 结构化日志：启动后运行 scripts/dev_webhook.sh（从 .env 读取密钥）向服务发送签名事件，可在 docker compose logs -f app 中观察 JSON 日志。
+- 结构化日志：启动后运行 `scripts/send_webhook.sh`（从 `.env` 读取密钥）向服务发送签名事件，可在 `docker compose logs -f app` 中观察 JSON 日志。
+
+### 一键冒烟脚本
+
+```bash
+# 本机或容器（:8000）
+bash scripts/run_smoke.sh --env-file ./.env --base-url http://127.0.0.1:8000
+
+# 仅发一次 webhook（随机 issue id）
+bash scripts/send_webhook.sh --env-file ./.env --url http://127.0.0.1:8000/gitee_webhook
+```
 
 ## 如何验证幂等
 

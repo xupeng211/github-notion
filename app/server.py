@@ -4,6 +4,7 @@ import time
 import logging
 import uuid
 from fastapi import FastAPI, Request, Response, HTTPException
+import asyncio
 from prometheus_client import make_asgi_app
 from starlette.middleware.base import BaseHTTPMiddleware
 from pythonjsonlogger import jsonlogger
@@ -70,7 +71,10 @@ async def gitee_webhook(request: Request):
         issue_id = str(issue.get("number") or issue.get("id") or "")
     except Exception:
         pass
-    ok, message = process_gitee_event(body, secret, signature, event_type)
+    # Run blocking processing in a thread to avoid blocking the event loop
+    ok, message = await asyncio.to_thread(
+        process_gitee_event, body, secret, signature, event_type
+    )
     if not ok:
         logger.warning(
             "process_failed",
