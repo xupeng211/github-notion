@@ -1,7 +1,7 @@
 version: '3.8'
 services:
   app:
-    image: ${IMAGE_REF:-${REGISTRY_HOST}:latest}
+    image: ${IMAGE_REF:-gitee.com/xupeng_11/gitee-notion:latest}
     env_file: .env
     environment:
       - APP_PORT=${APP_PORT:-8000}

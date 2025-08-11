@@ -11,6 +11,10 @@ jobs:
     runs-on: ubuntu-latest
     env:
       IMAGE_LOCAL: gitee-notion:ci
+      REGISTRY: ${{ secrets.REGISTRY }}
+      REGISTRY_USERNAME: ${{ secrets.REGISTRY_USERNAME }}
+      REGISTRY_PASSWORD: ${{ secrets.REGISTRY_PASSWORD }}
+      IMAGE_NAME: ${{ secrets.IMAGE_NAME }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -71,14 +75,6 @@ PY
           curl -fsS -H "X-Gitee-Token: $SIG" -H "X-Gitee-Event: Issue Hook" -H "Content-Type: application/json" -d "$BODY" http://127.0.0.1:8000/gitee_webhook >/dev/null
           docker logs --tail 50 ci-app
           docker rm -f ci-app
-
-      - name: Prepare env for push (optional)
-        if: github.event_name == 'push'
-        run: |
-          echo "REGISTRY=${{ secrets.REGISTRY }}" >> $GITHUB_ENV
-          echo "REGISTRY_USERNAME=${{ secrets.REGISTRY_USERNAME }}" >> $GITHUB_ENV
-          echo "REGISTRY_PASSWORD=${{ secrets.REGISTRY_PASSWORD }}" >> $GITHUB_ENV
-          echo "IMAGE_NAME=${{ secrets.IMAGE_NAME }}" >> $GITHUB_ENV
 
       - name: Docker login (optional)
         if: github.event_name == 'push' && env.REGISTRY != '' && env.REGISTRY_USERNAME != '' && env.REGISTRY_PASSWORD != ''

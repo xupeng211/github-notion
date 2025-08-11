@@ -2,6 +2,7 @@ version: '3.8'
 services:
   app:
     build: .
+    image: gitee.com/xupeng_11/gitee-notion:latest
     container_name: gitee-notion-sync
     env_file:
       - .env
