@@ -219,6 +219,12 @@ def start_deadletter_scheduler() -> None:
     if interval <= 0:
         return
     scheduler = BackgroundScheduler(daemon=True)
-    scheduler.add_job(lambda: replay_deadletters_once(os.getenv("DEADLETTER_REPLAY_TOKEN", "")), "interval", minutes=interval, id="deadletter_replay", replace_existing=True)
+    scheduler.add_job(
+        lambda: replay_deadletters_once(os.getenv("DEADLETTER_REPLAY_TOKEN", "")),
+        "interval",
+        minutes=interval,
+        id="deadletter_replay",
+        replace_existing=True,
+    )
     scheduler.start()
 

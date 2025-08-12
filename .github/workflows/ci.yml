@@ -35,7 +35,7 @@ jobs:
 
       - name: Lint (flake8)
         run: |
-          flake8 app
+          flake8
 
       - name: Run unit tests (minimal)
         env:
