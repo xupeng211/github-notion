@@ -1,5 +1,9 @@
 name: CI
 
+permissions:
+  contents: read
+  packages: write
+
 on:
   push:
     branches: [ main ]
@@ -89,18 +93,3 @@ PY
           docker tag "$IMAGE_LOCAL" "$IMAGE_FULL:latest"
           docker push "$IMAGE_FULL:${GITHUB_SHA}"
           docker push "$IMAGE_FULL:latest"
-name: CI
-on: [push, pull_request]
-jobs:
-  test:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-      - uses: actions/setup-python@v4
-        with:
-          python-version: '3.11'
-      - run: pip install ruff mypy pytest
-      - run: ruff check .
-      - run: mypy --strict app
-      - run: pytest
-      - run: docker build .
