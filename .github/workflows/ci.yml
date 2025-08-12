@@ -70,12 +70,7 @@ jobs:
           code=$(curl -sS -o /dev/null -w "%{http_code}" http://127.0.0.1:8000/metrics/)
           if [ "$code" != "200" ]; then echo "metrics failed $code" && exit 1; fi
           BODY='{"issue":{"id":777,"number":777,"title":"ci-demo"}}'
-          SIG=$(python3 - <<'PY'
-import hmac,hashlib,os
-sec=b"ci-secret"; body=b'{"issue":{"id":777,"number":777,"title":"ci-demo"}}'
-print(hmac.new(sec, body, hashlib.sha256).hexdigest())
-PY
-          )
+          SIG=$(python3 -c 'import hmac,hashlib;sec=b"ci-secret";body=b"{\"issue\":{\"id\":777,\"number\":777,\"title\":\"ci-demo\"}}";print(hmac.new(sec, body, hashlib.sha256).hexdigest())')
           curl -fsS -H "X-Gitee-Token: $SIG" -H "X-Gitee-Event: Issue Hook" -H "Content-Type: application/json" -d "$BODY" http://127.0.0.1:8000/gitee_webhook >/dev/null
           docker logs --tail 50 ci-app
           docker rm -f ci-app
