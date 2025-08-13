@@ -40,6 +40,13 @@ if DISABLE_METRICS:
     DEADLETTER_SIZE = _Noop()
     PROCESS_P95_MS = _Noop()
     DEADLETTER_REPLAY_TOTAL = _Noop()
+    HTTP_REQUESTS_TOTAL = _Noop()
+    HTTP_REQUEST_DURATION = _Noop()
+    WEBHOOK_ERRORS_TOTAL = _Noop()
+    NOTION_API_CALLS_TOTAL = _Noop()
+    NOTION_API_DURATION = _Noop()
+    DATABASE_OPERATIONS_TOTAL = _Noop()
+    RATE_LIMIT_HITS_TOTAL = _Noop()
 else:
     EVENTS_TOTAL = Counter("events_total", "Total events processed", ["result"])  # result: success|skip|fail
     RETRIES_TOTAL = Counter("retries_total", "Total retry attempts")
@@ -47,6 +54,23 @@ else:
     DEADLETTER_SIZE = Gauge("deadletter_size", "Current deadletter size")
     PROCESS_P95_MS = Gauge("process_p95_ms", "Approx p95 of processing latency in ms (sliding window)")
     DEADLETTER_REPLAY_TOTAL = Counter("deadletter_replay_total", "Total deadletters replayed")
+    
+    # HTTP 请求指标
+    HTTP_REQUESTS_TOTAL = Counter("http_requests_total", "Total HTTP requests", ["method", "endpoint", "status"])
+    HTTP_REQUEST_DURATION = Histogram("http_request_duration_seconds", "HTTP request duration", ["method", "endpoint"])
+    
+    # Webhook 错误指标
+    WEBHOOK_ERRORS_TOTAL = Counter("webhook_errors_total", "Total webhook processing errors", ["error_type"])
+    
+    # Notion API 指标
+    NOTION_API_CALLS_TOTAL = Counter("notion_api_calls_total", "Total Notion API calls", ["operation", "status"])
+    NOTION_API_DURATION = Histogram("notion_api_duration_seconds", "Notion API call duration", ["operation"])
+    
+    # 数据库操作指标
+    DATABASE_OPERATIONS_TOTAL = Counter("database_operations_total", "Total database operations", ["operation", "status"])
+    
+    # 速率限制指标
+    RATE_LIMIT_HITS_TOTAL = Counter("rate_limit_hits_total", "Total rate limit hits")
 
 logger = logging.getLogger("service")
 
@@ -86,9 +110,30 @@ def verify_gitee_signature(secret: str, payload: bytes, signature: str) -> bool:
 def exponential_backoff_request(method: str, url: str, headers: Dict[str, str] = None, json_data: Dict[str, Any] = None,
                                 max_retries: int = 5, base_delay: float = 0.5) -> Tuple[bool, Dict[str, Any]]:
     headers = headers or {}
+    
+    # 确定 API 操作类型
+    operation = "unknown"
+    if "notion.com" in url:
+        if "/pages/" in url and method == "PATCH":
+            operation = "update_page"
+        elif "/pages" in url and method == "POST":
+            operation = "create_page"
+        elif "/databases/" in url and method == "POST":
+            operation = "query_database"
+        elif "/users/me" in url:
+            operation = "get_user"
+    
+    start_time = time.time()
+    
     for attempt in range(max_retries + 1):
         try:
             resp = requests.request(method, url, headers=headers, json=json_data, timeout=10)
+            
+            # 记录 API 调用指标
+            if "notion.com" in url:
+                status = "success" if resp.status_code < 400 else "error"
+                NOTION_API_CALLS_TOTAL.labels(operation=operation, status=status).inc()
+            
             if resp.status_code in (429,) or 500 <= resp.status_code < 600:
                 if attempt < max_retries:
                     RETRIES_TOTAL.inc()
@@ -97,6 +142,12 @@ def exponential_backoff_request(method: str, url: str, headers: Dict[str, str] =
                 else:
                     return False, {"status": resp.status_code, "text": resp.text}
             resp.raise_for_status()
+            
+            # 记录成功的 API 调用持续时间
+            if "notion.com" in url:
+                duration = time.time() - start_time
+                NOTION_API_DURATION.labels(operation=operation).observe(duration)
+            
             if resp.text:
                 return True, resp.json()
             return True, {}
@@ -105,6 +156,13 @@ def exponential_backoff_request(method: str, url: str, headers: Dict[str, str] =
                 RETRIES_TOTAL.inc()
                 time.sleep(base_delay * (2 ** attempt))
                 continue
+            
+            # 记录失败的 API 调用
+            if "notion.com" in url:
+                NOTION_API_CALLS_TOTAL.labels(operation=operation, status="error").inc()
+                duration = time.time() - start_time
+                NOTION_API_DURATION.labels(operation=operation).observe(duration)
+            
             return False, {"error": str(e)}
 
 

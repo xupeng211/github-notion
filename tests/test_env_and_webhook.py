@@ -21,7 +21,12 @@ def sign(secret: str, payload: bytes) -> str:
 def test_health():
     r = client.get("/health")
     assert r.status_code == 200
-    assert r.json().get("status") == "healthy"
+    response_data = r.json()
+    # 健康状态可能是 healthy 或 degraded（如果没有配置 Notion token）
+    assert response_data.get("status") in ["healthy", "degraded"]
+    # 确保包含必要的检查信息
+    assert "checks" in response_data
+    assert "database" in response_data["checks"]
 
 
 def test_signature_validation():

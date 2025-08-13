@@ -8,11 +8,11 @@ URL = f"http://127.0.0.1:{PORT}/replay-deadletters"
 
 
 def main() -> int:
-if not TOKEN:
-    print("DEADLETTER_REPLAY_TOKEN not set; abort")
+    if not TOKEN:
+        print("DEADLETTER_REPLAY_TOKEN not set; abort")
         return 1
-resp = requests.post(URL, headers={"Authorization": f"Bearer {TOKEN}"})
-print(resp.status_code, resp.text)
+    resp = requests.post(URL, headers={"Authorization": f"Bearer {TOKEN}"})
+    print(resp.status_code, resp.text)
     return 0
 
 

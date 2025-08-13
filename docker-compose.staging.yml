@@ -1,0 +1,94 @@
+version: '3.8'
+
+services:
+  app:
+    image: ${REGISTRY}/${IMAGE_NAME}:${IMAGE_TAG:-latest}
+    container_name: gitee-notion-sync-staging
+    restart: unless-stopped
+    ports:
+      - "${SERVICE_PORT:-8002}:8000"
+    environment:
+      # 基础配置
+      - APP_PORT=8000
+      - LOG_LEVEL=INFO
+      - ENVIRONMENT=staging
+      
+      # 数据库配置
+      - DB_URL=sqlite:///data/sync.db
+      
+      # Gitee 配置
+      - GITEE_WEBHOOK_SECRET=${GITEE_WEBHOOK_SECRET}
+      
+      # Notion 配置
+      - NOTION_TOKEN=${NOTION_TOKEN}
+      - NOTION_DATABASE_ID=${NOTION_DATABASE_ID}
+      
+      # 安全和限制
+      - RATE_LIMIT_PER_MINUTE=120
+      - MAX_REQUEST_SIZE=2097152
+      - DEADLETTER_REPLAY_TOKEN=${DEADLETTER_REPLAY_TOKEN}
+      
+      # 可选配置
+      - DISABLE_NOTION=false
+      - DISABLE_METRICS=false
+      
+    volumes:
+      - ./data:/app/data
+      - ./logs:/app/logs
+    
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    
+    labels:
+      - "com.gitee-notion-sync.environment=staging"
+      - "com.gitee-notion-sync.version=${IMAGE_TAG:-latest}"
+    
+    networks:
+      - gitee-notion-network
+
+  # 可选: 添加监控服务
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: prometheus-staging
+    restart: unless-stopped
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./monitoring/prometheus-staging.yml:/etc/prometheus/prometheus.yml:ro
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--web.enable-lifecycle'
+    networks:
+      - gitee-notion-network
+    profiles:
+      - monitoring
+
+  # 可选: 添加 Grafana
+  grafana:
+    image: grafana/grafana:latest
+    container_name: grafana-staging
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD:-admin123}
+    volumes:
+      - grafana-data:/var/lib/grafana
+    networks:
+      - gitee-notion-network
+    profiles:
+      - monitoring
+
+networks:
+  gitee-notion-network:
+    driver: bridge
+
+volumes:
+  grafana-data: 

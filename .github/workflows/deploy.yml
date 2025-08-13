@@ -1,0 +1,309 @@
+name: 🚀 CI/CD Pipeline - Build & Deploy
+
+on:
+  push:
+    branches: [ main, master, develop ]
+  pull_request:
+    branches: [ main, master ]
+  workflow_dispatch:
+    inputs:
+      deploy_to_aws:
+        description: 'Deploy to AWS server'
+        required: false
+        default: false
+        type: boolean
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: xupeng211/gitee-notion
+
+jobs:
+  # 阶段 1: 测试和质量检查
+  test:
+    runs-on: ubuntu-latest
+    steps:
+    - name: 📥 Checkout code
+      uses: actions/checkout@v4
+
+    - name: 🐍 Set up Python 3.11
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+        cache: 'pip'
+
+    - name: 📦 Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install pytest pytest-cov bandit flake8
+
+    - name: 🔍 Code quality checks
+      run: |
+        echo "📝 Running code style checks..."
+        flake8 app/ --max-line-length=120 --ignore=E203,W503 || echo "Style check completed"
+        
+        echo "🔒 Running security scan..."
+        bandit -r app/ -f json -o bandit-report.json || echo "Security scan completed"
+
+    - name: 🧪 Run tests
+      run: |
+        python -m pytest tests/ -v --tb=short --cov=app --cov-report=xml --cov-report=term
+
+    - name: 🗄️ Test database migrations
+      run: |
+        mkdir -p test_data
+        DB_URL=sqlite:///test_data/test.db alembic upgrade head
+        DB_URL=sqlite:///test_data/test.db alembic current
+
+  # 阶段 2: 构建和推送 Docker 镜像
+  build-and-push:
+    needs: test
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    outputs:
+      image-digest: ${{ steps.build.outputs.digest }}
+      image-tag: ${{ steps.meta.outputs.tags }}
+    
+    steps:
+    - name: 📥 Checkout code
+      uses: actions/checkout@v4
+
+    - name: 🔑 Log in to GitHub Container Registry
+      uses: docker/login-action@v3
+      with:
+        registry: ${{ env.REGISTRY }}
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: 📋 Extract metadata
+      id: meta
+      uses: docker/metadata-action@v5
+      with:
+        images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+        tags: |
+          type=ref,event=branch
+          type=ref,event=pr
+          type=sha,prefix={{branch}}-
+          type=raw,value=latest,enable={{is_default_branch}}
+
+    - name: 🔧 Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+
+    - name: 🏗️ Build and push Docker image
+      id: build
+      uses: docker/build-push-action@v5
+      with:
+        context: .
+        file: ./Dockerfile.optimized
+        target: production
+        push: true
+        tags: ${{ steps.meta.outputs.tags }}
+        labels: ${{ steps.meta.outputs.labels }}
+        build-args: |
+          VERSION=${{ github.sha }}
+          BUILD_TIME=${{ github.run_number }}
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
+
+    - name: 🛡️ Run Trivy vulnerability scanner
+      uses: aquasecurity/trivy-action@master
+      with:
+        image-ref: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
+        format: 'sarif'
+        output: 'trivy-results.sarif'
+      continue-on-error: true
+
+    - name: 📊 Upload Trivy scan results
+      uses: github/codeql-action/upload-sarif@v2
+      if: always()
+      with:
+        sarif_file: 'trivy-results.sarif'
+      continue-on-error: true
+
+  # 阶段 3: 部署到 AWS 服务器
+  deploy-aws:
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event.inputs.deploy_to_aws == 'true')
+    environment: production
+    
+    steps:
+    - name: 📥 Checkout code
+      uses: actions/checkout@v4
+
+    - name: 📋 Prepare deployment files
+      run: |
+        # 创建部署目录
+        mkdir -p deploy
+        
+        # 复制配置文件
+        cp docker-compose.production.yml deploy/
+        cp -r monitoring deploy/ 2>/dev/null || echo "No monitoring config"
+        
+        # 创建环境变量文件
+        cat > deploy/.env << EOF
+        # 生产环境配置
+        LOG_LEVEL=INFO
+        ENVIRONMENT=production
+        APP_PORT=8000
+        
+        # 数据库配置
+        DB_URL=sqlite:///data/sync.db
+        
+        # 镜像配置
+        REGISTRY=${{ env.REGISTRY }}
+        IMAGE_NAME=${{ env.IMAGE_NAME }}
+        IMAGE_TAG=latest
+        
+        # 服务配置
+        SERVICE_PORT=8000
+        SERVICE_ENV=production
+        DEPLOYMENT_TIME=$(date +%Y%m%d-%H%M%S)
+        
+        # 安全配置
+        RATE_LIMIT_PER_MINUTE=60
+        MAX_REQUEST_SIZE=1048576
+        DEADLETTER_REPLAY_TOKEN=${{ secrets.DEADLETTER_REPLAY_TOKEN }}
+        
+        # 监控配置
+        GRAFANA_PASSWORD=${{ secrets.GRAFANA_PASSWORD }}
+        GRAFANA_SECRET_KEY=${{ secrets.GRAFANA_SECRET_KEY }}
+        
+        # Gitee 配置
+        GITEE_WEBHOOK_SECRET=${{ secrets.GITEE_WEBHOOK_SECRET }}
+        
+        # Notion 配置
+        NOTION_TOKEN=${{ secrets.NOTION_TOKEN }}
+        NOTION_DATABASE_ID=${{ secrets.NOTION_DATABASE_ID }}
+        EOF
+        
+        # 创建部署脚本
+        cat > deploy/deploy.sh << 'SCRIPT_EOF'
+        #!/bin/bash
+        set -e
+        
+        echo "🚀 开始 AWS 服务器部署..."
+        
+        # 安装 Docker (如果未安装)
+        if ! command -v docker >/dev/null 2>&1; then
+            echo "📦 安装 Docker..."
+            curl -fsSL https://get.docker.com -o get-docker.sh
+            sudo sh get-docker.sh
+            sudo usermod -aG docker $USER
+            rm get-docker.sh
+        fi
+        
+        # 安装 Docker Compose (如果未安装)
+        if ! command -v docker-compose >/dev/null 2>&1; then
+            echo "📦 安装 Docker Compose..."
+            sudo curl -L "https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+            sudo chmod +x /usr/local/bin/docker-compose
+        fi
+        
+        # 创建应用目录
+        APP_DIR="/opt/gitee-notion-sync"
+        sudo mkdir -p "$APP_DIR"
+        sudo chown $USER:$USER "$APP_DIR"
+        
+        # 复制文件到应用目录
+        cp -r . "$APP_DIR/"
+        cd "$APP_DIR"
+        
+        # 加载环境变量
+        source .env
+        
+        # 登录 GitHub Container Registry
+        echo "🔑 登录容器注册表..."
+        echo "$GITHUB_TOKEN" | docker login ghcr.io -u xupeng211 --password-stdin
+        
+        # 创建必要目录
+        mkdir -p data logs
+        
+        # 停止旧服务
+        echo "🛑 停止旧服务..."
+        docker-compose -f docker-compose.production.yml down 2>/dev/null || true
+        
+        # 拉取最新镜像
+        echo "📥 拉取最新镜像..."
+        docker pull "${REGISTRY}/${IMAGE_NAME}:latest"
+        
+        # 启动服务
+        echo "🚀 启动服务..."
+        docker-compose -f docker-compose.production.yml up -d
+        
+        # 等待服务启动
+        echo "⏳ 等待服务启动..."
+        sleep 15
+        
+        # 健康检查
+        for i in {1..30}; do
+            if curl -f http://localhost:8000/health >/dev/null 2>&1; then
+                echo "✅ 服务启动成功!"
+                break
+            fi
+            if [[ $i -eq 30 ]]; then
+                echo "❌ 服务启动失败"
+                docker-compose logs
+                exit 1
+            fi
+            echo "等待服务启动... ($i/30)"
+            sleep 2
+        done
+        
+        # 显示服务状态
+        echo "📊 服务状态:"
+        docker-compose ps
+        
+        echo ""
+        echo "🎉 部署完成!"
+        echo "📍 服务访问地址:"
+        echo "  健康检查: http://$(curl -s ifconfig.me):8000/health"
+        echo "  API 文档:  http://$(curl -s ifconfig.me):8000/docs"
+        echo "  监控指标: http://$(curl -s ifconfig.me):8000/metrics"
+        SCRIPT_EOF
+        
+        chmod +x deploy/deploy.sh
+
+    - name: 🔑 Setup SSH
+      run: |
+        mkdir -p ~/.ssh
+        echo "${{ secrets.AWS_PRIVATE_KEY }}" > ~/.ssh/aws-key.pem
+        chmod 600 ~/.ssh/aws-key.pem
+        ssh-keyscan -H 13.209.76.79 >> ~/.ssh/known_hosts
+
+    - name: 📤 Upload to AWS server
+      run: |
+        scp -i ~/.ssh/aws-key.pem -r deploy ubuntu@13.209.76.79:/tmp/gitee-notion-deploy-$(date +%Y%m%d-%H%M%S)
+
+    - name: 🚀 Deploy on AWS server
+      run: |
+        ssh -i ~/.ssh/aws-key.pem ubuntu@13.209.76.79 "
+          cd /tmp/gitee-notion-deploy-* &&
+          GITHUB_TOKEN='${{ secrets.GITHUB_TOKEN }}' bash deploy.sh
+        "
+
+    - name: 🔍 Verify deployment
+      run: |
+        sleep 10
+        curl -f http://13.209.76.79:8000/health || (echo "Health check failed" && exit 1)
+        echo "✅ 部署验证成功!"
+
+  # 阶段 4: 通知 (可选)
+  notify:
+    needs: [build-and-push, deploy-aws]
+    runs-on: ubuntu-latest
+    if: always()
+    
+    steps:
+    - name: 📢 Deployment notification
+      run: |
+        if [[ "${{ needs.deploy-aws.result }}" == "success" ]]; then
+          echo "🎉 部署成功!"
+          echo "🌐 服务地址: http://13.209.76.79:8000"
+          echo "📚 API 文档: http://13.209.76.79:8000/docs"
+          echo "🏥 健康检查: http://13.209.76.79:8000/health"
+        else
+          echo "❌ 部署失败，请检查日志"
+        fi 

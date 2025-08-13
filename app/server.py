@@ -3,6 +3,7 @@ import os
 import time
 import logging
 import uuid
+from typing import Callable
 from fastapi import FastAPI, Request, Response, HTTPException
 import asyncio
 from prometheus_client import make_asgi_app
@@ -12,9 +13,11 @@ from contextlib import asynccontextmanager
 from collections import deque
 from pydantic import ValidationError
 
-from app.models import init_db
-from app.service import process_gitee_event, start_deadletter_scheduler, replay_deadletters_once
+from app.models import init_db, SessionLocal
+from app.service import process_gitee_event, start_deadletter_scheduler, replay_deadletters_once, RATE_LIMIT_HITS_TOTAL
 from app.schemas import GiteeWebhookPayload
+from app.middleware import PrometheusMiddleware
+from app.audit import log_webhook_event, log_security_event
 
 # Simple in-memory rate limiter (token bucket-like) per process
 class SimpleRateLimiter:
@@ -51,7 +54,39 @@ async def lifespan(_app: FastAPI):
         except Exception:
             pass
 
-app = FastAPI(lifespan=lifespan)
+app = FastAPI(
+    title="Gitee-Notion 同步服务",
+    description="自动同步 Gitee issues 到 Notion 数据库",
+    version="1.0.0",
+    lifespan=lifespan
+)
+
+# 添加安全和限制中间件
+from starlette.middleware.trustedhost import TrustedHostMiddleware
+
+# 添加 Prometheus 监控中间件
+app.add_middleware(PrometheusMiddleware)
+
+# 添加请求大小限制
+MAX_REQUEST_SIZE = int(os.getenv("MAX_REQUEST_SIZE", "1048576"))  # 1MB 默认
+
+class RequestSizeLimitMiddleware(BaseHTTPMiddleware):
+    """请求大小限制中间件"""
+    
+    async def dispatch(self, request: Request, call_next: Callable) -> Response:
+        # 检查 Content-Length 头
+        content_length = request.headers.get("content-length")
+        if content_length and int(content_length) > MAX_REQUEST_SIZE:
+            return Response(
+                content=f"Request too large. Maximum size: {MAX_REQUEST_SIZE} bytes",
+                status_code=413,
+                headers={"content-type": "text/plain"}
+            )
+        
+        return await call_next(request)
+
+# 添加请求大小限制中间件
+app.add_middleware(RequestSizeLimitMiddleware)
 
 # JSON structured logging
 logger = logging.getLogger("app")
@@ -83,31 +118,142 @@ class RequestIDMiddleware(BaseHTTPMiddleware):
 
 app.add_middleware(RequestIDMiddleware)
 
+# 全局异常处理器
+@app.exception_handler(ValidationError)
+async def validation_exception_handler(request: Request, exc: ValidationError):
+    """处理 Pydantic 验证错误"""
+    return Response(
+        content=f"请求数据验证失败: {str(exc)}",
+        status_code=422,
+        headers={"content-type": "text/plain"}
+    )
+
+@app.exception_handler(ValueError)
+async def value_error_handler(request: Request, exc: ValueError):
+    """处理值错误"""
+    logger.error(f"Value error in {request.url.path}: {str(exc)}")
+    return Response(
+        content="请求参数错误",
+        status_code=400,
+        headers={"content-type": "text/plain"}
+    )
+
+@app.exception_handler(500)
+async def internal_server_error_handler(request: Request, exc):
+    """处理内部服务器错误"""
+    request_id = getattr(request.state, "request_id", "unknown")
+    logger.error(f"Internal server error: {str(exc)}", extra={"request_id": request_id})
+    return Response(
+        content=f"内部服务器错误。请求ID: {request_id}",
+        status_code=500,
+        headers={"content-type": "text/plain"}
+    )
+
 # health
-@app.get("/health")
+@app.get("/health", 
+         summary="健康检查",
+         description="检查服务健康状态，包括数据库连接、Notion API 状态、磁盘空间等",
+         response_description="健康检查结果，包含详细的系统状态信息")
 async def health():
-    return {
+    """Enhanced health check with deep monitoring"""
+    import requests
+    
+    # 基础信息
+    health_data = {
         "status": "healthy",
         "timestamp": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
         "environment": os.getenv("ENVIRONMENT", os.getenv("PY_ENV", "development")),
-        "notion_api": {
-            "connected": bool(os.getenv("NOTION_TOKEN", "")),
-            "version": "2022-06-28",
-        },
         "app_info": {
-            "app": "fastapi",
+            "app": "fastapi", 
             "log_level": os.getenv("LOG_LEVEL", "INFO"),
+            "version": "1.0.0"
         },
+        "checks": {}
     }
+    
+    # 检查数据库连接
+    try:
+        with SessionLocal() as db:
+            db.execute("SELECT 1")
+        health_data["checks"]["database"] = {"status": "ok", "message": "Database connection successful"}
+    except Exception as e:
+        health_data["checks"]["database"] = {"status": "error", "message": f"Database error: {str(e)}"}
+        health_data["status"] = "degraded"
+    
+    # 检查 Notion API 连接
+    notion_token = os.getenv("NOTION_TOKEN")
+    if notion_token:
+        try:
+            headers = {
+                "Authorization": f"Bearer {notion_token}",
+                "Notion-Version": "2022-06-28",
+                "Content-Type": "application/json"
+            }
+            response = requests.get("https://api.notion.com/v1/users/me", headers=headers, timeout=5)
+            if response.status_code == 200:
+                health_data["checks"]["notion_api"] = {
+                    "status": "ok", 
+                    "message": "Notion API connection successful",
+                    "version": "2022-06-28"
+                }
+            else:
+                health_data["checks"]["notion_api"] = {
+                    "status": "error", 
+                    "message": f"Notion API error: {response.status_code}",
+                    "version": "2022-06-28"
+                }
+                health_data["status"] = "degraded"
+        except Exception as e:
+            health_data["checks"]["notion_api"] = {
+                "status": "error", 
+                "message": f"Notion API connection failed: {str(e)}",
+                "version": "2022-06-28"
+            }
+            health_data["status"] = "degraded"
+    else:
+        health_data["checks"]["notion_api"] = {
+            "status": "warning", 
+            "message": "Notion API token not configured",
+            "version": "2022-06-28"
+        }
+    
+    # 检查磁盘空间（简单检查）
+    try:
+        import shutil
+        disk_usage = shutil.disk_usage("/")
+        free_gb = disk_usage.free / (1024**3)
+        if free_gb < 1.0:  # 少于 1GB
+            health_data["checks"]["disk_space"] = {
+                "status": "warning", 
+                "message": f"Low disk space: {free_gb:.2f}GB free"
+            }
+            if health_data["status"] == "healthy":
+                health_data["status"] = "degraded"
+        else:
+            health_data["checks"]["disk_space"] = {
+                "status": "ok", 
+                "message": f"Disk space OK: {free_gb:.2f}GB free"
+            }
+    except Exception as e:
+        health_data["checks"]["disk_space"] = {
+            "status": "error", 
+            "message": f"Cannot check disk space: {str(e)}"
+        }
+    
+    return health_data
 
 # metrics via separate ASGI
 app.mount("/metrics", make_asgi_app())
 
 # webhook
-@app.post("/gitee_webhook")
+@app.post("/gitee_webhook",
+          summary="Gitee Webhook 处理",
+          description="处理来自 Gitee 的 webhook 事件，支持 issue 创建、更新、关闭等操作，自动同步到 Notion",
+          response_description="处理结果，包含成功状态和详细信息")
 async def gitee_webhook(request: Request):
     # optional simple rate limit
     if not rate_limiter.allow():
+        RATE_LIMIT_HITS_TOTAL.inc()
         raise HTTPException(status_code=429, detail="too_many_requests")
 
     secret = os.getenv("GITEE_WEBHOOK_SECRET", "")
@@ -155,7 +301,10 @@ async def gitee_webhook(request: Request):
     return {"message": message}
 
 # admin: replay deadletters
-@app.post("/replay-deadletters")
+@app.post("/replay-deadletters",
+          summary="重放死信队列",
+          description="手动触发死信队列重放，需要管理员令牌授权",
+          response_description="重放结果，包含处理的死信数量")
 async def replay_deadletters(request: Request):
     auth = request.headers.get("Authorization", "")
     token = os.getenv("DEADLETTER_REPLAY_TOKEN", "")

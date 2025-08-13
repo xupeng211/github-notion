@@ -1,0 +1,136 @@
+groups:
+  - name: gitee-notion-sync.rules
+    rules:
+      # 服务可用性告警
+      - alert: ServiceDown
+        expr: up{job="gitee-notion-sync"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Gitee-Notion 同步服务不可用"
+          description: "服务已下线超过 1 分钟"
+
+      # 健康检查失败告警
+      - alert: HealthCheckFailed
+        expr: probe_success{job="gitee-notion-sync"} == 0
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "健康检查失败"
+          description: "健康检查失败超过 2 分钟"
+
+      # HTTP 错误率过高
+      - alert: HighErrorRate
+        expr: |
+          (
+            rate(http_requests_total{status=~"5.."}[5m]) /
+            rate(http_requests_total[5m])
+          ) > 0.1
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "HTTP 错误率过高"
+          description: "5xx 错误率超过 10%，当前值: {{ $value | humanizePercentage }}"
+
+      # Webhook 处理失败率过高
+      - alert: HighWebhookFailureRate
+        expr: |
+          (
+            rate(webhook_errors_total[5m]) /
+            rate(http_requests_total{endpoint="/gitee_webhook"}[5m])
+          ) > 0.05
+        for: 3m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Webhook 处理失败率过高"
+          description: "Webhook 失败率超过 5%，当前值: {{ $value | humanizePercentage }}"
+
+      # 速率限制命中过多
+      - alert: HighRateLimitHits
+        expr: rate(rate_limit_hits_total[5m]) > 1
+        for: 3m
+        labels:
+          severity: warning
+        annotations:
+          summary: "速率限制命中频繁"
+          description: "速率限制命中频率: {{ $value }} 次/秒"
+
+      # Notion API 响应时间过长
+      - alert: SlowNotionAPI
+        expr: |
+          histogram_quantile(0.95, 
+            rate(notion_api_duration_seconds_bucket[5m])
+          ) > 5
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Notion API 响应缓慢"
+          description: "95% 请求响应时间超过 5 秒，当前 P95: {{ $value }}s"
+
+      # Notion API 错误率过高
+      - alert: HighNotionAPIErrorRate
+        expr: |
+          (
+            rate(notion_api_calls_total{status="error"}[5m]) /
+            rate(notion_api_calls_total[5m])
+          ) > 0.1
+        for: 3m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Notion API 错误率过高"
+          description: "Notion API 错误率超过 10%，当前值: {{ $value | humanizePercentage }}"
+
+      # 死信队列积压过多
+      - alert: HighDeadletterQueue
+        expr: deadletter_size > 100
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "死信队列积压过多"
+          description: "死信队列大小: {{ $value }} 条消息"
+
+      # 内存使用率过高
+      - alert: HighMemoryUsage
+        expr: |
+          (
+            container_memory_usage_bytes{name="gitee-notion-sync-prod"} /
+            container_spec_memory_limit_bytes{name="gitee-notion-sync-prod"}
+          ) > 0.8
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "内存使用率过高"
+          description: "容器内存使用率超过 80%，当前值: {{ $value | humanizePercentage }}"
+
+      # CPU 使用率过高
+      - alert: HighCPUUsage
+        expr: |
+          rate(container_cpu_usage_seconds_total{name="gitee-notion-sync-prod"}[5m]) > 1.5
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "CPU 使用率过高"
+          description: "容器 CPU 使用率过高，当前值: {{ $value }}"
+
+      # 磁盘空间不足
+      - alert: LowDiskSpace
+        expr: |
+          (
+            node_filesystem_avail_bytes{mountpoint="/"} /
+            node_filesystem_size_bytes{mountpoint="/"}
+          ) < 0.1
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "磁盘空间不足"
+          description: "根分区可用空间少于 10%，剩余: {{ $value | humanizePercentage }}" 

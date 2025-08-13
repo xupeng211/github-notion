@@ -1,0 +1,135 @@
+# =================================================================
+# 多阶段构建优化 Dockerfile
+# =================================================================
+
+# 阶段 1: 基础镜像和依赖安装
+FROM python:3.11-slim AS base
+
+# 设置环境变量
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PIP_NO_CACHE_DIR=1 \
+    PIP_DISABLE_PIP_VERSION_CHECK=1
+
+# 安装系统依赖
+RUN apt-get update && apt-get install -y \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
+# 阶段 2: 依赖构建
+FROM base AS builder
+
+WORKDIR /app
+
+# 复制依赖文件
+COPY requirements.txt .
+
+# 安装 Python 依赖到用户目录（更好的缓存）
+RUN pip install --user --no-warn-script-location --no-cache-dir -r requirements.txt
+
+# 阶段 3: 开发环境
+FROM base AS development
+
+WORKDIR /app
+
+# 创建应用用户
+RUN useradd -m -s /bin/bash appuser
+
+# 复制依赖
+COPY --from=builder --chown=appuser:appuser /root/.local /home/appuser/.local
+
+# 设置 PATH
+ENV PATH="/home/appuser/.local/bin:$PATH"
+
+# 复制应用代码
+COPY --chown=appuser:appuser . .
+
+# 创建必要目录
+RUN mkdir -p /app/data /app/logs && \
+    chown -R appuser:appuser /app
+
+# 切换到应用用户
+USER appuser
+
+# 健康检查
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+    CMD curl -f http://localhost:${APP_PORT:-8000}/health || exit 1
+
+# 设置默认环境变量
+ENV APP_PORT=8000 \
+    LOG_LEVEL=INFO \
+    ENVIRONMENT=development
+
+EXPOSE ${APP_PORT}
+
+# 启动命令
+CMD ["python", "-m", "uvicorn", "app.server:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
+
+# 阶段 4: 生产环境
+FROM base AS production
+
+# 构建参数
+ARG VERSION=unknown
+ARG BUILD_TIME=unknown
+
+# 设置标签
+LABEL maintainer="Gitee-Notion Sync Team" \
+      version="${VERSION}" \
+      build-time="${BUILD_TIME}" \
+      description="Gitee-Notion 同步服务"
+
+WORKDIR /app
+
+# 创建应用用户（生产环境更严格的权限）
+RUN useradd -m -s /bin/false -u 1001 appuser
+
+# 复制依赖
+COPY --from=builder --chown=appuser:appuser /root/.local /home/appuser/.local
+
+# 设置 PATH
+ENV PATH="/home/appuser/.local/bin:$PATH"
+
+# 只复制必要的应用文件
+COPY --chown=appuser:appuser app/ ./app/
+COPY --chown=appuser:appuser alembic/ ./alembic/
+COPY --chown=appuser:appuser alembic.ini ./
+COPY --chown=appuser:appuser scripts/ ./scripts/
+
+# 创建必要目录并设置权限
+RUN mkdir -p /app/data /app/logs && \
+    chown -R appuser:appuser /app && \
+    chmod -R 755 /app && \
+    chmod -R 700 /app/data
+
+# 切换到应用用户
+USER appuser
+
+# 健康检查
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+    CMD curl -f http://localhost:${APP_PORT:-8000}/health || exit 1
+
+# 设置生产环境变量
+ENV APP_PORT=8000 \
+    LOG_LEVEL=INFO \
+    ENVIRONMENT=production \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1
+
+EXPOSE ${APP_PORT}
+
+# 生产启动命令（无热重载）
+CMD ["python", "-m", "uvicorn", "app.server:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "4"]
+
+# 阶段 5: 测试环境（可选）
+FROM development AS testing
+
+# 安装测试依赖
+USER root
+RUN pip install --no-cache-dir pytest pytest-cov bandit flake8 mypy
+USER appuser
+
+# 运行测试
+RUN python -m pytest tests/ -v --tb=short
+
+# 默认阶段为生产环境
+FROM production 
