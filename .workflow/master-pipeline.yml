@@ -42,6 +42,15 @@ PY
             docker logs --tail 50 ci-app
             docker rm -f ci-app
           - |
+            echo "Check Alembic migration status"
+            docker run --rm --name ci-alembic \
+              -e DB_URL=sqlite:///data/sync.db \
+              -v $(pwd):/app \
+              -w /app \
+              "${REGISTRY}/${IMAGE_NAME}:latest" \
+              alembic current
+            echo "Alembic status check completed"
+          - |
             echo "Pushing image"
             VERSION=$(git rev-parse --short HEAD)
             IMAGE_FULL="${REGISTRY}/${IMAGE_NAME}"

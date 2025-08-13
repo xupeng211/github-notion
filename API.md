@@ -67,7 +67,7 @@ X-Gitee-Event: Issue Hook
 
 #### POST /notion_webhook
 
-接收来自 Notion 的 webhook 事件，同步更新到 Gitee Issues。
+（说明）当前 FastAPI 实现未启用该端点，保留为后续扩展项。
 
 **请求头：**
 ```http
@@ -126,8 +126,8 @@ X-Notion-Signature: <webhook_signature>
         "version": "2022-06-28"
     },
     "app_info": {
-        "flask_env": "production",
-        "debug_mode": false
+        "app": "fastapi",
+        "log_level": "INFO"
     }
 }
 ```

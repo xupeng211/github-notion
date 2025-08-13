@@ -4,7 +4,19 @@
 
 {$DOMAIN_NAME} {
 	encode zstd gzip
-	reverse_proxy app:8000
+	# Optional transport timeouts to protect upstream
+	reverse_proxy app:8000 {
+		transport http {
+			read_timeout 30s
+			write_timeout 30s
+		}
+	}
+	# Optional: rate limiting requires external plugin (caddy-rate-limit). Example:
+	# @webhook {
+	#   path /gitee_webhook
+	# }
+	# rate_limit @webhook 5r/m burst=10
+	
 	header {
 		Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
 		X-Content-Type-Options "nosniff"

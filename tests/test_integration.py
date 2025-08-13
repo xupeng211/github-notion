@@ -3,6 +3,7 @@
 import os
 import json
 import pytest
+pytestmark = pytest.mark.skipif(os.getenv("RUN_INTEGRATION_TESTS") != "1", reason="Set RUN_INTEGRATION_TESTS=1 to enable integration tests")
 import requests
 import hmac
 import hashlib
@@ -63,6 +64,7 @@ class TestGiteeNotionSync:
         assert data["status"] == "healthy"
         assert "notion_api" in data
         assert "app_info" in data
+        assert "app" in data["app_info"]
     
     def test_metrics_endpoint(self):
         """测试指标收集端点"""

@@ -22,7 +22,7 @@ from app.models import (
 )
 
 # Metrics (allow disabling in tests to avoid duplicate registration)
-DISABLE_METRICS = os.getenv("DISABLE_METRICS", "").lower() in ("1", "true", "yes")
+DISABLE_METRICS = os.getenv("DISABLE_METRICS", "").lower() in ("1", "true", "yes") or bool(os.getenv("PYTEST_CURRENT_TEST"))
 
 if DISABLE_METRICS:
     class _Noop:
@@ -210,14 +210,14 @@ def replay_deadletters_once(secret_token: str) -> int:
     return cnt
 
 
-def start_deadletter_scheduler() -> None:
-    """Start background scheduler based on env interval."""
+def start_deadletter_scheduler():
+    """Start background scheduler based on env interval. Returns scheduler or None."""
     try:
         interval = int(os.getenv("DEADLETTER_REPLAY_INTERVAL_MINUTES", "10"))
     except Exception:
         interval = 10
     if interval <= 0:
-        return
+        return None
     scheduler = BackgroundScheduler(daemon=True)
     scheduler.add_job(
         lambda: replay_deadletters_once(os.getenv("DEADLETTER_REPLAY_TOKEN", "")),
@@ -227,4 +227,5 @@ def start_deadletter_scheduler() -> None:
         replace_existing=True,
     )
     scheduler.start()
+    return scheduler
 

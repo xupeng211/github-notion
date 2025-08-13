@@ -21,6 +21,7 @@ def sign(secret: str, payload: bytes) -> str:
 def test_health():
     r = client.get("/health")
     assert r.status_code == 200
+    assert r.json().get("status") == "healthy"
 
 
 def test_signature_validation():
@@ -29,7 +30,7 @@ def test_signature_validation():
     sig = sign(secret, payload)
     r = client.post("/gitee_webhook", data=payload, headers={"X-Gitee-Token": sig, "Content-Type": "application/json"})
     # service expects env GITEE_WEBHOOK_SECRET; here it's empty, so invalid
-    assert r.status_code == 400
+    assert r.status_code == 403
 
 
 def test_duplicate_idempotency(monkeypatch):

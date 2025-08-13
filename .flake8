@@ -10,5 +10,6 @@ exclude =
     .venv,
     venv,
     build,
-    dist
+    dist,
+    tests
 

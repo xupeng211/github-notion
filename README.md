@@ -59,7 +59,7 @@ curl -sS http://localhost:8000/metrics | grep deadletter_replay_total
 
 1) 复制环境模板并填写变量
 
-- 生成 .env 草稿
+- 生成 .env 草稿（依据 `.env.example`）
 
 ```bash
 make env
@@ -83,9 +83,7 @@ make check-env
 
 - 脚本会输出缺失项，并校验 DB_URL、APP_PORT 基本格式；失败返回码非 0。
 
-3) 本地启动示例
-
-- FastAPI 示例（app/server.py）：
+3) 本地启动示例（FastAPI, app/server.py）
 
 ```bash
 uvicorn app.server:app --port ${APP_PORT:-8000}
@@ -114,9 +112,42 @@ bash scripts/run_smoke.sh --env-file ./.env --base-url http://127.0.0.1:8000
 bash scripts/send_webhook.sh --env-file ./.env --url http://127.0.0.1:8000/gitee_webhook
 ```
 
-## 如何验证幂等
+## 健康检查响应示例
 
-- 同一 webhook 事件连续发送 3 次（scripts/dev_webhook.sh 可多次运行），应不重复创建 Notion 页面。我们基于事件内容哈希 + issue_id 去重，并对映射表（issue_id ↔ notion_page_id）进行 upsert，确保幂等。
+```json
+{
+  "status": "healthy",
+  "timestamp": "2024-02-20T10:00:00Z",
+  "environment": "development",
+  "notion_api": {"connected": true, "version": "2022-06-28"},
+  "app_info": {"app": "fastapi", "log_level": "INFO"}
+}
+```
+
+## 开发与生产 Compose 说明
+- 开发：`docker-compose.yml` 使用 `build: .`，注释 `image:` 字段。
+- 生产：`docker-compose.prod.yml` 使用远端 `image:` 并挂载持久化卷。
+
+## 可选速率限制
+- 设置 `RATE_LIMIT_PER_MINUTE`（整数，默认 0 关闭）。
+- 开启后，对 `/gitee_webhook` 进行每分钟级全局限流，超额返回 429。
+
+## Alembic 迁移
+- 生成迁移：`alembic revision -m "change"`（或使用 `--autogenerate`，需比对元数据配置）
+- 执行迁移：`alembic upgrade head`
+- 回退一步：`alembic downgrade -1`
+- 配置来源：`alembic.ini`（`sqlalchemy.url` 会从 `DB_URL` 环境变量读取）
+
+## Nginx 限流示例（在 http{} 块）
+```nginx
+limit_req_zone $binary_remote_addr zone=rl_gitee:10m rate=5r/s;
+server {
+  location /gitee_webhook {
+    limit_req zone=rl_gitee burst=10 nodelay;
+    proxy_pass http://app:8000;
+  }
+}
+```
 
 ## 生产 CI/CD 与部署
 

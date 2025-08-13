@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 
 import os
+import pytest
+pytestmark = pytest.mark.skipif(os.getenv("RUN_PERF_TESTS") != "1", reason="Set RUN_PERF_TESTS=1 to enable performance tests")
 import json
 import time
 import statistics

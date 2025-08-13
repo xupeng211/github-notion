@@ -7,4 +7,12 @@ This directory contains files that were present in earlier iterations of the pro
 
 If these files are not needed after verification and soak time, consider deleting them permanently.
 
+# 归档说明
+
+本目录用于存放历史实现与迁移资料。
+
+- `gitee-notion-sync/app.py`：早期 Flask 版本的服务端，已被 FastAPI (`app/server.py`) 取代。
+- 当前生产镜像与文档均基于 FastAPI。请勿在新代码中引用此旧实现。
+- 如需参考旧实现逻辑，请在本目录阅读并避免改动生产路径。
+
 

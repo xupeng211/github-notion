@@ -2,7 +2,7 @@ version: '3.8'
 services:
   app:
     build: .
-    image: ghcr.io/xupeng211/gitee-notion:latest
+    # image: ghcr.io/xupeng211/gitee-notion:latest  # use docker-compose.prod.yml for image-based deploys
     container_name: gitee-notion-sync
     env_file:
       - .env
