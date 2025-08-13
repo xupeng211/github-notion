@@ -180,6 +180,9 @@ jobs:
         
         echo "Starting AWS server deployment..."
         
+        # Clean up any existing deployment files first
+        rm -rf /tmp/gitee-notion-deploy-* 2>/dev/null || true
+        
         # Check and install Docker
         if ! command -v docker >/dev/null 2>&1; then
             echo "Installing Docker..."
@@ -270,13 +273,12 @@ jobs:
 
     - name: Upload to AWS server
       run: |
-        DEPLOY_DIR="gitee-notion-deploy-$(date +%Y%m%d-%H%M%S)"
-        scp -i ~/.ssh/aws-key.pem -o StrictHostKeyChecking=no -r deploy ubuntu@3.35.106.116:/tmp/$DEPLOY_DIR
+        scp -i ~/.ssh/aws-key.pem -o StrictHostKeyChecking=no -r deploy ubuntu@3.35.106.116:/tmp/gitee-notion-deploy
 
     - name: Deploy on AWS server
       run: |
         ssh -i ~/.ssh/aws-key.pem -o StrictHostKeyChecking=no ubuntu@3.35.106.116 "
-          cd /tmp/gitee-notion-deploy-* &&
+          cd /tmp/gitee-notion-deploy &&
           GITHUB_TOKEN='${{ secrets.GITHUB_TOKEN }}' bash deploy.sh
         "
 
