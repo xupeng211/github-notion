@@ -43,7 +43,7 @@ class ProcessedEvent(Base):
 
 def init_db() -> None:
     os.makedirs("data", exist_ok=True)
-    Base.metadata.create_all(bind=engine)
+    Base.metadata.create_all(bind=engine, checkfirst=True)
 
 
 autodebounce_window = timedelta(minutes=5)

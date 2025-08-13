@@ -66,7 +66,7 @@ jobs:
             -e GITEE_WEBHOOK_SECRET=ci-secret \
             -e DB_URL=sqlite:///data/sync.db \
             "$IMAGE_LOCAL"
-          echo "Waiting for app..." && sleep 2
+          echo "Waiting for app..." && sleep 5
           curl -fsS http://127.0.0.1:8000/health >/dev/null
           code=$(curl -sS -o /dev/null -w "%{http_code}" http://127.0.0.1:8000/metrics/)
           if [ "$code" != "200" ]; then echo "metrics failed $code" && exit 1; fi

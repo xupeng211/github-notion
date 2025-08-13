@@ -187,8 +187,9 @@ async def health():
 
     # 检查数据库连接
     try:
+        from sqlalchemy import text
         with SessionLocal() as db:
-            db.execute("SELECT 1")
+            db.execute(text("SELECT 1"))
         health_data["checks"]["database"] = {"status": "ok", "message": "Database connection successful"}
     except Exception as e:
         health_data["checks"]["database"] = {"status": "error", "message": f"Database error: {str(e)}"}
