@@ -92,12 +92,12 @@ git push github main
 # 1. 检查 GitHub Actions 状态 (应该全绿)
 # 2. 访问以下地址验证服务:
 
-健康检查: http://13.209.76.79:8000/health
-API 文档:  http://13.209.76.79:8000/docs
-监控指标: http://13.209.76.79:8000/metrics
+健康检查: http://3.35.106.116:8000/health
+API 文档:  http://3.35.106.116:8000/docs
+监控指标: http://3.35.106.116:8000/metrics
 
 # 3. SSH 到服务器检查
-ssh -i your-key.pem ubuntu@13.209.76.79
+ssh -i your-key.pem ubuntu@3.35.106.116
 cd /opt/gitee-notion-sync
 docker-compose ps
 ```
@@ -110,7 +110,7 @@ docker-compose ps
 1. 确认 AWS_PRIVATE_KEY secret 格式正确
 2. 检查 EC2 实例状态 (running)
 3. 验证安全组 SSH 端口 22 开放
-4. 确认服务器 IP: 13.209.76.79
+4. 确认服务器 IP: 3.35.106.116
 ```
 
 ### 问题 2: Docker 构建失败
@@ -159,7 +159,7 @@ curl -X POST http://localhost:8000/gitee_webhook \
 ### 2. **配置 Gitee Webhook** (今天)
 ```bash
 Gitee 仓库设置 → Webhooks → 添加 Webhook
-URL: http://13.209.76.79:8000/gitee_webhook
+URL: http://3.35.106.116:8000/gitee_webhook
 密钥: gitee-webhook-secret-2024
 事件: Issues
 ```
@@ -175,8 +175,8 @@ URL: http://13.209.76.79:8000/gitee_webhook
 docker-compose -f docker-compose.production.yml --profile monitoring up -d
 
 # 访问监控面板
-Grafana: http://13.209.76.79:3000 (admin/admin123secure)
-Prometheus: http://13.209.76.79:9090
+Grafana: http://3.35.106.116:3000 (admin/admin123secure)
+Prometheus: http://3.35.106.116:9090
 ```
 
 ### 5. **生产优化** (后续)

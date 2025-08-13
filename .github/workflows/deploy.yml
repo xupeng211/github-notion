@@ -253,7 +253,7 @@ jobs:
         echo ""
         echo "Deployment completed!"
         echo "Service access addresses:"
-        PUBLIC_IP=$(curl -s ifconfig.me 2>/dev/null || curl -s icanhazip.com 2>/dev/null || echo "13.209.76.79")
+                 PUBLIC_IP=$(curl -s ifconfig.me 2>/dev/null || curl -s icanhazip.com 2>/dev/null || echo "3.35.106.116")
         echo "  Health check: http://$PUBLIC_IP:8000/health"
         echo "  API docs: http://$PUBLIC_IP:8000/docs"
         echo "  Metrics: http://$PUBLIC_IP:8000/metrics"
@@ -266,16 +266,16 @@ jobs:
         mkdir -p ~/.ssh
         echo "${{ secrets.AWS_PRIVATE_KEY }}" > ~/.ssh/aws-key.pem
         chmod 600 ~/.ssh/aws-key.pem
-        ssh-keyscan -H 13.209.76.79 >> ~/.ssh/known_hosts 2>/dev/null || echo "Host key scan completed"
+        ssh-keyscan -H 3.35.106.116 >> ~/.ssh/known_hosts 2>/dev/null || echo "Host key scan completed"
 
     - name: Upload to AWS server
       run: |
         DEPLOY_DIR="gitee-notion-deploy-$(date +%Y%m%d-%H%M%S)"
-        scp -i ~/.ssh/aws-key.pem -o StrictHostKeyChecking=no -r deploy ubuntu@13.209.76.79:/tmp/$DEPLOY_DIR
+        scp -i ~/.ssh/aws-key.pem -o StrictHostKeyChecking=no -r deploy ubuntu@3.35.106.116:/tmp/$DEPLOY_DIR
 
     - name: Deploy on AWS server
       run: |
-        ssh -i ~/.ssh/aws-key.pem -o StrictHostKeyChecking=no ubuntu@13.209.76.79 "
+        ssh -i ~/.ssh/aws-key.pem -o StrictHostKeyChecking=no ubuntu@3.35.106.116 "
           cd /tmp/gitee-notion-deploy-* &&
           GITHUB_TOKEN='${{ secrets.GITHUB_TOKEN }}' bash deploy.sh
         "
@@ -283,7 +283,7 @@ jobs:
     - name: Verify deployment
       run: |
         sleep 10
-        curl -f http://13.209.76.79:8000/health || echo "Health check failed, but deployment may still be successful"
+        curl -f http://3.35.106.116:8000/health || echo "Health check failed, but deployment may still be successful"
         echo "Deployment process completed!"
       continue-on-error: true
 
@@ -312,9 +312,9 @@ jobs:
           echo ""
           if [[ "${{ needs.deploy-aws.result }}" == "success" ]]; then
             echo "AWS deployment successful!"
-            echo "Service URL: http://13.209.76.79:8000"
-            echo "API docs: http://13.209.76.79:8000/docs"
-            echo "Health check: http://13.209.76.79:8000/health"
+            echo "Service URL: http://3.35.106.116:8000"
+            echo "API docs: http://3.35.106.116:8000/docs"
+            echo "Health check: http://3.35.106.116:8000/health"
           else
             echo "To deploy to AWS, please:"
             echo "  1. Set AWS_PRIVATE_KEY secret"
