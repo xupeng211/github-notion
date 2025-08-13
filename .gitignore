@@ -1,4 +1,4 @@
-# Project ignores
+# Project specific ignores
 .env
 *.env
 __pycache__/
@@ -6,7 +6,6 @@ __pycache__/
 logs/
 .data/
 /data/
-
 data/
 backups/
 node_modules/
@@ -17,10 +16,34 @@ node_modules/
 venv/
 env/
 
-# IDE
+# IDE specific files
 .vscode/
 .idea/
 
-# OS
+# OS specific files
 .DS_Store
 Thumbs.db
+
+# Build artifacts
+dist/
+build/
+*.egg-info/
+
+# Temporary files
+*.tmp
+*.log
+*.bak
+*.swp
+*~
+
+# Coverage and testing
+.coverage
+.pytest_cache/
+.tox/
+htmlcov/
+
+# Docker
+.dockerignore
+
+# Alembic
+alembic/versions/*.pyc
