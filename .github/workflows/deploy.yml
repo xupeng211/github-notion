@@ -129,8 +129,7 @@ jobs:
     runs-on: ubuntu-latest
     if: |
       github.ref == 'refs/heads/main' && 
-      (github.event_name == 'push' || github.event.inputs.deploy_to_aws == 'true') &&
-      secrets.AWS_PRIVATE_KEY != ''
+      (github.event_name == 'push' || github.event.inputs.deploy_to_aws == 'true')
     environment: production
     
     steps:
