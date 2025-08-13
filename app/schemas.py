@@ -1,12 +1,17 @@
 from __future__ import annotations
-from typing import Optional, List, Union
+
+from typing import List, Optional, Union
+
 from pydantic import BaseModel
+
 
 class User(BaseModel):
     name: Optional[str] = None
 
+
 class Label(BaseModel):
     name: Optional[str] = None
+
 
 class Issue(BaseModel):
     id: Optional[Union[int, str]] = None
@@ -17,6 +22,7 @@ class Issue(BaseModel):
     labels: Optional[List[Label]] = None
     user: Optional[User] = None
 
+
 class GiteeWebhookPayload(BaseModel):
     action: Optional[str] = None
-    issue: Issue 
+    issue: Issue

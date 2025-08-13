@@ -1,7 +1,9 @@
-import hmac
 import hashlib
+import hmac
+from typing import Any, Dict
+
 import httpx
-from typing import Dict, Any
+
 
 class GiteeClient:
     def __init__(self, token: str):

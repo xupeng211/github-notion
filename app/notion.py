@@ -1,7 +1,8 @@
+from typing import Any, Dict
+
 import httpx
-from typing import Dict, Any
 import yaml
-from pathlib import Path
+
 
 class NotionClient:
     def __init__(self, token: str):

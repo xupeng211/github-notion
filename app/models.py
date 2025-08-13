@@ -1,13 +1,12 @@
 from __future__ import annotations
-import os
-import hashlib
-from datetime import datetime, timedelta
-from typing import Optional, List
 
-from sqlalchemy import (
-    create_engine, Column, Integer, String, DateTime, Text, JSON
-)
-from sqlalchemy.orm import declarative_base, sessionmaker, Session
+import hashlib
+import os
+from datetime import datetime, timedelta
+from typing import List, Optional
+
+from sqlalchemy import JSON, Column, DateTime, Integer, String, Text, create_engine
+from sqlalchemy.orm import Session, declarative_base, sessionmaker
 
 DB_URL = os.getenv("DB_URL", "sqlite:///data/sync.db")
 engine = create_engine(DB_URL, future=True)
@@ -121,4 +120,3 @@ def deadletter_increment_retry(db: Session, dl_id: int, last_error: Optional[str
         if last_error:
             rec.last_error = last_error
         db.commit()
-

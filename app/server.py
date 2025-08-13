@@ -1,25 +1,27 @@
 from __future__ import annotations
+
+import asyncio
+import logging
 import os
 import time
-import logging
 import uuid
-from typing import Callable
-from fastapi import FastAPI, Request, Response, HTTPException
-import asyncio
-from prometheus_client import make_asgi_app
-from starlette.middleware.base import BaseHTTPMiddleware
-from pythonjsonlogger import jsonlogger
-from contextlib import asynccontextmanager
 from collections import deque
-from pydantic import ValidationError
+from contextlib import asynccontextmanager
+from typing import Callable
 
-from app.models import init_db, SessionLocal
-from app.service import process_gitee_event, start_deadletter_scheduler, replay_deadletters_once, RATE_LIMIT_HITS_TOTAL
-from app.schemas import GiteeWebhookPayload
+from fastapi import FastAPI, HTTPException, Request, Response
+from prometheus_client import make_asgi_app
+from pydantic import ValidationError
+from pythonjsonlogger import jsonlogger
+from starlette.middleware.base import BaseHTTPMiddleware
 from app.middleware import PrometheusMiddleware
-from app.audit import log_webhook_event, log_security_event
+from app.models import SessionLocal, init_db
+from app.schemas import GiteeWebhookPayload
+from app.service import RATE_LIMIT_HITS_TOTAL, process_gitee_event, replay_deadletters_once, start_deadletter_scheduler
 
 # Simple in-memory rate limiter (token bucket-like) per process
+
+
 class SimpleRateLimiter:
     def __init__(self, max_per_minute: int | None):
         self.max_per_minute = max_per_minute
@@ -37,7 +39,9 @@ class SimpleRateLimiter:
             return True
         return False
 
+
 rate_limiter = SimpleRateLimiter(max_per_minute=int(os.getenv("RATE_LIMIT_PER_MINUTE", "0") or 0))
+
 
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
@@ -62,7 +66,6 @@ app = FastAPI(
 )
 
 # 添加安全和限制中间件
-from starlette.middleware.trustedhost import TrustedHostMiddleware
 
 # 添加 Prometheus 监控中间件
 app.add_middleware(PrometheusMiddleware)
@@ -70,9 +73,10 @@ app.add_middleware(PrometheusMiddleware)
 # 添加请求大小限制
 MAX_REQUEST_SIZE = int(os.getenv("MAX_REQUEST_SIZE", "1048576"))  # 1MB 默认
 
+
 class RequestSizeLimitMiddleware(BaseHTTPMiddleware):
     """请求大小限制中间件"""
-    
+
     async def dispatch(self, request: Request, call_next: Callable) -> Response:
         # 检查 Content-Length 头
         content_length = request.headers.get("content-length")
@@ -82,8 +86,9 @@ class RequestSizeLimitMiddleware(BaseHTTPMiddleware):
                 status_code=413,
                 headers={"content-type": "text/plain"}
             )
-        
+
         return await call_next(request)
+
 
 # 添加请求大小限制中间件
 app.add_middleware(RequestSizeLimitMiddleware)
@@ -97,6 +102,8 @@ logger.addHandler(logHandler)
 logger.setLevel(os.getenv("LOG_LEVEL", "INFO"))
 
 # Simple request id middleware
+
+
 class RequestIDMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
         request_id = request.headers.get("X-Request-ID", str(uuid.uuid4()))
@@ -116,9 +123,12 @@ class RequestIDMiddleware(BaseHTTPMiddleware):
         )
         return response
 
+
 app.add_middleware(RequestIDMiddleware)
 
 # 全局异常处理器
+
+
 @app.exception_handler(ValidationError)
 async def validation_exception_handler(request: Request, exc: ValidationError):
     """处理 Pydantic 验证错误"""
@@ -127,6 +137,7 @@ async def validation_exception_handler(request: Request, exc: ValidationError):
         status_code=422,
         headers={"content-type": "text/plain"}
     )
+
 
 @app.exception_handler(ValueError)
 async def value_error_handler(request: Request, exc: ValueError):
@@ -137,6 +148,7 @@ async def value_error_handler(request: Request, exc: ValueError):
         status_code=400,
         headers={"content-type": "text/plain"}
     )
+
 
 @app.exception_handler(500)
 async def internal_server_error_handler(request: Request, exc):
@@ -150,27 +162,29 @@ async def internal_server_error_handler(request: Request, exc):
     )
 
 # health
-@app.get("/health", 
+
+
+@app.get("/health",
          summary="健康检查",
          description="检查服务健康状态，包括数据库连接、Notion API 状态、磁盘空间等",
          response_description="健康检查结果，包含详细的系统状态信息")
 async def health():
     """Enhanced health check with deep monitoring"""
     import requests
-    
+
     # 基础信息
     health_data = {
         "status": "healthy",
         "timestamp": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
         "environment": os.getenv("ENVIRONMENT", os.getenv("PY_ENV", "development")),
         "app_info": {
-            "app": "fastapi", 
+            "app": "fastapi",
             "log_level": os.getenv("LOG_LEVEL", "INFO"),
             "version": "1.0.0"
         },
         "checks": {}
     }
-    
+
     # 检查数据库连接
     try:
         with SessionLocal() as db:
@@ -179,7 +193,7 @@ async def health():
     except Exception as e:
         health_data["checks"]["database"] = {"status": "error", "message": f"Database error: {str(e)}"}
         health_data["status"] = "degraded"
-    
+
     # 检查 Notion API 连接
     notion_token = os.getenv("NOTION_TOKEN")
     if notion_token:
@@ -192,31 +206,31 @@ async def health():
             response = requests.get("https://api.notion.com/v1/users/me", headers=headers, timeout=5)
             if response.status_code == 200:
                 health_data["checks"]["notion_api"] = {
-                    "status": "ok", 
+                    "status": "ok",
                     "message": "Notion API connection successful",
                     "version": "2022-06-28"
                 }
             else:
                 health_data["checks"]["notion_api"] = {
-                    "status": "error", 
+                    "status": "error",
                     "message": f"Notion API error: {response.status_code}",
                     "version": "2022-06-28"
                 }
                 health_data["status"] = "degraded"
         except Exception as e:
             health_data["checks"]["notion_api"] = {
-                "status": "error", 
+                "status": "error",
                 "message": f"Notion API connection failed: {str(e)}",
                 "version": "2022-06-28"
             }
             health_data["status"] = "degraded"
     else:
         health_data["checks"]["notion_api"] = {
-            "status": "warning", 
+            "status": "warning",
             "message": "Notion API token not configured",
             "version": "2022-06-28"
         }
-    
+
     # 检查磁盘空间（简单检查）
     try:
         import shutil
@@ -224,28 +238,30 @@ async def health():
         free_gb = disk_usage.free / (1024**3)
         if free_gb < 1.0:  # 少于 1GB
             health_data["checks"]["disk_space"] = {
-                "status": "warning", 
+                "status": "warning",
                 "message": f"Low disk space: {free_gb:.2f}GB free"
             }
             if health_data["status"] == "healthy":
                 health_data["status"] = "degraded"
         else:
             health_data["checks"]["disk_space"] = {
-                "status": "ok", 
+                "status": "ok",
                 "message": f"Disk space OK: {free_gb:.2f}GB free"
             }
     except Exception as e:
         health_data["checks"]["disk_space"] = {
-            "status": "error", 
+            "status": "error",
             "message": f"Cannot check disk space: {str(e)}"
         }
-    
+
     return health_data
 
 # metrics via separate ASGI
 app.mount("/metrics", make_asgi_app())
 
 # webhook
+
+
 @app.post("/gitee_webhook",
           summary="Gitee Webhook 处理",
           description="处理来自 Gitee 的 webhook 事件，支持 issue 创建、更新、关闭等操作，自动同步到 Notion",
@@ -301,6 +317,8 @@ async def gitee_webhook(request: Request):
     return {"message": message}
 
 # admin: replay deadletters
+
+
 @app.post("/replay-deadletters",
           summary="重放死信队列",
           description="手动触发死信队列重放，需要管理员令牌授权",
@@ -310,8 +328,7 @@ async def replay_deadletters(request: Request):
     token = os.getenv("DEADLETTER_REPLAY_TOKEN", "")
     if not token:
         raise HTTPException(status_code=403, detail="disabled")
-    if not auth.startswith("Bearer ") or auth.split(" ",1)[1] != token:
+    if not auth.startswith("Bearer ") or auth.split(" ", 1)[1] != token:
         raise HTTPException(status_code=401, detail="unauthorized")
     count = replay_deadletters_once(token)
     return {"replayed": count}
-

@@ -1,37 +1,50 @@
 from __future__ import annotations
+
+import hashlib
+import hmac
+import json
+import logging
+import math
 import os
 import time
-import json
-import hmac
-import hashlib
-import logging
-from typing import Tuple, Dict, Any
+from collections import deque
 from contextlib import contextmanager
 from threading import Lock
-from collections import deque
-import math
+from typing import Any, Dict, Tuple
 
 import requests
-from sqlalchemy.orm import Session
-from prometheus_client import Counter, Histogram, Gauge
 from apscheduler.schedulers.background import BackgroundScheduler
-
+from prometheus_client import Counter, Gauge, Histogram
 from app.models import (
-    SessionLocal, upsert_mapping, should_skip_event, mark_event_processed,
-    event_hash_from_bytes, deadletter_enqueue, deadletter_count
+    SessionLocal,
+    deadletter_count,
+    deadletter_enqueue,
+    event_hash_from_bytes,
+    mark_event_processed,
+    should_skip_event,
+    upsert_mapping,
 )
 
 # Metrics (allow disabling in tests to avoid duplicate registration)
-DISABLE_METRICS = os.getenv("DISABLE_METRICS", "").lower() in ("1", "true", "yes") or bool(os.getenv("PYTEST_CURRENT_TEST"))
+DISABLE_METRICS = os.getenv(
+    "DISABLE_METRICS",
+    "").lower() in (
+        "1",
+        "true",
+        "yes") or bool(
+            os.getenv("PYTEST_CURRENT_TEST"))
 
 if DISABLE_METRICS:
     class _Noop:
         def labels(self, *args, **kwargs):
             return self
+
         def inc(self, *args, **kwargs):
             pass
+
         def observe(self, *args, **kwargs):
             pass
+
         def set(self, *args, **kwargs):
             pass
     EVENTS_TOTAL = _Noop()
@@ -54,21 +67,23 @@ else:
     DEADLETTER_SIZE = Gauge("deadletter_size", "Current deadletter size")
     PROCESS_P95_MS = Gauge("process_p95_ms", "Approx p95 of processing latency in ms (sliding window)")
     DEADLETTER_REPLAY_TOTAL = Counter("deadletter_replay_total", "Total deadletters replayed")
-    
+
     # HTTP 请求指标
     HTTP_REQUESTS_TOTAL = Counter("http_requests_total", "Total HTTP requests", ["method", "endpoint", "status"])
     HTTP_REQUEST_DURATION = Histogram("http_request_duration_seconds", "HTTP request duration", ["method", "endpoint"])
-    
+
     # Webhook 错误指标
     WEBHOOK_ERRORS_TOTAL = Counter("webhook_errors_total", "Total webhook processing errors", ["error_type"])
-    
+
     # Notion API 指标
     NOTION_API_CALLS_TOTAL = Counter("notion_api_calls_total", "Total Notion API calls", ["operation", "status"])
     NOTION_API_DURATION = Histogram("notion_api_duration_seconds", "Notion API call duration", ["operation"])
-    
+
     # 数据库操作指标
-    DATABASE_OPERATIONS_TOTAL = Counter("database_operations_total", "Total database operations", ["operation", "status"])
-    
+    DATABASE_OPERATIONS_TOTAL = Counter(
+        "database_operations_total", "Total database operations", [
+            "operation", "status"])
+
     # 速率限制指标
     RATE_LIMIT_HITS_TOTAL = Counter("rate_limit_hits_total", "Total rate limit hits")
 
@@ -110,7 +125,7 @@ def verify_gitee_signature(secret: str, payload: bytes, signature: str) -> bool:
 def exponential_backoff_request(method: str, url: str, headers: Dict[str, str] = None, json_data: Dict[str, Any] = None,
                                 max_retries: int = 5, base_delay: float = 0.5) -> Tuple[bool, Dict[str, Any]]:
     headers = headers or {}
-    
+
     # 确定 API 操作类型
     operation = "unknown"
     if "notion.com" in url:
@@ -122,18 +137,18 @@ def exponential_backoff_request(method: str, url: str, headers: Dict[str, str] =
             operation = "query_database"
         elif "/users/me" in url:
             operation = "get_user"
-    
+
     start_time = time.time()
-    
+
     for attempt in range(max_retries + 1):
         try:
             resp = requests.request(method, url, headers=headers, json=json_data, timeout=10)
-            
+
             # 记录 API 调用指标
             if "notion.com" in url:
                 status = "success" if resp.status_code < 400 else "error"
                 NOTION_API_CALLS_TOTAL.labels(operation=operation, status=status).inc()
-            
+
             if resp.status_code in (429,) or 500 <= resp.status_code < 600:
                 if attempt < max_retries:
                     RETRIES_TOTAL.inc()
@@ -142,12 +157,12 @@ def exponential_backoff_request(method: str, url: str, headers: Dict[str, str] =
                 else:
                     return False, {"status": resp.status_code, "text": resp.text}
             resp.raise_for_status()
-            
+
             # 记录成功的 API 调用持续时间
             if "notion.com" in url:
                 duration = time.time() - start_time
                 NOTION_API_DURATION.labels(operation=operation).observe(duration)
-            
+
             if resp.text:
                 return True, resp.json()
             return True, {}
@@ -156,13 +171,13 @@ def exponential_backoff_request(method: str, url: str, headers: Dict[str, str] =
                 RETRIES_TOTAL.inc()
                 time.sleep(base_delay * (2 ** attempt))
                 continue
-            
+
             # 记录失败的 API 调用
             if "notion.com" in url:
                 NOTION_API_CALLS_TOTAL.labels(operation=operation, status="error").inc()
                 duration = time.time() - start_time
                 NOTION_API_DURATION.labels(operation=operation).observe(duration)
-            
+
             return False, {"error": str(e)}
 
 
@@ -179,7 +194,11 @@ def notion_upsert_page(issue: Dict[str, Any]) -> Tuple[bool, str]:
     }
     title = issue.get("title", "")
     q_url = f"https://api.notion.com/v1/databases/{NOTION_DATABASE_ID}/query"
-    ok, data = exponential_backoff_request("POST", q_url, headers, {"filter": {"property": "Task", "title": {"equals": title}}})
+    ok, data = exponential_backoff_request(
+        "POST", q_url, headers, {
+            "filter": {
+                "property": "Task", "title": {
+                    "equals": title}}})
     if not ok:
         return False, json.dumps(data)
     results = data.get("results", [])
@@ -248,6 +267,7 @@ def process_gitee_event(body_bytes: bytes, secret: str, signature: str, event_ty
 
 # Deadletter replay logic
 
+
 def replay_deadletters_once(secret_token: str) -> int:
     """Replay failed deadletters once. Returns count processed successfully."""
     token_env = os.getenv("DEADLETTER_REPLAY_TOKEN", "")
@@ -259,7 +279,8 @@ def replay_deadletters_once(secret_token: str) -> int:
         items = deadletter_list(s)
         for it in items:
             payload = json.dumps(it.payload).encode()
-            sig = hmac.new(os.getenv("GITEE_WEBHOOK_SECRET", "").encode(), payload, hashlib.sha256).hexdigest() if os.getenv("GITEE_WEBHOOK_SECRET") else ""
+            sig = hmac.new(os.getenv("GITEE_WEBHOOK_SECRET", "").encode(), payload,
+                           hashlib.sha256).hexdigest() if os.getenv("GITEE_WEBHOOK_SECRET") else ""
             ok, _ = process_gitee_event(payload, os.getenv("GITEE_WEBHOOK_SECRET", ""), sig, "replay")
             if ok:
                 deadletter_mark_replayed(s, it.id)
@@ -286,4 +307,3 @@ def start_deadletter_scheduler():
     )
     scheduler.start()
     return scheduler
-

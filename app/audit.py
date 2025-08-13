@@ -1,10 +1,10 @@
 """
 审计日志模块
 """
-import json
 import logging
 import time
-from typing import Dict, Any, Optional
+from typing import Any, Dict, Optional
+
 from fastapi import Request
 
 # 创建专门的审计日志记录器
@@ -33,7 +33,7 @@ def log_webhook_event(
     payload_size: Optional[int] = None
 ):
     """记录 webhook 事件的审计日志"""
-    
+
     audit_data = {
         "event": "webhook_processed",
         "timestamp": time.time(),
@@ -44,22 +44,22 @@ def log_webhook_event(
         "result": result,  # success, skip, fail
         "message": message,
     }
-    
+
     if duration_ms is not None:
         audit_data["duration_ms"] = duration_ms
-    
+
     if payload_size is not None:
         audit_data["payload_size_bytes"] = payload_size
-    
+
     # 添加请求头信息（隐藏敏感信息）
     headers = dict(request.headers)
     if "x-gitee-token" in headers:
         headers["x-gitee-token"] = "[REDACTED]"
     if "authorization" in headers:
         headers["authorization"] = "[REDACTED]"
-    
+
     audit_data["request_headers"] = headers
-    
+
     audit_logger.info("webhook_event", extra=audit_data)
 
 
@@ -72,7 +72,7 @@ def log_api_call(
     metadata: Optional[Dict[str, Any]] = None
 ):
     """记录 API 调用的审计日志"""
-    
+
     audit_data = {
         "event": "api_call",
         "timestamp": time.time(),
@@ -81,13 +81,13 @@ def log_api_call(
         "result": result,  # success, error
         "error": error,
     }
-    
+
     if duration_ms is not None:
         audit_data["duration_ms"] = duration_ms
-    
+
     if metadata:
         audit_data["metadata"] = metadata
-    
+
     audit_logger.info("api_call", extra=audit_data)
 
 
@@ -98,7 +98,7 @@ def log_security_event(
     severity: str = "warning"
 ):
     """记录安全相关事件的审计日志"""
-    
+
     audit_data = {
         "event": "security_event",
         "timestamp": time.time(),
@@ -107,7 +107,7 @@ def log_security_event(
         "details": details,
         "severity": severity,  # info, warning, error, critical
     }
-    
+
     if severity == "error":
         audit_logger.error("security_event", extra=audit_data)
     elif severity == "warning":
@@ -122,15 +122,15 @@ def log_system_event(
     metadata: Optional[Dict[str, Any]] = None
 ):
     """记录系统事件的审计日志"""
-    
+
     audit_data = {
         "event": "system_event",
         "timestamp": time.time(),
         "event_type": event_type,  # startup, shutdown, deadletter_replay
         "details": details,
     }
-    
+
     if metadata:
         audit_data["metadata"] = metadata
-    
-    audit_logger.info("system_event", extra=audit_data) 
+
+    audit_logger.info("system_event", extra=audit_data)
