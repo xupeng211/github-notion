@@ -1,10 +1,14 @@
 from __future__ import annotations
+
 import os
-from logging.config import fileConfig
-from sqlalchemy import engine_from_config, pool
-from alembic import context
 import sys
+from logging.config import fileConfig
 from pathlib import Path
+
+from sqlalchemy import engine_from_config, pool
+
+from alembic import context
+
 # Ensure project root on path for `import app`
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 if str(PROJECT_ROOT) not in sys.path:
@@ -23,6 +27,7 @@ if os.getenv("DB_URL"):
 from app.models import Base  # noqa: E402
 
 target_metadata = Base.metadata
+
 
 def run_migrations_offline():
     url = config.get_main_option("sqlalchemy.url")
@@ -46,4 +51,4 @@ def run_migrations_online() -> None:
 if context.is_offline_mode():
     run_migrations_offline()
 else:
-    run_migrations_online() 
+    run_migrations_online()

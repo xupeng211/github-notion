@@ -1,6 +1,5 @@
-import os
-import json
 import importlib
+import json
 import sys
 
 
@@ -38,7 +37,8 @@ def test_idempotency_and_mapping(tmp_path, monkeypatch):
 
     payload = {"issue": {"id": 999, "number": 999, "title": "ci-demo"}}
     body = json.dumps(payload).encode()
-    import hmac, hashlib
+    import hashlib
+    import hmac
     sig = hmac.new(b"s", body, hashlib.sha256).hexdigest()
 
     ok, msg = service.process_gitee_event(body, "s", sig, "Issue Hook")
@@ -68,7 +68,8 @@ def test_deadletter_replay_flow(tmp_path, monkeypatch):
 
     payload = {"issue": {"id": 1001, "number": 1001, "title": "dl-demo"}}
     body = json.dumps(payload).encode()
-    import hmac, hashlib
+    import hashlib
+    import hmac
     sig = hmac.new(b"s", body, hashlib.sha256).hexdigest()
 
     # First, force notion failure to enqueue deadletter

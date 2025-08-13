@@ -1,14 +1,13 @@
-import json
-import os
-import hmac
 import hashlib
-import pytest
+import hmac
+import json
+
 from fastapi.testclient import TestClient
 
 os.environ.setdefault("DB_URL", "sqlite:///data/test.db")
 
-from app.server import app  # noqa
 from app.models import init_db
+from app.server import app  # noqa
 
 client = TestClient(app)
 init_db()

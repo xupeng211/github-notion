@@ -1,17 +1,18 @@
 #!/usr/bin/env python3
 
-import os
-import pytest
+
+
 pytestmark = pytest.mark.skipif(os.getenv("RUN_PERF_TESTS") != "1", reason="Set RUN_PERF_TESTS=1 to enable performance tests")
-import json
-import time
-import statistics
 import concurrent.futures
-import requests
-import hmac
 import hashlib
+import hmac
+import json
+import statistics
+import time
 from datetime import datetime, timezone
-from typing import Dict, Any, List
+from typing import Any, Dict, List
+
+import requests
 
 # 测试配置
 TEST_CONFIG = {

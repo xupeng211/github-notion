@@ -1,11 +1,12 @@
-import pytest
+
 from app.notion import NotionClient
+
 
 def test_load_mapping():
     # ... 测试映射加载逻辑 ...
     # ... 测试映射加载逻辑 ...
-    from pathlib import Path
     import tempfile
+    from pathlib import Path
 
     with tempfile.TemporaryDirectory() as d:
         yml = Path(d)/"mapping.yml"

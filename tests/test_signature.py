@@ -1,5 +1,6 @@
-import pytest
+
 from app.gitee import GiteeClient
+
 
 def test_signature_verification():
     # ... 测试签名验证 ...

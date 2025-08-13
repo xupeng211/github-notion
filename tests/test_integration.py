@@ -1,14 +1,15 @@
 #!/usr/bin/env python3
 
-import os
 import json
-import pytest
+
+
 pytestmark = pytest.mark.skipif(os.getenv("RUN_INTEGRATION_TESTS") != "1", reason="Set RUN_INTEGRATION_TESTS=1 to enable integration tests")
-import requests
-import hmac
 import hashlib
+import hmac
 from datetime import datetime, timezone
-from typing import Dict, Any
+from typing import Any, Dict
+
+import requests
 
 # 测试配置
 TEST_CONFIG = {

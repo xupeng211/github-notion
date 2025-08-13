@@ -1,6 +1,5 @@
-import os
-import pytest
 import json
+
 from fastapi.testclient import TestClient
 
 pytestmark = pytest.mark.skipif(os.getenv("RUN_RATE_LIMIT_TESTS") != "1", reason="Set RUN_RATE_LIMIT_TESTS=1 to enable rate limit tests")
@@ -74,6 +73,7 @@ def test_rate_limit_enabled_with_env(monkeypatch):
     
     # 重新导入应用以应用新的环境变量
     import importlib
+
     import app.server
     importlib.reload(app.server)    
     # 前两次请求应该成功（返回 403 因为签名验证失败，但通过了限流）
@@ -98,10 +98,11 @@ def test_rate_limit_enabled_with_env(monkeypatch):
 def test_rate_limit_reset_after_window(monkeypatch):
     """测试速率限制窗口重置"""
     # 设置速率限制为每分钟 1 次
-    import time
     import importlib
+    import time
+
     import app.server
-    
+
     # 模拟时间窗口重置
     original_time = time.time
     
