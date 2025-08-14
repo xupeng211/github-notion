@@ -104,9 +104,9 @@ class NotionService:
             return None
 
     async def query_database(self, database_id: Optional[str] = None,
-                           filter_conditions: Optional[Dict[str, Any]] = None,
-                           sorts: Optional[List[Dict[str, Any]]] = None,
-                           page_size: int = 100) -> Optional[Dict[str, Any]]:
+                             filter_conditions: Optional[Dict[str, Any]] = None,
+                             sorts: Optional[List[Dict[str, Any]]] = None,
+                             page_size: int = 100) -> Optional[Dict[str, Any]]:
         """查询 Notion 数据库
 
         Args:

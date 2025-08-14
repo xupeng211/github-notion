@@ -5,7 +5,7 @@
 支持评论的创建、更新和删除同步。
 """
 import logging
-from typing import Dict, Any, List, Optional, Tuple
+from typing import Dict, Any, List, Tuple
 from datetime import datetime
 
 from app.github import github_service
@@ -27,7 +27,7 @@ class CommentSyncService:
         logger.info("Comment sync service initialized")
 
     async def sync_github_comment_to_notion(self, comment_data: Dict[str, Any],
-                                          issue_data: Dict[str, Any]) -> Tuple[bool, str]:
+                                             issue_data: Dict[str, Any]) -> Tuple[bool, str]:
         """将 GitHub 评论同步到 Notion
 
         Args:

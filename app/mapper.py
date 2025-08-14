@@ -7,7 +7,7 @@
 import logging
 import yaml
 from datetime import datetime
-from typing import Dict, Any, Optional, List, Tuple
+from typing import Dict, Any, Optional, Tuple
 from pathlib import Path
 
 logger = logging.getLogger(__name__)

@@ -24,7 +24,6 @@ from app.service import (
     create_sync_event,
     mark_sync_event_processed,
     upsert_mapping,
-    get_mapping_by_source,
     get_mapping_by_notion_page,
     EVENTS_TOTAL,
     PROCESS_LATENCY,
@@ -108,7 +107,7 @@ async def _handle_github_issue_event(payload: Dict[str, Any], body_bytes: bytes)
 
                 # 防循环：检查最近的同步事件
                 if should_skip_sync_event(db, event_hash, entity_id=issue_number,
-                                        source_platform="github", target_platform="notion"):
+                                           source_platform="github", target_platform="notion"):
                     EVENTS_TOTAL.labels("skip").inc()
                     return True, "loop_prevented"
 

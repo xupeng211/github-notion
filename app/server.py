@@ -376,7 +376,7 @@ async def notion_webhook(request: Request):
         if not verify_notion_signature(notion_secret, body, notion_sig):
             raise HTTPException(status_code=403, detail="invalid_signature")
     try:
-        payload = NotionWebhookPayload.model_validate_json(body.decode("utf-8"))
+        NotionWebhookPayload.model_validate_json(body.decode("utf-8"))
     except ValidationError:
         # 兼容 Notion 的 challenge 验证
         try:

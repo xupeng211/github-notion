@@ -156,8 +156,8 @@ def mark_event_processed(db: Session, issue_id: str, event_hash: str, platform: 
 
 
 def create_sync_event(db: Session, source_platform: str, target_platform: str,
-                     entity_id: str, action: str, event_hash: str,
-                     is_sync_induced: bool = False, parent_event_id: Optional[str] = None) -> str:
+                      entity_id: str, action: str, event_hash: str,
+                      is_sync_induced: bool = False, parent_event_id: Optional[str] = None) -> str:
     """创建同步事件记录"""
     import uuid
     event_id = str(uuid.uuid4())
@@ -181,7 +181,7 @@ def create_sync_event(db: Session, source_platform: str, target_platform: str,
 
 
 def should_skip_sync_event(db: Session, event_hash: str, entity_id: str,
-                          source_platform: str, target_platform: str) -> bool:
+                           source_platform: str, target_platform: str) -> bool:
     """检查是否应跳过同步事件（防循环）"""
     # 检查最近是否有相同方向的同步事件
     recent_sync = (

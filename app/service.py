@@ -10,7 +10,7 @@ import time
 from collections import deque
 from contextlib import contextmanager
 from threading import Lock
-from typing import Any, Dict, Tuple, Optional
+from typing import Any, Dict, Tuple
 
 import requests
 from apscheduler.schedulers.background import BackgroundScheduler
@@ -26,7 +26,6 @@ from app.models import (
     create_sync_event,
     should_skip_sync_event,
     mark_sync_event_processed,
-    get_mapping_by_source,
     get_mapping_by_notion_page,
 )
 from app.github import github_service
@@ -494,7 +493,7 @@ def replay_deadletters_once(secret_token: str) -> int:
         for it in items:
             payload = json.dumps(it.payload).encode()
             sig = hmac.new(os.getenv("GITEE_WEBHOOK_SECRET", "").encode(), payload,
-                            hashlib.sha256).hexdigest() if os.getenv("GITEE_WEBHOOK_SECRET") else ""
+                           hashlib.sha256).hexdigest() if os.getenv("GITEE_WEBHOOK_SECRET") else ""
             ok, _ = process_gitee_event(payload, os.getenv("GITEE_WEBHOOK_SECRET", ""), sig, "replay")
             if ok:
                 deadletter_mark_replayed(s, it.id)
@@ -593,7 +592,8 @@ def process_github_event(body_bytes: bytes, event: str) -> Tuple[bool, str]:
                     return True, "duplicate"
 
                 # 防循环：最近是否有 Notion -> GitHub 的同步
-                if should_skip_sync_event(db, event_hash, entity_id=issue_number, source_platform="github", target_pl...
+                if should_skip_sync_event(db, event_hash, entity_id=issue_number,
+                                          source_platform="github", target_platform="notion"):
                     EVENTS_TOTAL.labels("skip").inc()
                     return True, "loop_prevented"
 
@@ -612,7 +612,7 @@ def process_github_event(body_bytes: bytes, event: str) -> Tuple[bool, str]:
 
                 page_id = page_or_err
                 upsert_mapping(db, "github", issue_number, page_id,
-                                source_url=issue.get("html_url"), notion_database_id=NOTION_DATABASE_ID)
+                               source_url=issue.get("html_url"), notion_database_id=NOTION_DATABASE_ID)
                 mark_event_processed(db, issue_number, event_hash, platform="github")
                 ev_id = create_sync_event(db, source_platform="github", target_platform="notion",
                                           entity_id=issue_number, action=action or "updated", event_hash=event_hash,
@@ -665,7 +665,8 @@ def process_notion_event(body_bytes: bytes) -> Tuple[bool, str]:
                 return True, "duplicate"
 
             # 防循环：最近是否有 GitHub -> Notion 的同步
-            if should_skip_sync_event(db, event_hash, entity_id=issue_number, source_platform="notion", target_platfo...
+            if should_skip_sync_event(db, event_hash, entity_id=issue_number,
+                                      source_platform="notion", target_platform="github"):
                 EVENTS_TOTAL.labels("skip").inc()
                 return True, "loop_prevented"
 
@@ -679,13 +680,19 @@ def process_notion_event(body_bytes: bytes) -> Tuple[bool, str]:
             task_prop = properties.get("Task") or {}
             if task_prop.get("title"):
                 try:
-                    title = "".join([t.get("plain_text") or t.get("text", {}).get("content", "") for t in task_prop["..."
+                    title = "".join([
+                        t.get("plain_text") or t.get("text", {}).get("content", "")
+                        for t in task_prop["title"]
+                    ])
                 except Exception:
                     pass
             output_prop = properties.get("Output") or {}
             if output_prop.get("rich_text"):
                 try:
-                    body = "".join([t.get("plain_text") or t.get("text", {}).get("content", "") for t in output_prop[...
+                    body = "".join([
+                        t.get("plain_text") or t.get("text", {}).get("content", "")
+                        for t in output_prop["rich_text"]
+                    ])
                 except Exception:
                     pass
             status_prop = properties.get("Status") or {}
@@ -708,7 +715,9 @@ def process_notion_event(body_bytes: bytes) -> Tuple[bool, str]:
             sync_marker = event_hash[:12]
 
             # 更新 GitHub Issue
-            ok, msg = github_service.update_issue(owner, repo, int(issue_number), title=title, body=body, state=state, sync_marker=sync_marker)
+            ok, msg = github_service.update_issue(
+                owner, repo, int(issue_number), title=title, body=body,
+                state=state, sync_marker=sync_marker)
             if not ok:
                 deadletter_enqueue(db, payload, reason="github_error", last_error=msg,
                                     source_platform="notion", entity_id=str(page_id))
