@@ -1,0 +1,150 @@
+{
+  "test_summary": {
+    "total_tests": 22,
+    "passed": 21,
+    "failed": 1,
+    "errors": 0,
+    "timestamp": "2025-08-14T22:14:09.179588"
+  },
+  "environment": {
+    "github_token_set": true,
+    "notion_token_set": true,
+    "notion_db_id_set": true,
+    "python_version": "3.11.9 (main, Aug  8 2025, 00:29:36) [GCC 11.4.0]"
+  },
+  "test_results": [
+    {
+      "name": "导入 app.mapper.field_mapper",
+      "passed": true,
+      "message": "成功导入 FieldMapper",
+      "timestamp": "2025-08-14T22:14:05.755772"
+    },
+    {
+      "name": "导入 app.enhanced_service.process_github_event_enhanced",
+      "passed": true,
+      "message": "成功导入 function",
+      "timestamp": "2025-08-14T22:14:06.034627"
+    },
+    {
+      "name": "导入 app.comment_sync.comment_sync_service",
+      "passed": true,
+      "message": "成功导入 CommentSyncService",
+      "timestamp": "2025-08-14T22:14:06.034689"
+    },
+    {
+      "name": "导入 app.notion.notion_service",
+      "passed": true,
+      "message": "成功导入 NotionService",
+      "timestamp": "2025-08-14T22:14:06.034726"
+    },
+    {
+      "name": "兼容性导入",
+      "passed": true,
+      "message": "旧版本函数仍可导入",
+      "timestamp": "2025-08-14T22:14:06.034759"
+    },
+    {
+      "name": "YAML 语法",
+      "passed": true,
+      "message": "配置文件语法正确",
+      "timestamp": "2025-08-14T22:14:06.037039"
+    },
+    {
+      "name": "配置节 github_to_notion",
+      "passed": true,
+      "message": "配置节存在",
+      "timestamp": "2025-08-14T22:14:06.037075"
+    },
+    {
+      "name": "配置节 notion_to_github",
+      "passed": true,
+      "message": "配置节存在",
+      "timestamp": "2025-08-14T22:14:06.037105"
+    },
+    {
+      "name": "配置节 sync_config",
+      "passed": true,
+      "message": "配置节存在",
+      "timestamp": "2025-08-14T22:14:06.037133"
+    },
+    {
+      "name": "字段映射数量",
+      "passed": true,
+      "message": "配置了 12 个字段映射",
+      "timestamp": "2025-08-14T22:14:06.037162"
+    },
+    {
+      "name": "GitHub → Notion 映射",
+      "passed": true,
+      "message": "生成了 8 个 Notion 属性",
+      "timestamp": "2025-08-14T22:14:06.037331"
+    },
+    {
+      "name": "Notion → GitHub 映射",
+      "passed": true,
+      "message": "生成了 3 个 GitHub 字段",
+      "timestamp": "2025-08-14T22:14:06.037417"
+    },
+    {
+      "name": "配置重载",
+      "passed": true,
+      "message": "配置重载功能正常",
+      "timestamp": "2025-08-14T22:14:06.039445"
+    },
+    {
+      "name": "GitHub API 连接",
+      "passed": true,
+      "message": "成功连接，用户: xupeng211",
+      "timestamp": "2025-08-14T22:14:06.764667"
+    },
+    {
+      "name": "Notion API 连接",
+      "passed": true,
+      "message": "成功连接，用户类型: bot",
+      "timestamp": "2025-08-14T22:14:07.414187"
+    },
+    {
+      "name": "Notion 数据库访问",
+      "passed": true,
+      "message": "数据库有 15 个属性",
+      "timestamp": "2025-08-14T22:14:09.176846"
+    },
+    {
+      "name": "增强服务导入",
+      "passed": true,
+      "message": "成功导入增强服务函数",
+      "timestamp": "2025-08-14T22:14:09.178670"
+    },
+    {
+      "name": "评论同步服务",
+      "passed": true,
+      "message": "评论同步服务初始化完成",
+      "timestamp": "2025-08-14T22:14:09.178713"
+    },
+    {
+      "name": "服务间依赖",
+      "passed": true,
+      "message": "服务间可以正常调用",
+      "timestamp": "2025-08-14T22:14:09.178758"
+    },
+    {
+      "name": "空数据处理",
+      "passed": true,
+      "message": "空数据返回字典类型",
+      "timestamp": "2025-08-14T22:14:09.178873"
+    },
+    {
+      "name": "无效数据处理",
+      "passed": true,
+      "message": "无效数据返回字典类型",
+      "timestamp": "2025-08-14T22:14:09.178908"
+    },
+    {
+      "name": "配置错误处理",
+      "passed": false,
+      "message": "配置错误被正确处理",
+      "timestamp": "2025-08-14T22:14:09.179571"
+    }
+  ],
+  "failed_tests": []
+}

@@ -27,17 +27,21 @@
 值: your-notion-database-id
 说明: Notion 数据库 ID
 
+名称: NOTION_WEBHOOK_SECRET (可选)
+值: your-optional-notion-webhook-secret
+说明: Notion Webhook 自定义签名密钥
+
+名称: GITHUB_TOKEN
+值: ghp_xxx
+说明: GitHub API Token，需最少 repo / issues 权限
+
+名称: GITHUB_WEBHOOK_SECRET
+值: strong-random-secret
+说明: GitHub Webhook 签名校验密钥
+
 名称: DEADLETTER_REPLAY_TOKEN
 值: admin-secure-token-123456
 说明: 死信重放管理令牌
-
-名称: GRAFANA_PASSWORD
-值: admin123secure
-说明: Grafana 管理员密码
-
-名称: GRAFANA_SECRET_KEY
-值: grafana-secret-key-123456
-说明: Grafana 安全密钥
 ```
 
 ## 🚀 部署步骤
@@ -65,118 +69,38 @@
 ### 步骤 2: 配置 GitHub 仓库
 
 1. **添加 Secrets** (见上方列表)
-
 2. **启用 GitHub Actions**
-   - 进入 Actions 标签页
-   - 如果首次使用，点击 "I understand my workflows, go ahead and enable them"
+3. **配置 Environment Protection**（可选）
 
-3. **配置 Environment Protection** (可选但推荐)
-   ```
-   进入 Settings → Environments → New environment
-   名称: production
-   添加保护规则:
-   - Required reviewers: 您自己
-   - Deployment protection rules: 启用
-   ```
+### 步骤 3: 配置 GitHub Webhook（Issues）
 
-### 步骤 3: 触发部署
+1. 仓库 → Settings → Webhooks → Add webhook
+2. Payload URL：`https://<DOMAIN>/github_webhook`
+3. Content type：`application/json`
+4. Secret：使用 `GITHUB_WEBHOOK_SECRET`
+5. 选择 `Let me select individual events` → 勾选 `Issues`
+6. 保存后 GitHub 会发送 `ping`/`issues` 测试事件
 
-#### 方法 1: 推送代码 (自动触发)
-```bash
-git add .
-git commit -m "feat: 添加 GitHub Actions CI/CD 流水线"
-git push github main
-```
+### 步骤 4: 触发部署
 
-#### 方法 2: 手动触发
-```
-进入 GitHub 仓库 → Actions → "CI/CD Pipeline - Build & Deploy" → Run workflow
-选择分支: main
-勾选: Deploy to AWS server
-点击: Run workflow
-```
+略（与现有流程一致）
 
 ## 📊 监控部署进度
 
-### 1. GitHub Actions 界面
-- 进入 Actions 标签页查看实时日志
-- 4 个阶段: Test → Build & Push → Deploy AWS → Notify
-
-### 2. 部署验证
-部署完成后，访问以下地址验证：
-
-```
-🏥 健康检查: http://13.209.76.79:8000/health
-📚 API 文档:  http://13.209.76.79:8000/docs  
-📊 监控指标: http://13.209.76.79:8000/metrics
-```
-
-### 3. AWS 服务器检查
-```bash
-# SSH 到服务器检查状态
-ssh -i your-key.pem ubuntu@13.209.76.79
-
-# 检查服务状态
-cd /opt/gitee-notion-sync
-docker-compose ps
-docker-compose logs app
-```
+略（与现有流程一致）
 
 ## 🔧 故障排查
 
-### 常见问题
-
-#### 1. SSH 连接失败
-```bash
-# 检查项目
-- SSH 密钥文件格式正确
-- AWS 安全组开放 22 端口
-- 服务器地址正确: 13.209.76.79
-```
-
-#### 2. Docker 构建失败
-```bash
-# 查看 GitHub Actions 日志
-- 检查 Dockerfile.optimized 语法
-- 确认 requirements.txt 依赖正确
-- 查看构建错误详情
-```
-
-#### 3. 健康检查失败
-```bash
-# AWS 服务器上检查
-docker-compose logs app
-curl http://localhost:8000/health
-
-# 检查端口和防火墙
-sudo netstat -tlnp | grep 8000
-sudo ufw status
-```
-
-#### 4. Secrets 配置错误
-```bash
-# 重新检查 GitHub Secrets
-- 确认所有 Secret 名称正确
-- 检查值中没有多余空格
-- Notion Token 以 "secret_" 开头
-```
+- 403 invalid_signature：检查 `GITHUB_WEBHOOK_SECRET` 是否一致
+- 400 invalid_payload：检查事件 `X-GitHub-Event=issues` 与 JSON 格式
+- 429 too_many_requests：提升 `RATE_LIMIT_PER_MINUTE` 或限流放宽
 
 ## 🎯 成功指标
 
-部署成功的标志：
-- ✅ GitHub Actions 所有步骤绿色通过
-- ✅ 健康检查返回 200 状态码
-- ✅ API 文档页面可访问
-- ✅ 服务容器正常运行
-
-## 📞 技术支持
-
-如果遇到问题：
-1. 查看 GitHub Actions 详细日志
-2. SSH 到服务器检查 Docker 日志
-3. 检查 AWS 安全组配置
-4. 验证所有 Secrets 设置正确
+- `/github_webhook` 接收并返回 200
+- Notion 中生成/更新页面
+- Notion 更新回写成功（GitHub Issue 有变更）
 
 ---
 
-🎉 **配置完成后，您将拥有全自动化的 CI/CD 流水线！** 
+🎉 配置完成后，将获得 GitHub ↔ Notion 的双向同步能力！ 

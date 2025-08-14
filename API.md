@@ -2,7 +2,7 @@
 
 ## 概述
 
-Gitee-Notion 同步服务提供了一套 Webhook API，用于实现 Gitee Issues 和 Notion 数据库之间的自动同步。
+Gitee-Notion 同步服务提供了一套 Webhook API，用于实现 Gitee/GitHub Issues 与 Notion 数据库之间的自动同步（现已支持 GitHub ↔ Notion 双向）。
 
 ## 基础信息
 
@@ -14,8 +14,9 @@ Gitee-Notion 同步服务提供了一套 Webhook API，用于实现 Gitee Issues
 
 所有 webhook 请求都需要进行签名验证：
 
-- Gitee Webhook: 使用 `X-Gitee-Token` 头部
-- Notion Webhook: 使用 `X-Notion-Signature` 头部
+- Gitee Webhook: 使用 `X-Gitee-Token` 头部（HMAC SHA256）
+- GitHub Webhook: 使用 `X-Hub-Signature-256` 头部（HMAC SHA256）
+- Notion Webhook: 使用 `X-Notion-Signature` 头部（可选，HMAC SHA256）
 
 ## API 端点
 
@@ -42,37 +43,63 @@ X-Gitee-Event: Issue Hook
         "body": "这是一个示例 Issue 的内容",
         "state": "open",
         "labels": [
-            {
-                "name": "bug"
-            }
+            { "name": "bug" }
         ],
         "created_at": "2024-02-20T10:00:00Z",
         "updated_at": "2024-02-20T10:00:00Z",
-        "user": {
-            "name": "example_user"
-        }
+        "user": { "name": "example_user" }
     }
 }
 ```
 
 **响应：**
 ```json
-{
-    "status": "success",
-    "message": "Webhook processed"
-}
+{ "message": "ok" }
 ```
 
-### 2. Notion Webhook 端点
+### 2. GitHub Webhook 端点
 
-#### POST /notion_webhook
+#### POST /github_webhook
 
-（说明）当前 FastAPI 实现未启用该端点，保留为后续扩展项。
+接收来自 GitHub 的 `issues` 事件，与 Notion 同步（创建/更新页面）。
 
 **请求头：**
 ```http
 Content-Type: application/json
-X-Notion-Signature: <webhook_signature>
+X-Hub-Signature-256: sha256=<signature>
+X-GitHub-Event: issues
+```
+
+**请求体字段（节选）：**
+```json
+{
+  "action": "opened|edited|closed|reopened",
+  "issue": {
+    "number": 42,
+    "title": "Bug: cannot save",
+    "body": "...",
+    "state": "open|closed",
+    "html_url": "https://github.com/org/repo/issues/42"
+  },
+  "repository": { "name": "repo", "owner": {"login": "org"} }
+}
+```
+
+**响应：**
+```json
+{ "message": "ok" }
+```
+
+### 3. Notion Webhook 端点
+
+#### POST /notion_webhook
+
+接收来自 Notion 的页面变更（page_updated 等），与 GitHub Issue 回写同步。
+
+**请求头：**
+```http
+Content-Type: application/json
+X-Notion-Signature: sha256=<signature>  # 可选，若配置 NOTION_WEBHOOK_SECRET
 ```
 
 **请求体示例（页面更新）：**
@@ -82,20 +109,9 @@ X-Notion-Signature: <webhook_signature>
     "page": {
         "id": "page_id",
         "properties": {
-            "Title": {
-                "title": [
-                    {
-                        "text": {
-                            "content": "更新的标题"
-                        }
-                    }
-                ]
-            },
-            "Status": {
-                "select": {
-                    "name": "In Progress"
-                }
-            }
+      "Task": { "title": [{ "text": { "content": "更新的标题" } }] },
+      "Status": { "select": { "name": "In Progress" } },
+      "Output": { "rich_text": [{ "text": { "content": "正文" } }] }
         }
     }
 }
@@ -103,13 +119,10 @@ X-Notion-Signature: <webhook_signature>
 
 **响应：**
 ```json
-{
-    "status": "success",
-    "message": "Page updated"
-}
+{ "message": "ok" }
 ```
 
-### 3. 健康检查端点
+### 4. 健康检查端点
 
 #### GET /health
 
@@ -121,35 +134,18 @@ X-Notion-Signature: <webhook_signature>
     "status": "healthy",
     "timestamp": "2024-02-20T10:00:00Z",
     "environment": "production",
-    "notion_api": {
-        "connected": true,
-        "version": "2022-06-28"
-    },
-    "app_info": {
-        "app": "fastapi",
-        "log_level": "INFO"
-    }
+  "notion_api": { "connected": true, "version": "2022-06-28" },
+  "app_info": { "app": "fastapi", "log_level": "INFO" }
 }
 ```
 
-### 4. 指标端点
+### 5. 指标端点
 
 #### GET /metrics
 
 提供服务的 Prometheus 指标。
 
 **响应格式：** Prometheus 文本格式
-
-**示例指标：**
-```
-# HELP http_requests_total Total number of HTTP requests
-# TYPE http_requests_total counter
-http_requests_total{method="POST",endpoint="/gitee_webhook",status="200"} 100
-
-# HELP http_request_duration_seconds HTTP request duration in seconds
-# TYPE http_request_duration_seconds histogram
-http_request_duration_seconds_bucket{method="POST",endpoint="/gitee_webhook",le="0.1"} 95
-```
 
 ## 错误处理
 
@@ -163,106 +159,32 @@ http_request_duration_seconds_bucket{method="POST",endpoint="/gitee_webhook",le=
 - 429: 请求过于频繁
 - 500: 服务器内部错误
 
-错误响应格式：
+**错误响应格式：**
 ```json
-{
-    "error": "error_code",
-    "message": "详细错误信息",
-    "timestamp": "2024-02-20T10:00:00Z"
-}
+{ "error": "error_code", "message": "详细错误信息", "timestamp": "2024-02-20T10:00:00Z" }
 ```
 
 ## 速率限制
 
-- Gitee Webhook: 5 请求/分钟
-- Notion Webhook: 5 请求/分钟
-- 其他端点: 200 请求/天，50 请求/小时
-
-超过限制时返回 429 状态码。
+- `/gitee_webhook`, `/github_webhook`, `/notion_webhook`: 按 `RATE_LIMIT_PER_MINUTE` 全局限流
 
 ## 最佳实践
 
-1. **重试策略**
-   - 建议在失败时实现指数退避重试
-   - 最大重试次数：3次
-   - 重试间隔：2秒、4秒、8秒
-
-2. **错误处理**
-   - 始终检查响应状态码
-   - 记录详细的错误信息
-   - 实现适当的错误恢复机制
-
-3. **监控建议**
-   - 监控 webhook 处理成功率
-   - 跟踪响应时间
-   - 设置适当的告警阈值
+1. 重试策略：指数退避、最大 3-5 次
+2. 错误处理：记录详细信息并入死信
+3. 监控建议：成功率与时延，设置告警
 
 ## 安全建议
 
-1. **Webhook 安全**
-   - 保护好 webhook 密钥
-   - 始终验证请求签名
-   - 使用 HTTPS 传输
-
-2. **访问控制**
-   - 实施 IP 白名单
-   - 使用强密码策略
-   - 定期轮换密钥
-
-3. **数据安全**
-   - 加密敏感数据
-   - 实施数据备份
-   - 遵守数据保留策略
+1. Webhook 安全：保护密钥、验证签名、HTTPS
+2. 访问控制：IP 白名单、强密码、密钥轮换
+3. 数据安全：加密、备份、保留策略
 
 ## 示例代码
 
-### Python 示例
-
-```python
-import requests
-import hmac
-import hashlib
-
-def send_gitee_webhook(url, secret, payload):
-    """发送 Gitee webhook 请求的示例"""
-    headers = {
-        'Content-Type': 'application/json',
-        'X-Gitee-Token': hmac.new(
-            secret.encode(),
-            payload.encode(),
-            hashlib.sha256
-        ).hexdigest()
-    }
-    
-    response = requests.post(url, json=payload, headers=headers)
-    return response.json()
-
-# 使用示例
-payload = {
-    "action": "open",
-    "issue": {
-        "title": "测试 Issue",
-        "body": "这是一个测试"
-    }
-}
-
-result = send_gitee_webhook(
-    "https://your-service.com/gitee_webhook",
-    "your-webhook-secret",
-    payload
-)
-print(result)
-```
+略（参考 `scripts/send_webhook.sh` 并自定义 GitHub 版本）
 
 ## 更新日志
 
-### v1.0.0 (2024-02-20)
-- 初始版本发布
-- 支持基本的 Issue 同步功能
-- 添加健康检查端点
-- 实现基本的监控功能
-
-## 支持
-
-- 技术支持邮箱: support@example.com
-- 文档更新日期: 2024-02-20 
+- v1.1.0: 新增 GitHub ↔ Notion 双向同步、启用 `/github_webhook`、`/notion_webhook`
+- v1.0.0: 初始版本 

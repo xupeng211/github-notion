@@ -1,0 +1,38 @@
+# 如果使用 systemd 管理 FastAPI 应用，创建以下服务单元文件：
+# 文件位置: /etc/systemd/system/github-notion-sync.service
+
+[Unit]
+Description=GitHub-Notion Sync Service
+After=network.target
+Requires=network.target
+
+[Service]
+Type=exec
+User=ubuntu
+Group=ubuntu
+WorkingDirectory=/home/ubuntu/PC
+EnvironmentFile=/home/ubuntu/PC/.env
+ExecStart=/home/ubuntu/.pyenv/versions/3.11.9/bin/uvicorn app.server:app --host 127.0.0.1 --port 8000 --workers 2
+ExecReload=/bin/kill -HUP $MAINPID
+Restart=always
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=github-notion-sync
+
+# 安全设置
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectSystem=strict
+ReadWritePaths=/home/ubuntu/PC/data /home/ubuntu/PC/logs
+ProtectHome=yes
+
+[Install]
+WantedBy=multi-user.target
+
+# 创建服务的命令：
+# sudo cp deploy/systemd-service.txt /etc/systemd/system/github-notion-sync.service
+# sudo systemctl daemon-reload
+# sudo systemctl enable github-notion-sync
+# sudo systemctl start github-notion-sync
+# sudo systemctl status github-notion-sync 

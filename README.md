@@ -51,7 +51,7 @@ curl -sS http://localhost:8000/metrics | grep deadletter_replay_total
 
 
 
-# 生产就绪的 Gitee ↔ Notion 同步服务
+# 生产就绪的 GitHub ↔ Notion 双向同步服务（兼容 Gitee）
 
 
 
@@ -68,9 +68,11 @@ make env
 - 打开 .env 并填写必要值：
   - NOTION_TOKEN：前往 https://www.notion.so/my-integrations 创建 Integration，复制 Internal Integration Token
   - NOTION_DATABASE_ID：在浏览器打开你的数据库页面，Share -> Copy link，链接中类似 https://www.notion.so/xxxx?<db>=<DATABASE_ID>，或页面 URL 尾部的 32 字符 ID（去除连字符）
-  - GITEE_TOKEN：登录 Gitee -> 设置 -> 私人令牌（Personal Access Token），生成并复制；至少勾选 repo、issues 权限
-  - GITEE_WEBHOOK_SECRET：自定义一个强随机字符串；配置 Gitee Webhook 时保持一致
-  - SOURCE_OF_TRUTH：gitee 或 notion，默认 gitee
+  - NOTION_WEBHOOK_SECRET（可选）：若启用 Notion Webhook 自定义验签
+  - GITEE_TOKEN（可选，兼容模式）：Gitee Personal Access Token
+  - GITEE_WEBHOOK_SECRET（可选，兼容模式）：Gitee Webhook 密钥
+  - GITHUB_TOKEN：GitHub Personal Access Token（需 repo / issues 权限）
+  - GITHUB_WEBHOOK_SECRET：GitHub Webhook Secret（与 GitHub Webhook 配置一致）
   - DB_URL：例如 sqlite:///data/sync.db
   - APP_PORT：本地启动端口，例如 8000
   - LOG_LEVEL：INFO/DEBUG/WARN 等
@@ -130,7 +132,7 @@ bash scripts/send_webhook.sh --env-file ./.env --url http://127.0.0.1:8000/gitee
 
 ## 可选速率限制
 - 设置 `RATE_LIMIT_PER_MINUTE`（整数，默认 0 关闭）。
-- 开启后，对 `/gitee_webhook` 进行每分钟级全局限流，超额返回 429。
+- 开启后，对 `/gitee_webhook`、`/github_webhook`、`/notion_webhook` 进行每分钟级全局限流，超额返回 429。
 
 ## Alembic 迁移
 - 生成迁移：`alembic revision -m "change"`（或使用 `--autogenerate`，需比对元数据配置）
@@ -146,6 +148,14 @@ server {
     limit_req zone=rl_gitee burst=10 nodelay;
     proxy_pass http://app:8000;
   }
+  location /github_webhook {
+    limit_req zone=rl_gitee burst=10 nodelay;
+    proxy_pass http://app:8000;
+  }
+  location /notion_webhook {
+    limit_req zone=rl_gitee burst=10 nodelay;
+    proxy_pass http://app:8000;
+  }
 }
 ```
 
@@ -154,9 +164,17 @@ server {
 - 选择平台并配置 Secrets（见 docs/DEPLOY.md）
 - 推送到 main 后：CI 构建镜像 → 推送 → SSH 到 EC2 执行部署脚本，完成滚动更新
 
-### 配置 Gitee Webhook
+### 配置 Gitee Webhook（兼容）
 - 仓库 → 管理 → Webhook → 新增
 - URL：http://<EC2_HOST>:8000/gitee_webhook
 - 密钥：使用 .env 的 GITEE_WEBHOOK_SECRET
 - 触发事件：Issues（创建/编辑/关闭）+ Issue 评论
 - 保存后点击“测试”，/health 与日志应显示事件已接收
+
+### 配置 GitHub Webhook（双向同步）
+- 仓库 → Settings → Webhooks → Add webhook
+- Payload URL：`https://<DOMAIN>/github_webhook`
+- Content type：`application/json`
+- Secret：使用 `.env` 的 `GITHUB_WEBHOOK_SECRET`
+- 选择事件：`Let me select individual events` → 勾选 `Issues`
+- 保存后 GitHub 会发送 `ping`/`issues` 事件用于联通性验证

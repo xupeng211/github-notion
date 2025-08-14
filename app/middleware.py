@@ -54,6 +54,8 @@ class PrometheusMiddleware(BaseHTTPMiddleware):
             return "/metrics"
         elif path.startswith("/gitee_webhook"):
             return "/gitee_webhook"
+        elif path.startswith("/github_webhook"):
+            return "/github_webhook"
         elif path.startswith("/notion_webhook"):
             return "/notion_webhook"
         elif path.startswith("/docs") or path.startswith("/redoc") or path.startswith("/openapi.json"):
