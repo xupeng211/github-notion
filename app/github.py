@@ -15,12 +15,12 @@ logger = logging.getLogger(__name__)
 
 class GitHubService:
     """GitHub API 服务类"""
-    
+
     def __init__(self):
         self.token = os.getenv("GITHUB_TOKEN", "")
         self.webhook_secret = os.getenv("GITHUB_WEBHOOK_SECRET", "")
         self.base_url = "https://api.github.com"
-        
+
         # 配置会话和重试策略
         self.session = requests.Session()
         retry_strategy = Retry(
@@ -31,7 +31,7 @@ class GitHubService:
         adapter = HTTPAdapter(max_retries=retry_strategy)
         self.session.mount("http://", adapter)
         self.session.mount("https://", adapter)
-        
+
         # 设置默认headers
         self.session.headers.update({
             "Authorization": f"Bearer {self.token}",
@@ -44,23 +44,23 @@ class GitHubService:
         if not self.webhook_secret:
             logger.warning("GitHub webhook secret not configured")
             return False
-            
+
         if not signature:
             return False
-            
+
         # GitHub signature format: sha256=<hash>
         if not signature.startswith("sha256="):
             return False
-            
+
         expected_signature = signature[7:]  # Remove "sha256=" prefix
-        
+
         # Calculate HMAC
         calculated_signature = hmac.new(
             self.webhook_secret.encode(),
             payload,
             hashlib.sha256
         ).hexdigest()
-        
+
         # Use secure comparison
         return hmac.compare_digest(calculated_signature, expected_signature)
 
@@ -75,15 +75,15 @@ class GitHubService:
             logger.error(f"Failed to get GitHub issue {owner}/{repo}#{issue_number}: {e}")
             return None
 
-    def update_issue(self, owner: str, repo: str, issue_number: int, 
-                    title: Optional[str] = None, body: Optional[str] = None, 
+    def update_issue(self, owner: str, repo: str, issue_number: int,
+                    title: Optional[str] = None, body: Optional[str] = None,
                     state: Optional[str] = None, labels: Optional[list] = None,
                     sync_marker: Optional[str] = None) -> Tuple[bool, str]:
         """更新GitHub Issue"""
         try:
             url = f"{self.base_url}/repos/{owner}/{repo}/issues/{issue_number}"
             data = {}
-            
+
             if title is not None:
                 data["title"] = title
             if body is not None:
@@ -99,34 +99,34 @@ class GitHubService:
                 data["state"] = state
             if labels is not None:
                 data["labels"] = labels
-                
+
             response = self.session.patch(url, json=data, timeout=10)
             response.raise_for_status()
-            
+
             logger.info(f"Successfully updated GitHub issue {owner}/{repo}#{issue_number}")
             return True, "success"
-            
+
         except requests.RequestException as e:
             logger.error(f"Failed to update GitHub issue {owner}/{repo}#{issue_number}: {e}")
             return False, str(e)
 
-    def add_comment(self, owner: str, repo: str, issue_number: int, 
+    def add_comment(self, owner: str, repo: str, issue_number: int,
                    comment: str, sync_marker: Optional[str] = None) -> Tuple[bool, str]:
         """在GitHub Issue中添加评论"""
         try:
             url = f"{self.base_url}/repos/{owner}/{repo}/issues/{issue_number}/comments"
-            
+
             # 添加同步标记
             if sync_marker:
                 comment = f"{comment}\n\n<!-- sync-marker:{sync_marker} -->"
-                
+
             data = {"body": comment}
             response = self.session.post(url, json=data, timeout=10)
             response.raise_for_status()
-            
+
             logger.info(f"Successfully added comment to GitHub issue {owner}/{repo}#{issue_number}")
             return True, "success"
-            
+
         except requests.RequestException as e:
             logger.error(f"Failed to add comment to GitHub issue {owner}/{repo}#{issue_number}: {e}")
             return False, str(e)
@@ -161,4 +161,4 @@ class GitHubService:
 
 
 # 全局实例
-github_service = GitHubService() 
+github_service = GitHubService()

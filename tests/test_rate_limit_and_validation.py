@@ -56,7 +56,7 @@ def test_pydantic_validation_valid_payload():
             "user": {"name": "testuser"}
         }
     }
-    
+
     response = client.post(
         "/gitee_webhook",
         json=valid_payload,
@@ -70,12 +70,12 @@ def test_rate_limit_enabled_with_env(monkeypatch):
     """测试启用速率限制（需要环境变量）"""
     # 设置速率限制为每分钟 2 次
     monkeypatch.setenv("RATE_LIMIT_PER_MINUTE", "2")
-    
+
     # 重新导入应用以应用新的环境变量
     import importlib
 
     import app.server
-    importlib.reload(app.server)    
+    importlib.reload(app.server)
     # 前两次请求应该成功（返回 403 因为签名验证失败，但通过了限流）
     for i in range(2):
         response = client.post(
@@ -84,7 +84,7 @@ def test_rate_limit_enabled_with_env(monkeypatch):
             headers={"X-Gitee-Token": "dummy", "X-Gitee-Event": "Issue Hook"}
         )
         assert response.status_code in (400, 403)
-    
+
     # 第三次请求应该被限流
     response = client.post(
         "/gitee_webhook",
@@ -105,19 +105,19 @@ def test_rate_limit_reset_after_window(monkeypatch):
 
     # 模拟时间窗口重置
     original_time = time.time
-    
+
     def mock_time():
         return original_time() + 61  # 前进 61 秒
-    
+
     monkeypatch.setattr(time, "time", mock_time)
-    
+
     # 重新导入应用以应用新的环境变量
     monkeypatch.setenv("RATE_LIMIT_PER_MINUTE", "1")
-    importlib.reload(app.server)    
+    importlib.reload(app.server)
     # 应该能再次通过限流
     response = client.post(
         "/gitee_webhook",
         json={"issue": {"number": 4, "title": "test4"}},
         headers={"X-Gitee-Token": "dummy", "X-Gitee-Event": "Issue Hook"}
     )
-    assert response.status_code in (400, 403)  # 通过限流，但签名验证失败 
+    assert response.status_code in (400, 403)  # 通过限流，但签名验证失败

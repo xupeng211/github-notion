@@ -105,7 +105,7 @@ class SyncEvent(BaseModel):
     """同步事件模型，用于防循环"""
     event_id: str
     source: str  # 'github', 'notion'
-    target: str  # 'github', 'notion'  
+    target: str  # 'github', 'notion'
     entity_type: str  # 'issue', 'page'
     entity_id: str
     action: str

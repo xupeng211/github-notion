@@ -153,4 +153,4 @@ def downgrade() -> None:
 	inspector = inspect(bind)
 	cols = [c['name'] for c in inspector.get_columns('mapping')]
 	if 'issue_id' in cols and 'source_id' in cols:
-		op.execute('UPDATE mapping SET issue_id = source_id WHERE issue_id IS NULL') 
+		op.execute('UPDATE mapping SET issue_id = source_id WHERE issue_id IS NULL')

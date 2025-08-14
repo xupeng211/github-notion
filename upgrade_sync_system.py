@@ -4,7 +4,6 @@ GitHub-Notion 双向同步系统升级脚本
 自动升级现有系统到支持双向同步的增强版本
 """
 
-import os
 import sys
 import shutil
 import subprocess
@@ -301,4 +300,4 @@ def main():
 
 
 if __name__ == "__main__":
-    main() 
+    main()

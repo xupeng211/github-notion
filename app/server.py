@@ -332,29 +332,29 @@ async def gitee_webhook(request: Request):
           description="处理来自 GitHub 的 issues 事件并同步到 Notion",
           response_description="处理结果")
 async def github_webhook(request: Request):
-	if not rate_limiter.allow():
-		RATE_LIMIT_HITS_TOTAL.inc()
-		raise HTTPException(status_code=429, detail="too_many_requests")
+    if not rate_limiter.allow():
+        RATE_LIMIT_HITS_TOTAL.inc()
+        raise HTTPException(status_code=429, detail="too_many_requests")
 
-	signature = request.headers.get("X-Hub-Signature-256", "")
-	event = request.headers.get("X-GitHub-Event", "")
+    signature = request.headers.get("X-Hub-Signature-256", "")
+    event = request.headers.get("X-GitHub-Event", "")
 
-	body = await request.body()
-	# 验证签名
-	if not github_service.verify_webhook_signature(body, signature):
-		raise HTTPException(status_code=403, detail="invalid_signature")
+    body = await request.body()
+    # 验证签名
+    if not github_service.verify_webhook_signature(body, signature):
+        raise HTTPException(status_code=403, detail="invalid_signature")
 
-	# Pydantic 校验（尽量宽松，仅用于基础字段）
-	try:
-		_ = GitHubWebhookPayload.model_validate_json(body.decode("utf-8"))
-	except ValidationError:
-		raise HTTPException(status_code=400, detail="invalid_payload")
+    # Pydantic 校验（尽量宽松，仅用于基础字段）
+    try:
+        _ = GitHubWebhookPayload.model_validate_json(body.decode("utf-8"))
+    except ValidationError:
+        raise HTTPException(status_code=400, detail="invalid_payload")
 
-	ok, message = await asyncio.to_thread(process_github_event, body, event)
-	if not ok:
-		logger.warning("github_webhook_failed", extra={"event": event, "msg": message})
-		raise HTTPException(status_code=400, detail=message)
-	return {"message": message}
+    ok, message = await asyncio.to_thread(process_github_event, body, event)
+    if not ok:
+        logger.warning("github_webhook_failed", extra={"event": event, "msg": message})
+        raise HTTPException(status_code=400, detail=message)
+    return {"message": message}
 
 
 # 新增：Notion Webhook 处理
@@ -363,35 +363,35 @@ async def github_webhook(request: Request):
           description="处理来自 Notion 的页面变更并同步到 GitHub",
           response_description="处理结果")
 async def notion_webhook(request: Request):
-	if not rate_limiter.allow():
-		RATE_LIMIT_HITS_TOTAL.inc()
-		raise HTTPException(status_code=429, detail="too_many_requests")
+    if not rate_limiter.allow():
+        RATE_LIMIT_HITS_TOTAL.inc()
+        raise HTTPException(status_code=429, detail="too_many_requests")
 
-	# Notion webhook 验证（基于官方规范：首次验证challenge）
-	body = await request.body()
-	# 可选：X-Notion-Signature 验证（自定义集成时使用）
-	notion_secret = os.getenv("NOTION_WEBHOOK_SECRET", "")
-	notion_sig = request.headers.get("X-Notion-Signature", "")
-	if notion_secret:
-		if not verify_notion_signature(notion_secret, body, notion_sig):
-			raise HTTPException(status_code=403, detail="invalid_signature")
-	try:
-		payload = NotionWebhookPayload.model_validate_json(body.decode("utf-8"))
-	except ValidationError:
-		# 兼容 Notion 的 challenge 验证
-		try:
-			data = json.loads(body.decode("utf-8"))
-			if "challenge" in data:
-				return {"challenge": data["challenge"]}
-		except Exception:
-			pass
-		raise HTTPException(status_code=400, detail="invalid_payload")
+    # Notion webhook 验证（基于官方规范：首次验证challenge）
+    body = await request.body()
+    # 可选：X-Notion-Signature 验证（自定义集成时使用）
+    notion_secret = os.getenv("NOTION_WEBHOOK_SECRET", "")
+    notion_sig = request.headers.get("X-Notion-Signature", "")
+    if notion_secret:
+        if not verify_notion_signature(notion_secret, body, notion_sig):
+            raise HTTPException(status_code=403, detail="invalid_signature")
+    try:
+        payload = NotionWebhookPayload.model_validate_json(body.decode("utf-8"))
+    except ValidationError:
+        # 兼容 Notion 的 challenge 验证
+        try:
+            data = json.loads(body.decode("utf-8"))
+            if "challenge" in data:
+                return {"challenge": data["challenge"]}
+        except Exception:
+            pass
+        raise HTTPException(status_code=400, detail="invalid_payload")
 
-	ok, message = await asyncio.to_thread(process_notion_event, body)
-	if not ok:
-		logger.warning("notion_webhook_failed", extra={"msg": message})
-		raise HTTPException(status_code=400, detail=message)
-	return {"message": message}
+    ok, message = await asyncio.to_thread(process_notion_event, body)
+    if not ok:
+        logger.warning("notion_webhook_failed", extra={"msg": message})
+        raise HTTPException(status_code=400, detail=message)
+    return {"message": message}
 
 # admin: replay deadletters
 
