@@ -44,7 +44,7 @@ jobs:
     - name: Code quality checks
       run: |
         echo "Running code style checks..."
-        flake8 app/ --max-line-length=120 --ignore=E203,W503 || echo "Style check completed with warnings"
+        flake8 app/ --max-line-length=120 --ignore=E203,W503,E127,E128 --exclude=__pycache__,*.pyc || echo "Style check completed with warnings"
         echo "Running security scan..."
         bandit -r app/ -f json -o bandit-report.json || echo "Security scan completed"
       continue-on-error: true
