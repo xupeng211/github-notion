@@ -1,150 +1,186 @@
 {
-  "test_summary": {
-    "total_tests": 22,
-    "passed": 18,
-    "failed": 4,
-    "errors": 0,
-    "timestamp": "2025-08-15T00:42:03.845251"
+  "timestamp": "2025-08-15 02:37:29",
+  "summary": {
+    "total_tests": 27,
+    "passed": 26,
+    "failed": 1,
+    "warnings": 2,
+    "success_rate": 96.3
   },
-  "environment": {
-    "github_token_set": false,
-    "notion_token_set": false,
-    "notion_db_id_set": false,
-    "python_version": "3.11.9 (main, Aug  8 2025, 00:29:36) [GCC 11.4.0]"
-  },
-  "test_results": [
+  "details": [
     {
-      "name": "导入 app.mapper.field_mapper",
+      "test": "架构验证",
       "passed": true,
-      "message": "成功导入 FieldMapper",
-      "timestamp": "2025-08-15T00:42:03.582862"
+      "message": "",
+      "warning": false
     },
     {
-      "name": "导入 app.enhanced_service.process_github_event_enhanced",
+      "test": "导入 app.server",
       "passed": true,
-      "message": "成功导入 function",
-      "timestamp": "2025-08-15T00:42:03.840614"
+      "message": "",
+      "warning": false
     },
     {
-      "name": "导入 app.comment_sync.comment_sync_service",
+      "test": "导入 app.service",
       "passed": true,
-      "message": "成功导入 CommentSyncService",
-      "timestamp": "2025-08-15T00:42:03.840658"
+      "message": "",
+      "warning": false
     },
     {
-      "name": "导入 app.notion.notion_service",
+      "test": "导入 app.models",
       "passed": true,
-      "message": "成功导入 NotionService",
-      "timestamp": "2025-08-15T00:42:03.840665"
+      "message": "",
+      "warning": false
     },
     {
-      "name": "兼容性导入",
+      "test": "导入 app.notion",
       "passed": true,
-      "message": "旧版本函数仍可导入",
-      "timestamp": "2025-08-15T00:42:03.840668"
+      "message": "",
+      "warning": false
     },
     {
-      "name": "YAML 语法",
+      "test": "导入 app.github",
       "passed": true,
-      "message": "配置文件语法正确",
-      "timestamp": "2025-08-15T00:42:03.843012"
+      "message": "",
+      "warning": false
     },
     {
-      "name": "配置节 github_to_notion",
+      "test": "导入 app.schemas",
       "passed": true,
-      "message": "配置节存在",
-      "timestamp": "2025-08-15T00:42:03.843032"
+      "message": "",
+      "warning": false
     },
     {
-      "name": "配置节 notion_to_github",
+      "test": "导入 app.middleware",
       "passed": true,
-      "message": "配置节存在",
-      "timestamp": "2025-08-15T00:42:03.843035"
+      "message": "",
+      "warning": false
     },
     {
-      "name": "配置节 sync_config",
-      "passed": true,
-      "message": "配置节存在",
-      "timestamp": "2025-08-15T00:42:03.843037"
-    },
-    {
-      "name": "字段映射数量",
-      "passed": true,
-      "message": "配置了 12 个字段映射",
-      "timestamp": "2025-08-15T00:42:03.843040"
-    },
-    {
-      "name": "GitHub → Notion 映射",
-      "passed": true,
-      "message": "生成了 8 个 Notion 属性",
-      "timestamp": "2025-08-15T00:42:03.843111"
-    },
-    {
-      "name": "Notion → GitHub 映射",
-      "passed": true,
-      "message": "生成了 3 个 GitHub 字段",
-      "timestamp": "2025-08-15T00:42:03.843129"
-    },
-    {
-      "name": "配置重载",
-      "passed": true,
-      "message": "配置重载功能正常",
-      "timestamp": "2025-08-15T00:42:03.845136"
-    },
-    {
-      "name": "GitHub Token",
+      "test": "数据库初始化",
       "passed": false,
-      "message": "GITHUB_TOKEN 环境变量未设置",
-      "timestamp": "2025-08-15T00:42:03.845153"
+      "message": "",
+      "warning": false
     },
     {
-      "name": "Notion Token",
+      "test": "数据库读写操作",
       "passed": false,
-      "message": "NOTION_TOKEN 环境变量未设置",
-      "timestamp": "2025-08-15T00:42:03.845155"
+      "message": "跳过：数据库初始化失败",
+      "warning": true
     },
     {
-      "name": "Notion Database ID",
+      "test": "签名验证功能",
+      "passed": true,
+      "message": "",
+      "warning": false
+    },
+    {
+      "test": "事件哈希功能",
+      "passed": true,
+      "message": "",
+      "warning": false
+    },
+    {
+      "test": "GitHub URL 解析",
+      "passed": true,
+      "message": "",
+      "warning": false
+    },
+    {
+      "test": "健康检查端点",
+      "passed": true,
+      "message": "",
+      "warning": false
+    },
+    {
+      "test": "Prometheus 指标端点",
+      "passed": true,
+      "message": "",
+      "warning": false
+    },
+    {
+      "test": "/github_webhook 端点",
+      "passed": true,
+      "message": "",
+      "warning": false
+    },
+    {
+      "test": "/notion_webhook 端点",
+      "passed": true,
+      "message": "",
+      "warning": false
+    },
+    {
+      "test": "/gitee_webhook 端点",
+      "passed": true,
+      "message": "",
+      "warning": false
+    },
+    {
+      "test": "GitHub 签名验证（空密钥）",
+      "passed": true,
+      "message": "",
+      "warning": false
+    },
+    {
+      "test": "GitHub 签名验证（错误格式）",
+      "passed": true,
+      "message": "",
+      "warning": false
+    },
+    {
+      "test": "Notion 签名验证",
+      "passed": true,
+      "message": "",
+      "warning": false
+    },
+    {
+      "test": "异步 HTTP 请求",
+      "passed": true,
+      "message": "",
+      "warning": false
+    },
+    {
+      "test": "异步 Notion 函数",
       "passed": false,
-      "message": "NOTION_DATABASE_ID 环境变量未设置",
-      "timestamp": "2025-08-15T00:42:03.845156"
+      "message": "结果异常: {\"error\": \"Illegal header value b'Bearer '\"}",
+      "warning": true
     },
     {
-      "name": "增强服务导入",
+      "test": "scripts/validate_fixes.py 可执行性",
       "passed": true,
-      "message": "成功导入增强服务函数",
-      "timestamp": "2025-08-15T00:42:03.845165"
+      "message": "",
+      "warning": false
     },
     {
-      "name": "评论同步服务",
+      "test": "scripts/init_db.py 可执行性",
       "passed": true,
-      "message": "评论同步服务初始化完成",
-      "timestamp": "2025-08-15T00:42:03.845169"
+      "message": "",
+      "warning": false
     },
     {
-      "name": "服务间依赖",
+      "test": "scripts/start_service.py 可执行性",
       "passed": true,
-      "message": "服务间可以正常调用",
-      "timestamp": "2025-08-15T00:42:03.845173"
+      "message": "",
+      "warning": false
     },
     {
-      "name": "空数据处理",
+      "test": "env.example 存在性",
       "passed": true,
-      "message": "空数据返回字典类型",
-      "timestamp": "2025-08-15T00:42:03.845183"
+      "message": "",
+      "warning": false
     },
     {
-      "name": "无效数据处理",
+      "test": "monitoring/prometheus.yml 存在性",
       "passed": true,
-      "message": "无效数据返回字典类型",
-      "timestamp": "2025-08-15T00:42:03.845187"
+      "message": "",
+      "warning": false
     },
     {
-      "name": "配置错误处理",
-      "passed": false,
-      "message": "配置错误被正确处理",
-      "timestamp": "2025-08-15T00:42:03.845245"
+      "test": "monitoring/alert_rules.yml 存在性",
+      "passed": true,
+      "message": "",
+      "warning": false
     }
-  ],
-  "failed_tests": []
+  ]
 }

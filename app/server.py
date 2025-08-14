@@ -15,14 +15,14 @@ from pydantic import ValidationError
 from pythonjsonlogger import jsonlogger
 from starlette.middleware.base import BaseHTTPMiddleware
 from app.middleware import PrometheusMiddleware
-from app.models import SessionLocal, init_db
+from app.models import SessionLocal, deadletter_count
 from app.schemas import GiteeWebhookPayload
 from app.service import RATE_LIMIT_HITS_TOTAL, process_gitee_event, replay_deadletters_once, start_deadletter_scheduler
 
 # 新增导入
 from app.schemas import GitHubWebhookPayload, NotionWebhookPayload
 from app.github import github_service
-from app.service import process_github_event, process_notion_event
+from app.service import process_notion_event, async_process_github_event
 import json
 from app.service import verify_notion_signature
 
@@ -54,7 +54,8 @@ rate_limiter = SimpleRateLimiter(max_per_minute=int(os.getenv("RATE_LIMIT_PER_MI
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
     # startup
-    init_db()
+    # 注意：数据库初始化现在通过 alembic 管理，不再使用 init_db()
+    # 部署时请运行: alembic upgrade head
     scheduler = start_deadletter_scheduler()
     try:
         yield
@@ -140,34 +141,106 @@ app.add_middleware(RequestIDMiddleware)
 @app.exception_handler(ValidationError)
 async def validation_exception_handler(request: Request, exc: ValidationError):
     """处理 Pydantic 验证错误"""
-    return Response(
-        content=f"请求数据验证失败: {str(exc)}",
-        status_code=422,
-        headers={"content-type": "text/plain"}
+    request_id = getattr(request.state, "request_id", "unknown")
+
+    # 记录详细的验证错误
+    logger.warning(
+        "validation_error",
+        extra={
+            "request_id": request_id,
+            "url": str(request.url),
+            "method": request.method,
+            "error": str(exc),
+            "error_count": len(exc.errors()) if hasattr(exc, 'errors') else 1
+        }
     )
+
+    return {
+        "error": "validation_error",
+        "message": "请求数据验证失败",
+        "details": str(exc),
+        "request_id": request_id
+    }
 
 
 @app.exception_handler(ValueError)
 async def value_error_handler(request: Request, exc: ValueError):
     """处理值错误"""
-    logger.error(f"Value error in {request.url.path}: {str(exc)}")
-    return Response(
-        content="请求参数错误",
-        status_code=400,
-        headers={"content-type": "text/plain"}
+    request_id = getattr(request.state, "request_id", "unknown")
+
+    logger.warning(
+        "value_error",
+        extra={
+            "request_id": request_id,
+            "url": str(request.url),
+            "method": request.method,
+            "error": str(exc)
+        }
     )
+
+    return {
+        "error": "value_error",
+        "message": "请求参数错误",
+        "details": str(exc),
+        "request_id": request_id
+    }
 
 
 @app.exception_handler(500)
 async def internal_server_error_handler(request: Request, exc):
     """处理内部服务器错误"""
     request_id = getattr(request.state, "request_id", "unknown")
-    logger.error(f"Internal server error: {str(exc)}", extra={"request_id": request_id})
-    return Response(
-        content=f"内部服务器错误。请求ID: {request_id}",
-        status_code=500,
-        headers={"content-type": "text/plain"}
+
+    # 记录详细错误信息，包括堆栈跟踪
+    import traceback
+    logger.error(
+        "internal_server_error",
+        extra={
+            "request_id": request_id,
+            "url": str(request.url),
+            "method": request.method,
+            "error": str(exc),
+            "error_type": type(exc).__name__,
+            "traceback": traceback.format_exc()
+        }
     )
+
+    return {
+        "error": "internal_server_error",
+        "message": "内部服务器错误，请稍后重试",
+        "request_id": request_id
+    }
+
+
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception):
+    """全局异常处理器，捕获所有未处理的异常"""
+    request_id = getattr(request.state, "request_id", "unknown")
+
+    # 记录详细错误信息
+    import traceback
+    logger.error(
+        "unhandled_exception",
+        extra={
+            "request_id": request_id,
+            "error": str(exc),
+            "error_type": type(exc).__name__,
+            "url": str(request.url),
+            "method": request.method,
+            "traceback": traceback.format_exc()
+        }
+    )
+
+    # 根据异常类型返回适当的响应
+    if isinstance(exc, HTTPException):
+        # HTTPException 应该由 FastAPI 自动处理，但这里提供备用
+        raise exc
+
+    return {
+        "error": "unexpected_error",
+        "message": "发生了意外错误，请联系管理员",
+        "request_id": request_id
+    }
 
 # health
 
@@ -205,6 +278,8 @@ async def health():
 
     # 检查 Notion API 连接
     notion_token = os.getenv("NOTION_TOKEN")
+    notion_database_id = os.getenv("NOTION_DATABASE_ID")
+
     if notion_token:
         try:
             headers = {
@@ -212,24 +287,38 @@ async def health():
                 "Notion-Version": "2022-06-28",
                 "Content-Type": "application/json"
             }
-            response = requests.get("https://api.notion.com/v1/users/me", headers=headers, timeout=5)
-            if response.status_code == 200:
-                health_data["checks"]["notion_api"] = {
-                    "status": "ok",
-                    "message": "Notion API connection successful",
-                    "version": "2022-06-28"
-                }
-            else:
-                health_data["checks"]["notion_api"] = {
-                    "status": "error",
-                    "message": f"Notion API error: {response.status_code}",
-                    "version": "2022-06-28"
-                }
+
+            # 检查用户认证
+            user_response = requests.get("https://api.notion.com/v1/users/me", headers=headers, timeout=5)
+            user_response.raise_for_status()
+
+            # 检查数据库访问权限（如果配置了数据库ID）
+            db_accessible = True
+            if notion_database_id:
+                try:
+                    db_response = requests.get(
+                        f"https://api.notion.com/v1/databases/{notion_database_id}",
+                        headers=headers, timeout=5
+                    )
+                    db_response.raise_for_status()
+                except requests.RequestException:
+                    db_accessible = False
+
+            health_data["checks"]["notion_api"] = {
+                "status": "ok" if db_accessible else "warning",
+                "message": "Notion API connection successful" if db_accessible else "API连接成功但数据库访问受限",
+                "version": "2022-06-28",
+                "database_accessible": db_accessible,
+                "database_id": notion_database_id[:8] + "..." if notion_database_id else None
+            }
+
+            if not db_accessible and notion_database_id:
                 health_data["status"] = "degraded"
-        except Exception as e:
+
+        except requests.RequestException as e:
             health_data["checks"]["notion_api"] = {
                 "status": "error",
-                "message": f"Notion API connection failed: {str(e)}",
+                "message": f"Notion API error: {str(e)}",
                 "version": "2022-06-28"
             }
             health_data["status"] = "degraded"
@@ -240,27 +329,106 @@ async def health():
             "version": "2022-06-28"
         }
 
-    # 检查磁盘空间（简单检查）
+    # 检查 GitHub API 连接
+    github_token = os.getenv("GITHUB_TOKEN")
+    if github_token:
+        try:
+            headers = {
+                "Authorization": f"Bearer {github_token}",
+                "Accept": "application/vnd.github+json",
+                "X-GitHub-Api-Version": "2022-11-28"
+            }
+
+            # 检查用户认证和 API 限制
+            user_response = requests.get("https://api.github.com/user", headers=headers, timeout=5)
+            user_response.raise_for_status()
+
+            # 获取 API 限制信息
+            rate_limit_response = requests.get("https://api.github.com/rate_limit", headers=headers, timeout=5)
+            rate_limit_data = rate_limit_response.json() if rate_limit_response.status_code == 200 else {}
+
+            remaining = rate_limit_data.get("rate", {}).get("remaining", "unknown")
+            limit = rate_limit_data.get("rate", {}).get("limit", "unknown")
+
+            health_data["checks"]["github_api"] = {
+                "status": "ok",
+                "message": "GitHub API connection successful",
+                "rate_limit": {
+                    "remaining": remaining,
+                    "limit": limit
+                }
+            }
+
+            # 如果 API 剩余请求数很低，标记为警告
+            if isinstance(remaining, int) and remaining < 100:
+                health_data["checks"]["github_api"]["status"] = "warning"
+                health_data["checks"]["github_api"]["message"] = f"GitHub API rate limit低 ({remaining}/{limit})"
+
+        except requests.RequestException as e:
+            health_data["checks"]["github_api"] = {
+                "status": "error",
+                "message": f"GitHub API error: {str(e)}"
+            }
+            health_data["status"] = "degraded"
+    else:
+        health_data["checks"]["github_api"] = {
+            "status": "warning",
+            "message": "GitHub API token not configured"
+        }
+
+    # 检查磁盘空间
     try:
         import shutil
         disk_usage = shutil.disk_usage("/")
         free_gb = disk_usage.free / (1024**3)
+        total_gb = disk_usage.total / (1024**3)
+        used_gb = (disk_usage.total - disk_usage.free) / (1024**3)
+        usage_percent = (used_gb / total_gb) * 100
+
         if free_gb < 1.0:  # 少于 1GB
-            health_data["checks"]["disk_space"] = {
-                "status": "warning",
-                "message": f"Low disk space: {free_gb:.2f}GB free"
-            }
+            status = "error"
+            message = f"磁盘空间严重不足: {free_gb:.2f}GB 可用"
+            health_data["status"] = "degraded"
+        elif usage_percent > 90:  # 使用超过90%
+            status = "warning"
+            message = f"磁盘空间不足: {usage_percent:.1f}% 已使用"
             if health_data["status"] == "healthy":
                 health_data["status"] = "degraded"
         else:
-            health_data["checks"]["disk_space"] = {
-                "status": "ok",
-                "message": f"Disk space OK: {free_gb:.2f}GB free"
+            status = "ok"
+            message = f"磁盘空间充足: {free_gb:.2f}GB 可用"
+
+        health_data["checks"]["disk_space"] = {
+            "status": status,
+            "message": message,
+            "details": {
+                "free_gb": round(free_gb, 2),
+                "total_gb": round(total_gb, 2),
+                "usage_percent": round(usage_percent, 1)
             }
+        }
     except Exception as e:
         health_data["checks"]["disk_space"] = {
             "status": "error",
-            "message": f"Cannot check disk space: {str(e)}"
+            "message": f"无法检查磁盘空间: {str(e)}"
+        }
+
+    # 检查死信队列状态
+    try:
+        with SessionLocal() as db:
+            deadletter_count_val = deadletter_count(db)
+            health_data["checks"]["deadletter_queue"] = {
+                "status": "warning" if deadletter_count_val > 10 else "ok",
+                "message": f"死信队列: {deadletter_count_val} 条记录",
+                "count": deadletter_count_val
+            }
+            if deadletter_count_val > 50:
+                health_data["checks"]["deadletter_queue"]["status"] = "error"
+                health_data["status"] = "degraded"
+    except Exception as e:
+        health_data["checks"]["deadletter_queue"] = {
+            "status": "error",
+            "message": f"无法检查死信队列: {str(e)}"
         }
 
     return health_data
@@ -350,7 +518,8 @@ async def github_webhook(request: Request):
     except ValidationError:
         raise HTTPException(status_code=400, detail="invalid_payload")
 
-    ok, message = await asyncio.to_thread(process_github_event, body, event)
+    # 直接调用异步函数，无需 asyncio.to_thread
+    ok, message = await async_process_github_event(body, event)
     if not ok:
         logger.warning("github_webhook_failed", extra={"event": event, "msg": message})
         raise HTTPException(status_code=400, detail=message)

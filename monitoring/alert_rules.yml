@@ -1,136 +1,114 @@
 groups:
-  - name: gitee-notion-sync.rules
+  - name: github-notion-sync-alerts
     rules:
       # 服务可用性告警
       - alert: ServiceDown
-        expr: up{job="gitee-notion-sync"} == 0
+        expr: up{job="github-notion-sync"} == 0
         for: 1m
         labels:
           severity: critical
         annotations:
-          summary: "Gitee-Notion 同步服务不可用"
-          description: "服务已下线超过 1 分钟"
+          summary: "GitHub-Notion 同步服务不可用"
+          description: "服务已离线超过 1 分钟"
 
-      # 健康检查失败告警
-      - alert: HealthCheckFailed
-        expr: probe_success{job="gitee-notion-sync"} == 0
+      # 高错误率告警
+      - alert: HighErrorRate
+        expr: rate(events_total{result="fail"}[5m]) > 0.1
         for: 2m
         labels:
           severity: warning
         annotations:
-          summary: "健康检查失败"
-          description: "健康检查失败超过 2 分钟"
+          summary: "事件处理错误率过高"
+          description: "过去 5 分钟内错误率超过 10%: {{ $value }}"
 
-      # HTTP 错误率过高
-      - alert: HighErrorRate
-        expr: |
-          (
-            rate(http_requests_total{status=~"5.."}[5m]) /
-            rate(http_requests_total[5m])
-          ) > 0.1
+      # 死信队列积压告警
+      - alert: DeadletterQueueBacklog
+        expr: deadletter_size > 50
         for: 5m
         labels:
           severity: warning
         annotations:
-          summary: "HTTP 错误率过高"
-          description: "5xx 错误率超过 10%，当前值: {{ $value | humanizePercentage }}"
+          summary: "死信队列积压严重"
+          description: "死信队列中有 {{ $value }} 条记录等待重试"
 
-      # Webhook 处理失败率过高
-      - alert: HighWebhookFailureRate
-        expr: |
-          (
-            rate(webhook_errors_total[5m]) /
-            rate(http_requests_total{endpoint="/gitee_webhook"}[5m])
-          ) > 0.05
+      # 死信队列严重积压告警
+      - alert: DeadletterQueueCritical
+        expr: deadletter_size > 200
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "死信队列严重积压"
+          description: "死信队列中有 {{ $value }} 条记录，需要立即处理"
+
+      # 处理延迟告警
+      - alert: HighProcessingLatency
+        expr: process_p95_ms > 5000
         for: 3m
         labels:
           severity: warning
         annotations:
-          summary: "Webhook 处理失败率过高"
-          description: "Webhook 失败率超过 5%，当前值: {{ $value | humanizePercentage }}"
+          summary: "事件处理延迟过高"
+          description: "95分位处理延迟超过 5 秒: {{ $value }}ms"
 
-      # 速率限制命中过多
-      - alert: HighRateLimitHits
-        expr: rate(rate_limit_hits_total[5m]) > 1
-        for: 3m
-        labels:
-          severity: warning
-        annotations:
-          summary: "速率限制命中频繁"
-          description: "速率限制命中频率: {{ $value }} 次/秒"
-
-      # Notion API 响应时间过长
-      - alert: SlowNotionAPI
-        expr: |
-          histogram_quantile(0.95, 
-            rate(notion_api_duration_seconds_bucket[5m])
-          ) > 5
-        for: 5m
-        labels:
-          severity: warning
-        annotations:
-          summary: "Notion API 响应缓慢"
-          description: "95% 请求响应时间超过 5 秒，当前 P95: {{ $value }}s"
-
-      # Notion API 错误率过高
-      - alert: HighNotionAPIErrorRate
-        expr: |
-          (
-            rate(notion_api_calls_total{status="error"}[5m]) /
-            rate(notion_api_calls_total[5m])
-          ) > 0.1
-        for: 3m
+      # Notion API 错误率告警
+      - alert: NotionAPIErrors
+        expr: rate(notion_api_calls_total{status="error"}[5m]) > 0.05
+        for: 2m
         labels:
           severity: warning
         annotations:
           summary: "Notion API 错误率过高"
-          description: "Notion API 错误率超过 10%，当前值: {{ $value | humanizePercentage }}"
+          description: "过去 5 分钟内 Notion API 错误率超过 5%"
 
-      # 死信队列积压过多
-      - alert: HighDeadletterQueue
-        expr: deadletter_size > 100
-        for: 10m
+      # 速率限制告警
+      - alert: RateLimitHits
+        expr: rate(rate_limit_hits_total[5m]) > 0.01
+        for: 1m
         labels:
           severity: warning
         annotations:
-          summary: "死信队列积压过多"
-          description: "死信队列大小: {{ $value }} 条消息"
+          summary: "触发速率限制"
+          description: "服务正在触发速率限制，可能影响性能"
 
-      # 内存使用率过高
+      # 磁盘空间告警
+      - alert: LowDiskSpace
+        expr: node_filesystem_avail_bytes{mountpoint="/"} / node_filesystem_size_bytes{mountpoint="/"} * 100 < 10
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "磁盘空间不足"
+          description: "根分区剩余空间少于 10%"
+
+      # 内存使用率告警
       - alert: HighMemoryUsage
-        expr: |
-          (
-            container_memory_usage_bytes{name="gitee-notion-sync-prod"} /
-            container_spec_memory_limit_bytes{name="gitee-notion-sync-prod"}
-          ) > 0.8
+        expr: (1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) * 100 > 80
         for: 5m
         labels:
           severity: warning
         annotations:
           summary: "内存使用率过高"
-          description: "容器内存使用率超过 80%，当前值: {{ $value | humanizePercentage }}"
+          description: "内存使用率超过 80%: {{ $value }}%"
 
-      # CPU 使用率过高
-      - alert: HighCPUUsage
-        expr: |
-          rate(container_cpu_usage_seconds_total{name="gitee-notion-sync-prod"}[5m]) > 1.5
-        for: 5m
-        labels:
-          severity: warning
-        annotations:
-          summary: "CPU 使用率过高"
-          description: "容器 CPU 使用率过高，当前值: {{ $value }}"
-
-      # 磁盘空间不足
-      - alert: LowDiskSpace
-        expr: |
-          (
-            node_filesystem_avail_bytes{mountpoint="/"} /
-            node_filesystem_size_bytes{mountpoint="/"}
-          ) < 0.1
-        for: 5m
+  - name: github-notion-sync-health
+    rules:
+      # 健康检查失败告警
+      - alert: HealthCheckFailed
+        expr: up{job="github-notion-sync-health"} == 0
+        for: 2m
         labels:
           severity: critical
         annotations:
-          summary: "磁盘空间不足"
-          description: "根分区可用空间少于 10%，剩余: {{ $value | humanizePercentage }}" 
+          summary: "健康检查失败"
+          description: "服务健康检查端点无法访问"
+
+      # API 连接问题告警（需要自定义指标）
+      - alert: APIConnectionIssues
+        expr: increase(webhook_errors_total[5m]) > 5
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: "API 连接异常"
+          description: "过去 5 分钟内出现多次 API 连接错误" 
