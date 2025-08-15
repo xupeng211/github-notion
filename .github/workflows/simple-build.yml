@@ -1,3 +1,4 @@
+# UPDATED: 2025-08-16 - 确保工作流被识别和触发
 name: Simple Docker Build
 
 # 超级简化的Docker构建，专注于成功构建镜像
