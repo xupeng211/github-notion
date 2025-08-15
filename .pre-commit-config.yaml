@@ -1,0 +1,74 @@
+repos:
+  # 基础文件检查
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.4.0
+    hooks:
+      - id: trailing-whitespace
+        description: "清理行末空白字符"
+      - id: end-of-file-fixer
+        description: "确保文件以换行符结尾"
+      - id: check-yaml
+        description: "检查YAML文件格式"
+      - id: check-added-large-files
+        description: "防止提交大文件"
+      - id: check-merge-conflict
+        description: "检查合并冲突标记"
+      - id: check-case-conflict
+        description: "检查文件名大小写冲突"
+      - id: check-json
+        description: "检查JSON文件格式"
+      - id: pretty-format-json
+        description: "格式化JSON文件"
+        args: ['--autofix']
+      - id: mixed-line-ending
+        description: "修复混合换行符"
+        args: ['--fix=lf']
+
+  # Python代码自动格式化
+  - repo: https://github.com/psf/black
+    rev: 23.12.1
+    hooks:
+      - id: black
+        description: "使用Black自动格式化Python代码"
+        language_version: python3
+        args: [--line-length=120]
+
+  # Python导入排序
+  - repo: https://github.com/pycqa/isort
+    rev: 5.13.2
+    hooks:
+      - id: isort
+        description: "使用isort自动排序Python导入"
+        name: isort (python)
+        args: ["--profile", "black", "--line-length", "120"]
+
+  # 自动移除未使用的导入和变量
+  - repo: https://github.com/myint/autoflake
+    rev: v2.2.1
+    hooks:
+      - id: autoflake
+        description: "移除未使用的导入和变量"
+        args:
+          - --remove-all-unused-imports
+          - --remove-unused-variables
+          - --in-place
+        exclude: ^(migrations/|__pycache__/)
+
+  # Python代码质量检查
+  - repo: https://github.com/pycqa/flake8
+    rev: 7.0.0
+    hooks:
+      - id: flake8
+        description: "Python代码质量检查"
+        args:
+          - --max-line-length=120
+          - --ignore=E203,W503,E501
+          - --max-complexity=10
+        exclude: ^(migrations/|__pycache__/|alembic/)
+
+# 全局配置
+default_language_version:
+  python: python3
+
+fail_fast: false
+minimum_pre_commit_version: "2.15.0"
