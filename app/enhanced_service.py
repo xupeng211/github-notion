@@ -4,33 +4,34 @@
 集成新的字段映射器、评论同步和改进的双向同步逻辑，
 提供更完整和强大的 GitHub ↔ Notion 同步功能。
 """
+
+import asyncio
 import json
 import logging
 import time
-from typing import Dict, Any, Tuple
-import asyncio
+from typing import Any, Dict, Tuple
 
+from app.comment_sync import comment_sync_service
+from app.github import github_service
 from app.mapper import field_mapper
 from app.notion import notion_service
-from app.github import github_service
-from app.comment_sync import comment_sync_service
 from app.service import (
-    session_scope,
+    DEADLETTER_SIZE,
+    EVENTS_TOTAL,
+    NOTION_DATABASE_ID,
+    PROCESS_LATENCY,
+    _get_issue_lock,
+    create_sync_event,
+    deadletter_count,
+    deadletter_enqueue,
     event_hash_from_bytes,
+    get_mapping_by_notion_page,
+    mark_event_processed,
+    mark_sync_event_processed,
+    session_scope,
     should_skip_event,
     should_skip_sync_event,
-    deadletter_enqueue,
-    mark_event_processed,
-    create_sync_event,
-    mark_sync_event_processed,
     upsert_mapping,
-    get_mapping_by_notion_page,
-    EVENTS_TOTAL,
-    PROCESS_LATENCY,
-    DEADLETTER_SIZE,
-    deadletter_count,
-    _get_issue_lock,
-    NOTION_DATABASE_ID
 )
 
 logger = logging.getLogger(__name__)
@@ -85,7 +86,7 @@ async def _handle_github_issue_event(payload: Dict[str, Any], body_bytes: bytes)
             return False, "missing_required_fields"
 
         # 检查是否应该忽略此事件
-        should_ignore, reason = field_mapper.should_ignore_event(payload, 'github')
+        should_ignore, reason = field_mapper.should_ignore_event(payload, "github")
         if should_ignore:
             EVENTS_TOTAL.labels("skip").inc()
             return True, f"ignored:{reason}"
@@ -106,8 +107,9 @@ async def _handle_github_issue_event(payload: Dict[str, Any], body_bytes: bytes)
                     return True, "duplicate"
 
                 # 防循环：检查最近的同步事件
-                if should_skip_sync_event(db, event_hash, entity_id=issue_number,
-                                           source_platform="github", target_platform="notion"):
+                if should_skip_sync_event(
+                    db, event_hash, entity_id=issue_number, source_platform="github", target_platform="notion"
+                ):
                     EVENTS_TOTAL.labels("skip").inc()
                     return True, "loop_prevented"
 
@@ -115,8 +117,14 @@ async def _handle_github_issue_event(payload: Dict[str, Any], body_bytes: bytes)
                 success, result = await notion_service.upsert_page_from_github(issue, field_mapper)
 
                 if not success:
-                    deadletter_enqueue(db, payload, reason="notion_error", last_error=result,
-                                     source_platform="github", entity_id=issue_number)
+                    deadletter_enqueue(
+                        db,
+                        payload,
+                        reason="notion_error",
+                        last_error=result,
+                        source_platform="github",
+                        entity_id=issue_number,
+                    )
                     DEADLETTER_SIZE.set(deadletter_count(db))
                     EVENTS_TOTAL.labels("fail").inc()
                     return False, "notion_error"
@@ -124,18 +132,30 @@ async def _handle_github_issue_event(payload: Dict[str, Any], body_bytes: bytes)
                 # 更新映射关系
                 if not result.startswith("ignored:"):
                     page_id = result
-                    upsert_mapping(db, "github", issue_number, page_id,
-                                    source_url=issue.get("html_url"), notion_database_id=NOTION_DATABASE_ID)
+                    upsert_mapping(
+                        db,
+                        "github",
+                        issue_number,
+                        page_id,
+                        source_url=issue.get("html_url"),
+                        notion_database_id=NOTION_DATABASE_ID,
+                    )
 
                     # 如果启用了评论同步，同步现有评论
                     sync_config = field_mapper.get_sync_config()
-                    if sync_config.get('sync_comments', True) and action in ['opened', 'reopened']:
+                    if sync_config.get("sync_comments", True) and action in ["opened", "reopened"]:
                         asyncio.create_task(_sync_issue_comments_to_notion(owner, repo, int(issue_number), page_id))
 
                 mark_event_processed(db, issue_number, event_hash, platform="github")
-                ev_id = create_sync_event(db, source_platform="github", target_platform="notion",
-                                        entity_id=issue_number, action=action or "updated",
-                                        event_hash=event_hash, is_sync_induced=False)
+                ev_id = create_sync_event(
+                    db,
+                    source_platform="github",
+                    target_platform="notion",
+                    entity_id=issue_number,
+                    action=action or "updated",
+                    event_hash=event_hash,
+                    is_sync_induced=False,
+                )
                 mark_sync_event_processed(db, ev_id)
 
         EVENTS_TOTAL.labels("success").inc()
@@ -161,7 +181,7 @@ async def _handle_github_comment_event(payload: Dict[str, Any], body_bytes: byte
 
         # 检查同步配置
         sync_config = field_mapper.get_sync_config()
-        if not sync_config.get('sync_comments', True):
+        if not sync_config.get("sync_comments", True):
             EVENTS_TOTAL.labels("skip").inc()
             return True, "comment_sync_disabled"
 
@@ -254,8 +274,9 @@ async def _handle_notion_page_event(payload: Dict[str, Any], body_bytes: bytes) 
                 return True, "duplicate"
 
             # 防循环
-            if should_skip_sync_event(db, event_hash, entity_id=issue_number,
-                                    source_platform="notion", target_platform="github"):
+            if should_skip_sync_event(
+                db, event_hash, entity_id=issue_number, source_platform="notion", target_platform="github"
+            ):
                 EVENTS_TOTAL.labels("skip").inc()
                 return True, "loop_prevented"
 
@@ -281,24 +302,38 @@ async def _handle_notion_page_event(payload: Dict[str, Any], body_bytes: bytes) 
 
             # 更新 GitHub Issue
             success, message = github_service.update_issue(
-                owner, repo, int(issue_number),
+                owner,
+                repo,
+                int(issue_number),
                 title=github_updates.get("title"),
                 body=github_updates.get("body"),
                 state=github_updates.get("state"),
-                sync_marker=sync_marker
+                sync_marker=sync_marker,
             )
 
             if not success:
-                deadletter_enqueue(db, payload, reason="github_error", last_error=message,
-                                    source_platform="notion", entity_id=str(page_id))
+                deadletter_enqueue(
+                    db,
+                    payload,
+                    reason="github_error",
+                    last_error=message,
+                    source_platform="notion",
+                    entity_id=str(page_id),
+                )
                 DEADLETTER_SIZE.set(deadletter_count(db))
                 EVENTS_TOTAL.labels("fail").inc()
                 return False, "github_error"
 
             mark_event_processed(db, issue_number, event_hash, platform="notion")
-            ev_id = create_sync_event(db, source_platform="notion", target_platform="github",
-                                    entity_id=issue_number, action="updated", event_hash=event_hash,
-                                    is_sync_induced=True)
+            ev_id = create_sync_event(
+                db,
+                source_platform="notion",
+                target_platform="github",
+                entity_id=issue_number,
+                action="updated",
+                event_hash=event_hash,
+                is_sync_induced=True,
+            )
             mark_sync_event_processed(db, ev_id)
 
         EVENTS_TOTAL.labels("success").inc()
@@ -322,7 +357,7 @@ async def _handle_notion_block_event(payload: Dict[str, Any], body_bytes: bytes)
 
         # 检查评论同步配置
         sync_config = field_mapper.get_sync_config()
-        if not sync_config.get('sync_comments', True):
+        if not sync_config.get("sync_comments", True):
             EVENTS_TOTAL.labels("skip").inc()
             return True, "comment_sync_disabled"
 
@@ -348,20 +383,16 @@ async def _handle_notion_block_event(payload: Dict[str, Any], body_bytes: bytes)
         return False, str(e)
 
 
-async def _sync_issue_comments_to_notion(owner: str, repo: str, issue_number: int,
-                                       notion_page_id: str) -> None:
+async def _sync_issue_comments_to_notion(owner: str, repo: str, issue_number: int, notion_page_id: str) -> None:
     """异步同步 Issue 的所有评论到 Notion（后台任务）"""
     try:
-        await comment_sync_service.sync_all_comments_github_to_notion(
-            owner, repo, issue_number, notion_page_id
-        )
+        await comment_sync_service.sync_all_comments_github_to_notion(owner, repo, issue_number, notion_page_id)
         logger.info(f"Successfully synced comments for issue #{issue_number} to Notion")
     except Exception as e:
         logger.error(f"Failed to sync comments for issue #{issue_number}: {e}")
 
 
-async def sync_existing_issues_to_notion(owner: str, repo: str,
-                                       limit: int = 50) -> Tuple[bool, str]:
+async def sync_existing_issues_to_notion(owner: str, repo: str, limit: int = 50) -> Tuple[bool, str]:
     """批量同步现有的 GitHub Issues 到 Notion
 
     Args:
@@ -375,12 +406,7 @@ async def sync_existing_issues_to_notion(owner: str, repo: str,
     try:
         # 获取仓库的 Issues
         url = f"{github_service.base_url}/repos/{owner}/{repo}/issues"
-        params = {
-            "state": "all",
-            "per_page": min(limit, 100),
-            "sort": "updated",
-            "direction": "desc"
-        }
+        params = {"state": "all", "per_page": min(limit, 100), "sort": "updated", "direction": "desc"}
 
         response = github_service.session.get(url, params=params, timeout=30)
         response.raise_for_status()
@@ -405,19 +431,17 @@ async def sync_existing_issues_to_notion(owner: str, repo: str,
 
                     # 可选：同步评论
                     sync_config = field_mapper.get_sync_config()
-                    if sync_config.get('sync_comments', True):
+                    if sync_config.get("sync_comments", True):
                         issue_number = issue.get("number")
                         if issue_number:
-                            asyncio.create_task(_sync_issue_comments_to_notion(
-                                owner, repo, issue_number, result
-                            ))
+                            asyncio.create_task(_sync_issue_comments_to_notion(owner, repo, issue_number, result))
                 elif not success:
                     failed_count += 1
                     logger.warning(f"Failed to sync issue #{issue.get('number')}: {result}")
 
                 # 添加延迟以避免触发 API 限制
                 sync_config = field_mapper.get_sync_config()
-                delay = sync_config.get('rate_limit_delay', 1.0)
+                delay = sync_config.get("rate_limit_delay", 1.0)
                 if delay > 0:
                     await asyncio.sleep(delay)
 
@@ -438,17 +462,13 @@ async def sync_existing_issues_to_notion(owner: str, repo: str,
 def process_github_event_sync(body_bytes: bytes, event: str) -> Tuple[bool, str]:
     """同步版本的 GitHub 事件处理（兼容性）"""
     try:
-        return asyncio.get_event_loop().run_until_complete(
-            process_github_event_enhanced(body_bytes, event)
-        )
+        return asyncio.get_event_loop().run_until_complete(process_github_event_enhanced(body_bytes, event))
     except RuntimeError:
         # 如果没有事件循环，创建新的
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
         try:
-            return loop.run_until_complete(
-                process_github_event_enhanced(body_bytes, event)
-            )
+            return loop.run_until_complete(process_github_event_enhanced(body_bytes, event))
         finally:
             loop.close()
 
@@ -456,16 +476,12 @@ def process_github_event_sync(body_bytes: bytes, event: str) -> Tuple[bool, str]
 def process_notion_event_sync(body_bytes: bytes) -> Tuple[bool, str]:
     """同步版本的 Notion 事件处理（兼容性）"""
     try:
-        return asyncio.get_event_loop().run_until_complete(
-            process_notion_event_enhanced(body_bytes)
-        )
+        return asyncio.get_event_loop().run_until_complete(process_notion_event_enhanced(body_bytes))
     except RuntimeError:
         # 如果没有事件循环，创建新的
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
         try:
-            return loop.run_until_complete(
-                process_notion_event_enhanced(body_bytes)
-            )
+            return loop.run_until_complete(process_notion_event_enhanced(body_bytes))
         finally:
             loop.close()

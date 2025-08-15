@@ -1,7 +1,7 @@
-import os
 import hashlib
 import hmac
 import json
+import os
 
 from fastapi.testclient import TestClient
 
@@ -95,17 +95,21 @@ def test_conflict_strategy(monkeypatch):
 
     payload1 = json.dumps({"issue": {"number": 4, "title": "Z"}}).encode()
     sig1 = sign("k", payload1)
-    r1 = client.post("/gitee_webhook", data=payload1, headers={"X-Gitee-Token": sig1, "Content-Type": "application/json"})
+    r1 = client.post(
+        "/gitee_webhook", data=payload1, headers={"X-Gitee-Token": sig1, "Content-Type": "application/json"}
+    )
     assert r1.status_code == 200
 
     payload2 = json.dumps({"issue": {"number": 4, "title": "Z2"}}).encode()
     sig2 = sign("k", payload2)
-    r2 = client.post("/gitee_webhook", data=payload2, headers={"X-Gitee-Token": sig2, "Content-Type": "application/json"})
+    r2 = client.post(
+        "/gitee_webhook", data=payload2, headers={"X-Gitee-Token": sig2, "Content-Type": "application/json"}
+    )
     assert r2.status_code == 200
 
 
 def test_replay_script_imports():
     # Ensure replay script imports without error
     import importlib
-    importlib.import_module("scripts.replay_deadletter")
 
+    importlib.import_module("scripts.replay_deadletter")

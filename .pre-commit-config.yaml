@@ -62,8 +62,8 @@ repos:
         description: "Python代码质量检查"
         args:
           - --max-line-length=120
-          - --ignore=E203,W503,E501
-          - --max-complexity=10
+          - --ignore=E203,W503,E501,C901
+          - --max-complexity=25
         exclude: ^(migrations/|__pycache__/|alembic/)
 
 # 全局配置

@@ -1,10 +1,11 @@
 """GitHub API 集成服务"""
+
 import hashlib
 import hmac
 import json
 import logging
 import os
-from typing import Dict, Any, Optional, Tuple
+from typing import Any, Dict, Optional, Tuple
 
 import requests
 from requests.adapters import HTTPAdapter
@@ -33,11 +34,13 @@ class GitHubService:
         self.session.mount("https://", adapter)
 
         # 设置默认headers
-        self.session.headers.update({
-            "Authorization": f"Bearer {self.token}",
-            "Accept": "application/vnd.github+json",
-            "X-GitHub-Api-Version": "2022-11-28"
-        })
+        self.session.headers.update(
+            {
+                "Authorization": f"Bearer {self.token}",
+                "Accept": "application/vnd.github+json",
+                "X-GitHub-Api-Version": "2022-11-28",
+            }
+        )
 
     def verify_webhook_signature(self, payload: bytes, signature: str) -> bool:
         """验证GitHub Webhook签名"""
@@ -55,11 +58,7 @@ class GitHubService:
         expected_signature = signature[7:]  # Remove "sha256=" prefix
 
         # Calculate HMAC
-        calculated_signature = hmac.new(
-            self.webhook_secret.encode(),
-            payload,
-            hashlib.sha256
-        ).hexdigest()
+        calculated_signature = hmac.new(self.webhook_secret.encode(), payload, hashlib.sha256).hexdigest()
 
         # Use secure comparison
         return hmac.compare_digest(calculated_signature, expected_signature)
@@ -75,10 +74,17 @@ class GitHubService:
             logger.error(f"Failed to get GitHub issue {owner}/{repo}#{issue_number}: {e}")
             return None
 
-    def update_issue(self, owner: str, repo: str, issue_number: int,
-                    title: Optional[str] = None, body: Optional[str] = None,
-                    state: Optional[str] = None, labels: Optional[list] = None,
-                    sync_marker: Optional[str] = None) -> Tuple[bool, str]:
+    def update_issue(
+        self,
+        owner: str,
+        repo: str,
+        issue_number: int,
+        title: Optional[str] = None,
+        body: Optional[str] = None,
+        state: Optional[str] = None,
+        labels: Optional[list] = None,
+        sync_marker: Optional[str] = None,
+    ) -> Tuple[bool, str]:
         """更新GitHub Issue"""
         try:
             url = f"{self.base_url}/repos/{owner}/{repo}/issues/{issue_number}"
@@ -110,8 +116,9 @@ class GitHubService:
             logger.error(f"Failed to update GitHub issue {owner}/{repo}#{issue_number}: {e}")
             return False, str(e)
 
-    def add_comment(self, owner: str, repo: str, issue_number: int,
-                   comment: str, sync_marker: Optional[str] = None) -> Tuple[bool, str]:
+    def add_comment(
+        self, owner: str, repo: str, issue_number: int, comment: str, sync_marker: Optional[str] = None
+    ) -> Tuple[bool, str]:
         """在GitHub Issue中添加评论"""
         try:
             url = f"{self.base_url}/repos/{owner}/{repo}/issues/{issue_number}/comments"
@@ -142,7 +149,7 @@ class GitHubService:
             "title": data.get("title", ""),
             "body": data.get("body", ""),
             "state": data.get("state", ""),
-            "updated_at": data.get("updated_at", "")
+            "updated_at": data.get("updated_at", ""),
         }
         content = json.dumps(key_fields, sort_keys=True)
         return hashlib.sha256(content.encode()).hexdigest()
@@ -152,7 +159,7 @@ class GitHubService:
         try:
             # 处理形如 https://github.com/owner/repo 的URL
             if "github.com" in github_url:
-                parts = github_url.rstrip('/').split('/')
+                parts = github_url.rstrip("/").split("/")
                 if len(parts) >= 2:
                     return parts[-2], parts[-1]  # owner, repo
         except Exception as e:

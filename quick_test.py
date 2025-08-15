@@ -26,12 +26,7 @@ def quick_test():
 
     # 1. 测试文件存在性
     print("\n📁 检查关键文件...")
-    key_files = [
-        'app/mapper.py',
-        'app/enhanced_service.py',
-        'app/comment_sync.py',
-        'app/mapping.yml'
-    ]
+    key_files = ["app/mapper.py", "app/enhanced_service.py", "app/comment_sync.py", "app/mapping.yml"]
 
     for file_path in key_files:
         total_tests += 1
@@ -44,9 +39,9 @@ def quick_test():
     # 2. 测试模块导入
     print("\n🔗 测试模块导入...")
     modules = [
-        ('app.mapper', 'field_mapper'),
-        ('app.enhanced_service', 'process_github_event_enhanced'),
-        ('app.comment_sync', 'comment_sync_service'),
+        ("app.mapper", "field_mapper"),
+        ("app.enhanced_service", "process_github_event_enhanced"),
+        ("app.comment_sync", "comment_sync_service"),
     ]
 
     for module_name, attr_name in modules:
@@ -64,10 +59,11 @@ def quick_test():
     total_tests += 1
     try:
         import yaml
-        with open('app/mapping.yml', 'r', encoding='utf-8') as f:
+
+        with open("app/mapping.yml", "r", encoding="utf-8") as f:
             config = yaml.safe_load(f)
 
-        required_sections = ['github_to_notion', 'notion_to_github']
+        required_sections = ["github_to_notion", "notion_to_github"]
         if all(section in config for section in required_sections):
             print_status("配置文件格式正确", "success")
             tests_passed += 1
@@ -95,7 +91,7 @@ def quick_test():
 
     # 5. 检查环境变量
     print("\n🔐 检查环境变量...")
-    env_vars = ['GITHUB_TOKEN', 'NOTION_TOKEN', 'NOTION_DATABASE_ID']
+    env_vars = ["GITHUB_TOKEN", "NOTION_TOKEN", "NOTION_DATABASE_ID"]
 
     for var in env_vars:
         if os.getenv(var):

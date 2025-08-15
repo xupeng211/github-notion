@@ -1,10 +1,13 @@
 import os
+
 import pytest
+
 #!/usr/bin/env python3
 
 
-
-pytestmark = pytest.mark.skipif(os.getenv("RUN_PERF_TESTS") != "1", reason="Set RUN_PERF_TESTS=1 to enable performance tests")
+pytestmark = pytest.mark.skipif(
+    os.getenv("RUN_PERF_TESTS") != "1", reason="Set RUN_PERF_TESTS=1 to enable performance tests"
+)
 import concurrent.futures
 import hashlib
 import hmac
@@ -25,6 +28,7 @@ TEST_CONFIG = {
     "request_interval": float(os.getenv("REQUEST_INTERVAL", "1.0")),  # 请求间隔（秒）
 }
 
+
 class PerformanceTest:
     def __init__(self):
         self.results: List[Dict[str, Any]] = []
@@ -39,25 +43,16 @@ class PerformanceTest:
                 "title": f"Performance Test Issue {datetime.now(timezone.utc).isoformat()}",
                 "body": "This is a test issue for performance testing.",
                 "state": "open",
-                "labels": [
-                    {"name": "test"},
-                    {"name": "performance"}
-                ],
+                "labels": [{"name": "test"}, {"name": "performance"}],
                 "created_at": datetime.now(timezone.utc).isoformat(),
                 "updated_at": datetime.now(timezone.utc).isoformat(),
-                "user": {
-                    "name": "test_user"
-                }
-            }
+                "user": {"name": "test_user"},
+            },
         }
 
     def calculate_signature(self, payload: str) -> str:
         """计算 webhook 签名"""
-        return hmac.new(
-            TEST_CONFIG["gitee_webhook_secret"].encode(),
-            payload.encode(),
-            hashlib.sha256
-        ).hexdigest()
+        return hmac.new(TEST_CONFIG["gitee_webhook_secret"].encode(), payload.encode(), hashlib.sha256).hexdigest()
 
     def send_request(self) -> Dict[str, Any]:
         """发送单个请求并记录结果"""
@@ -67,16 +62,13 @@ class PerformanceTest:
         headers = {
             "Content-Type": "application/json",
             "X-Gitee-Token": self.calculate_signature(payload_str),
-            "X-Gitee-Event": "Issue Hook"
+            "X-Gitee-Event": "Issue Hook",
         }
 
         start_time = time.time()
         try:
             response = requests.post(
-                f"{TEST_CONFIG['base_url']}/gitee_webhook",
-                headers=headers,
-                data=payload_str,
-                timeout=30
+                f"{TEST_CONFIG['base_url']}/gitee_webhook", headers=headers, data=payload_str, timeout=30
             )
 
             end_time = time.time()
@@ -86,15 +78,13 @@ class PerformanceTest:
                 "timestamp": datetime.now(timezone.utc).isoformat(),
                 "duration": duration,
                 "status_code": response.status_code,
-                "success": 200 <= response.status_code < 300
+                "success": 200 <= response.status_code < 300,
             }
 
             if not result["success"]:
-                self.errors.append({
-                    "timestamp": result["timestamp"],
-                    "status_code": result["status_code"],
-                    "response": response.text
-                })
+                self.errors.append(
+                    {"timestamp": result["timestamp"], "status_code": result["status_code"], "response": response.text}
+                )
 
             return result
 
@@ -107,7 +97,7 @@ class PerformanceTest:
                 "duration": duration,
                 "status_code": None,
                 "success": False,
-                "error": str(e)
+                "error": str(e),
             }
 
             self.errors.append(error_result)
@@ -123,9 +113,7 @@ class PerformanceTest:
 
         start_time = time.time()
 
-        with concurrent.futures.ThreadPoolExecutor(
-            max_workers=TEST_CONFIG["concurrent_users"]
-        ) as executor:
+        with concurrent.futures.ThreadPoolExecutor(max_workers=TEST_CONFIG["concurrent_users"]) as executor:
             while time.time() - start_time < TEST_CONFIG["test_duration"]:
                 futures = []
                 for _ in range(TEST_CONFIG["concurrent_users"]):
@@ -181,10 +169,12 @@ class PerformanceTest:
         print(f"- 每秒请求数: {requests_per_second:.2f}")
         print(f"- 总测试时长: {test_duration:.2f} 秒")
 
+
 def main():
     """主函数"""
     test = PerformanceTest()
     test.run_load_test()
+
 
 if __name__ == "__main__":
     main()

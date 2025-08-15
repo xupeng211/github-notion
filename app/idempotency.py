@@ -7,9 +7,11 @@ import hashlib
 import json
 import logging
 from datetime import datetime, timedelta
-from typing import Optional, Tuple, Any, Dict
+from typing import Any, Dict, Optional, Tuple
+
 from sqlalchemy.orm import Session
-from app.models import SyncEvent, ProcessedEvent, SessionLocal
+
+from app.models import ProcessedEvent, SessionLocal, SyncEvent
 
 logger = logging.getLogger(__name__)
 
@@ -34,7 +36,7 @@ class IdempotencyManager:
         event_type: str,
         delivery_id: Optional[str] = None,
         entity_id: Optional[str] = None,
-        timestamp: Optional[str] = None
+        timestamp: Optional[str] = None,
     ) -> str:
         """
         生成唯一的事件ID
@@ -79,21 +81,25 @@ class IdempotencyManager:
 
         if "issue" in payload:
             issue = payload["issue"]
-            key_fields.update({
-                "title": issue.get("title", ""),
-                "body": issue.get("body", ""),
-                "state": issue.get("state", ""),
-                "updated_at": issue.get("updated_at", "")
-            })
+            key_fields.update(
+                {
+                    "title": issue.get("title", ""),
+                    "body": issue.get("body", ""),
+                    "state": issue.get("state", ""),
+                    "updated_at": issue.get("updated_at", ""),
+                }
+            )
 
         if "pull_request" in payload:
             pr = payload["pull_request"]
-            key_fields.update({
-                "title": pr.get("title", ""),
-                "body": pr.get("body", ""),
-                "state": pr.get("state", ""),
-                "updated_at": pr.get("updated_at", "")
-            })
+            key_fields.update(
+                {
+                    "title": pr.get("title", ""),
+                    "body": pr.get("body", ""),
+                    "state": pr.get("state", ""),
+                    "updated_at": pr.get("updated_at", ""),
+                }
+            )
 
         # Notion页面内容
         if "properties" in payload:
@@ -104,10 +110,7 @@ class IdempotencyManager:
         return hashlib.sha256(content.encode()).hexdigest()
 
     def is_duplicate_event(
-        self,
-        event_id: str,
-        content_hash: str,
-        max_age_hours: int = 24
+        self, event_id: str, content_hash: str, max_age_hours: int = 24
     ) -> Tuple[bool, Optional[str]]:
         """
         检查是否为重复事件
@@ -124,10 +127,11 @@ class IdempotencyManager:
             cutoff_time = datetime.utcnow() - timedelta(hours=max_age_hours)
 
             # 检查是否存在相同的事件ID
-            existing_event = self.db.query(SyncEvent).filter(
-                SyncEvent.event_id == event_id,
-                SyncEvent.created_at >= cutoff_time
-            ).first()
+            existing_event = (
+                self.db.query(SyncEvent)
+                .filter(SyncEvent.event_id == event_id, SyncEvent.created_at >= cutoff_time)
+                .first()
+            )
 
             if existing_event:
                 if existing_event.status == "processed":
@@ -136,10 +140,11 @@ class IdempotencyManager:
                     return True, f"duplicate_event_id_pending:{existing_event.id}"
 
             # 检查是否存在相同内容哈希的已处理事件
-            existing_hash = self.db.query(ProcessedEvent).filter(
-                ProcessedEvent.event_hash == content_hash,
-                ProcessedEvent.created_at >= cutoff_time
-            ).first()
+            existing_hash = (
+                self.db.query(ProcessedEvent)
+                .filter(ProcessedEvent.event_hash == content_hash, ProcessedEvent.created_at >= cutoff_time)
+                .first()
+            )
 
             if existing_hash:
                 return True, f"duplicate_content_hash:{existing_hash.id}"
@@ -159,7 +164,7 @@ class IdempotencyManager:
         event_type: str,
         entity_id: str,
         action: str,
-        payload: Dict[str, Any]
+        payload: Dict[str, Any],
     ) -> SyncEvent:
         """
         记录事件开始处理
@@ -185,21 +190,17 @@ class IdempotencyManager:
                 entity_type="issue" if "issue" in payload else "page",
                 entity_id=entity_id,
                 action=action,
-                sync_direction=(
-                    f"{provider}_to_notion" if provider != "notion" else "notion_to_github"
-                ),
-                status="pending"
+                sync_direction=(f"{provider}_to_notion" if provider != "notion" else "notion_to_github"),
+                status="pending",
             )
 
             self.db.add(sync_event)
             self.db.commit()
             self.db.refresh(sync_event)
 
-            logger.info("event_processing_recorded", extra={
-                "event_id": event_id,
-                "provider": provider,
-                "entity_id": entity_id
-            })
+            logger.info(
+                "event_processing_recorded", extra={"event_id": event_id, "provider": provider, "entity_id": entity_id}
+            )
 
             return sync_event
 
@@ -208,12 +209,7 @@ class IdempotencyManager:
             self.db.rollback()
             raise
 
-    def mark_event_processed(
-        self,
-        event_id: str,
-        success: bool,
-        error_message: Optional[str] = None
-    ) -> bool:
+    def mark_event_processed(self, event_id: str, success: bool, error_message: Optional[str] = None) -> bool:
         """
         标记事件处理完成
 
@@ -226,9 +222,7 @@ class IdempotencyManager:
             bool: 是否成功更新
         """
         try:
-            sync_event = self.db.query(SyncEvent).filter(
-                SyncEvent.event_id == event_id
-            ).first()
+            sync_event = self.db.query(SyncEvent).filter(SyncEvent.event_id == event_id).first()
 
             if not sync_event:
                 logger.warning("sync_event_not_found", extra={"event_id": event_id})
@@ -242,17 +236,15 @@ class IdempotencyManager:
                 processed_event = ProcessedEvent(
                     event_hash=sync_event.event_hash,
                     issue_id=sync_event.entity_id,
-                    source_platform=sync_event.source_platform
+                    source_platform=sync_event.source_platform,
                 )
                 self.db.add(processed_event)
 
             self.db.commit()
 
-            logger.info("event_processing_completed", extra={
-                "event_id": event_id,
-                "success": success,
-                "error": error_message
-            })
+            logger.info(
+                "event_processing_completed", extra={"event_id": event_id, "success": success, "error": error_message}
+            )
 
             return True
 
@@ -275,23 +267,21 @@ class IdempotencyManager:
             cutoff_time = datetime.utcnow() - timedelta(days=days_to_keep)
 
             # 清理已处理的旧事件
-            deleted_sync = self.db.query(SyncEvent).filter(
-                SyncEvent.created_at < cutoff_time,
-                SyncEvent.status == "processed"
-            ).delete()
+            deleted_sync = (
+                self.db.query(SyncEvent)
+                .filter(SyncEvent.created_at < cutoff_time, SyncEvent.status == "processed")
+                .delete()
+            )
 
-            deleted_processed = self.db.query(ProcessedEvent).filter(
-                ProcessedEvent.created_at < cutoff_time
-            ).delete()
+            deleted_processed = self.db.query(ProcessedEvent).filter(ProcessedEvent.created_at < cutoff_time).delete()
 
             self.db.commit()
 
             total_deleted = deleted_sync + deleted_processed
-            logger.info("old_events_cleaned", extra={
-                "sync_events": deleted_sync,
-                "processed_events": deleted_processed,
-                "total": total_deleted
-            })
+            logger.info(
+                "old_events_cleaned",
+                extra={"sync_events": deleted_sync, "processed_events": deleted_processed, "total": total_deleted},
+            )
 
             return total_deleted
 
@@ -306,7 +296,7 @@ def with_idempotency(
     event_type: str,
     delivery_id: Optional[str] = None,
     entity_id: Optional[str] = None,
-    max_age_hours: int = 24
+    max_age_hours: int = 24,
 ):
     """
     幂等性装饰器
@@ -316,41 +306,33 @@ def with_idempotency(
     async def process_github_issue(payload):
         # 处理逻辑
     """
+
     def decorator(func):
         async def wrapper(payload, *args, **kwargs):
             with IdempotencyManager() as manager:
                 # 生成事件ID和内容哈希
-                event_id = manager.generate_event_id(
-                    provider, event_type, delivery_id, entity_id
-                )
+                event_id = manager.generate_event_id(provider, event_type, delivery_id, entity_id)
                 content_hash = manager.generate_content_hash(payload)
 
                 # 检查是否为重复事件（基于事件ID和内容哈希）
-                is_duplicate = (
-                    manager.is_duplicate_event(event_id, content_hash)
-                    or manager.is_duplicate_event_by_delivery_id(delivery_id)
-                )
+                is_duplicate = manager.is_duplicate_event(
+                    event_id, content_hash
+                ) or manager.is_duplicate_event_by_delivery_id(delivery_id)
 
                 if is_duplicate:
-                    logger.info("duplicate_event_skipped", extra={
-                        "event_id": event_id,
-                        "reason": "duplicate_detected"
-                    })
+                    logger.info("duplicate_event_skipped", extra={"event_id": event_id, "reason": "duplicate_detected"})
                     return True, "duplicate_event_skipped:duplicate_detected"
 
                 # 记录事件开始处理
                 action = payload.get("action", "unknown")
-                extracted_entity_id = (
-                    entity_id or str(
-                        payload.get("issue", {}).get("number")
-                        or payload.get("pull_request", {}).get("number")
-                        or payload.get("id", "unknown")
-                    )
+                extracted_entity_id = entity_id or str(
+                    payload.get("issue", {}).get("number")
+                    or payload.get("pull_request", {}).get("number")
+                    or payload.get("id", "unknown")
                 )
 
                 manager.record_event_processing(
-                    event_id, content_hash, provider, event_type,
-                    extracted_entity_id, action, payload
+                    event_id, content_hash, provider, event_type, extracted_entity_id, action, payload
                 )
 
                 try:
@@ -367,4 +349,5 @@ def with_idempotency(
                     raise
 
         return wrapper
+
     return decorator

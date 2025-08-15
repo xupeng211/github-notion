@@ -1,10 +1,11 @@
 import os
-import pytest
-import json
 
+import pytest
 from fastapi.testclient import TestClient
 
-pytestmark = pytest.mark.skipif(os.getenv("RUN_RATE_LIMIT_TESTS") != "1", reason="Set RUN_RATE_LIMIT_TESTS=1 to enable rate limit tests")
+pytestmark = pytest.mark.skipif(
+    os.getenv("RUN_RATE_LIMIT_TESTS") != "1", reason="Set RUN_RATE_LIMIT_TESTS=1 to enable rate limit tests"
+)
 
 from app.server import app
 
@@ -18,7 +19,7 @@ def test_rate_limit_disabled_by_default():
         response = client.post(
             "/gitee_webhook",
             json={"issue": {"number": 1, "title": "test"}},
-            headers={"X-Gitee-Token": "dummy", "X-Gitee-Event": "Issue Hook"}
+            headers={"X-Gitee-Token": "dummy", "X-Gitee-Event": "Issue Hook"},
         )
         # 应该因为签名验证失败而返回 403，而不是 429
         assert response.status_code in (400, 403)
@@ -30,7 +31,7 @@ def test_pydantic_validation_invalid_payload():
     response = client.post(
         "/gitee_webhook",
         json={"action": "open"},  # 缺少 issue
-        headers={"X-Gitee-Token": "dummy", "X-Gitee-Event": "Issue Hook"}
+        headers={"X-Gitee-Token": "dummy", "X-Gitee-Event": "Issue Hook"},
     )
     assert response.status_code == 400
     assert "invalid_payload" in response.json()["detail"]
@@ -39,7 +40,7 @@ def test_pydantic_validation_invalid_payload():
     response = client.post(
         "/gitee_webhook",
         json={"issue": "not_a_dict"},  # issue 应该是字典
-        headers={"X-Gitee-Token": "dummy", "X-Gitee-Event": "Issue Hook"}
+        headers={"X-Gitee-Token": "dummy", "X-Gitee-Event": "Issue Hook"},
     )
     assert response.status_code == 400
     assert "invalid_payload" in response.json()["detail"]
@@ -55,14 +56,12 @@ def test_pydantic_validation_valid_payload():
             "body": "Test body",
             "state": "open",
             "labels": [{"name": "bug"}],
-            "user": {"name": "testuser"}
-        }
+            "user": {"name": "testuser"},
+        },
     }
 
     response = client.post(
-        "/gitee_webhook",
-        json=valid_payload,
-        headers={"X-Gitee-Token": "dummy", "X-Gitee-Event": "Issue Hook"}
+        "/gitee_webhook", json=valid_payload, headers={"X-Gitee-Token": "dummy", "X-Gitee-Event": "Issue Hook"}
     )
     # 应该因为签名验证失败而返回 403，而不是 400
     assert response.status_code in (400, 403)
@@ -77,13 +76,14 @@ def test_rate_limit_enabled_with_env(monkeypatch):
     import importlib
 
     import app.server
+
     importlib.reload(app.server)
     # 前两次请求应该成功（返回 403 因为签名验证失败，但通过了限流）
     for i in range(2):
         response = client.post(
             "/gitee_webhook",
             json={"issue": {"number": i, "title": f"test{i}"}},
-            headers={"X-Gitee-Token": "dummy", "X-Gitee-Event": "Issue Hook"}
+            headers={"X-Gitee-Token": "dummy", "X-Gitee-Event": "Issue Hook"},
         )
         assert response.status_code in (400, 403)
 
@@ -91,7 +91,7 @@ def test_rate_limit_enabled_with_env(monkeypatch):
     response = client.post(
         "/gitee_webhook",
         json={"issue": {"number": 3, "title": "test3"}},
-        headers={"X-Gitee-Token": "dummy", "X-Gitee-Event": "Issue Hook"}
+        headers={"X-Gitee-Token": "dummy", "X-Gitee-Event": "Issue Hook"},
     )
     assert response.status_code == 429
     assert "too_many_requests" in response.json()["detail"]
@@ -120,6 +120,6 @@ def test_rate_limit_reset_after_window(monkeypatch):
     response = client.post(
         "/gitee_webhook",
         json={"issue": {"number": 4, "title": "test4"}},
-        headers={"X-Gitee-Token": "dummy", "X-Gitee-Event": "Issue Hook"}
+        headers={"X-Gitee-Token": "dummy", "X-Gitee-Event": "Issue Hook"},
     )
     assert response.status_code in (400, 403)  # 通过限流，但签名验证失败

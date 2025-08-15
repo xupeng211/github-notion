@@ -9,7 +9,9 @@ def test_verify_gitee_signature_valid_invalid(monkeypatch):
     secret = "s"
     body = b"{}"
 
-    ok = service.verify_gitee_signature(secret, body, service.hmac.new(secret.encode(), body, service.hashlib.sha256).hexdigest())
+    ok = service.verify_gitee_signature(
+        secret, body, service.hmac.new(secret.encode(), body, service.hashlib.sha256).hexdigest()
+    )
     assert ok is True
 
     ok2 = service.verify_gitee_signature(secret, body, "bad")
@@ -25,6 +27,7 @@ def test_idempotency_and_mapping(tmp_path, monkeypatch):
 
     # Reload modules to pick up env
     import prometheus_client
+
     prometheus_client.REGISTRY = prometheus_client.CollectorRegistry()
     # Ensure fresh imports under new env/registry
     for mod in ["app.service", "app.models"]:
@@ -39,6 +42,7 @@ def test_idempotency_and_mapping(tmp_path, monkeypatch):
     body = json.dumps(payload).encode()
     import hashlib
     import hmac
+
     sig = hmac.new(b"s", body, hashlib.sha256).hexdigest()
 
     ok, msg = service.process_gitee_event(body, "s", sig, "Issue Hook")
@@ -57,6 +61,7 @@ def test_deadletter_replay_flow(tmp_path, monkeypatch):
     monkeypatch.setenv("DEADLETTER_REPLAY_TOKEN", "t")
 
     import prometheus_client
+
     prometheus_client.REGISTRY = prometheus_client.CollectorRegistry()
     for mod in ["app.service", "app.models"]:
         if mod in sys.modules:
@@ -70,6 +75,7 @@ def test_deadletter_replay_flow(tmp_path, monkeypatch):
     body = json.dumps(payload).encode()
     import hashlib
     import hmac
+
     sig = hmac.new(b"s", body, hashlib.sha256).hexdigest()
 
     # First, force notion failure to enqueue deadletter
@@ -87,5 +93,3 @@ def test_deadletter_replay_flow(tmp_path, monkeypatch):
     monkeypatch.setattr(service, "notion_upsert_page", succeed_notion)
     replayed = service.replay_deadletters_once("t")
     assert replayed >= 1
-
-

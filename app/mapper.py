@@ -4,11 +4,13 @@
 提供 GitHub 和 Notion 之间的双向数据映射功能，
 支持复杂的字段转换、类型处理和智能映射规则。
 """
+
 import logging
-import yaml
 from datetime import datetime
-from typing import Dict, Any, Optional, Tuple
 from pathlib import Path
+from typing import Any, Dict, Optional, Tuple
+
+import yaml
 
 logger = logging.getLogger(__name__)
 
@@ -28,7 +30,7 @@ class FieldMapper:
     def _load_config(self) -> Dict[str, Any]:
         """加载映射配置"""
         try:
-            with open(self.config_path, 'r', encoding='utf-8') as f:
+            with open(self.config_path, "r", encoding="utf-8") as f:
                 return yaml.safe_load(f)
         except Exception as e:
             logger.error(f"Failed to load mapping config from {self.config_path}: {e}")
@@ -54,9 +56,9 @@ class FieldMapper:
             Notion 页面属性字典
         """
         properties = {}
-        mappings = self.config.get('github_to_notion', {})
-        field_types = self.config.get('field_types', {})
-        status_mapping = self.config.get('status_mapping', {}).get('github_to_notion', {})
+        mappings = self.config.get("github_to_notion", {})
+        field_types = self.config.get("field_types", {})
+        status_mapping = self.config.get("status_mapping", {}).get("github_to_notion", {})
 
         for github_field, notion_field in mappings.items():
             value = self._get_nested_value(github_data, github_field)
@@ -64,10 +66,10 @@ class FieldMapper:
                 continue
 
             # 获取字段类型
-            field_type = field_types.get(notion_field, 'rich_text')
+            field_type = field_types.get(notion_field, "rich_text")
 
             # 特殊处理状态字段
-            if github_field == 'state' and value in status_mapping:
+            if github_field == "state" and value in status_mapping:
                 value = status_mapping[value]
 
             # 根据字段类型转换数据
@@ -88,10 +90,10 @@ class FieldMapper:
             GitHub Issue 更新数据字典
         """
         github_data: Dict[str, Any] = {}
-        mappings = self.config.get('notion_to_github', {})
-        status_mapping = self.config.get('status_mapping', {}).get('notion_to_github', {})
+        mappings = self.config.get("notion_to_github", {})
+        status_mapping = self.config.get("status_mapping", {}).get("notion_to_github", {})
 
-        properties = notion_page.get('properties', {})
+        properties = notion_page.get("properties", {})
 
         for notion_field, github_field in mappings.items():
             notion_property = properties.get(notion_field)
@@ -103,11 +105,11 @@ class FieldMapper:
                 continue
 
             # 特殊处理状态字段
-            if notion_field == 'Status' and value in status_mapping:
+            if notion_field == "Status" and value in status_mapping:
                 value = status_mapping[value]
 
             # 处理嵌套字段（如 labels.primary）
-            if '.' in github_field:
+            if "." in github_field:
                 self._set_nested_value(github_data, github_field, value)
             else:
                 github_data[github_field] = value
@@ -126,7 +128,7 @@ class FieldMapper:
         """
         try:
             current = data
-            parts = path.split('.')
+            parts = path.split(".")
 
             for part in parts:
                 if current is None:
@@ -150,7 +152,7 @@ class FieldMapper:
     def _set_nested_value(self, data: Dict[str, Any], path: str, value: Any) -> None:
         """设置嵌套字段值"""
         try:
-            parts = path.split('.')
+            parts = path.split(".")
             current = data
 
             # 导航到最后一级的父对象
@@ -164,8 +166,9 @@ class FieldMapper:
         except Exception as e:
             logger.error(f"Failed to set nested value for path '{path}': {e}")
 
-    def _convert_to_notion_type(self, value: Any, field_type: str,
-                               github_field: str, full_data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    def _convert_to_notion_type(
+        self, value: Any, field_type: str, github_field: str, full_data: Dict[str, Any]
+    ) -> Optional[Dict[str, Any]]:
         """将值转换为 Notion 字段类型格式
 
         Args:
@@ -181,50 +184,40 @@ class FieldMapper:
             if value is None or (isinstance(value, str) and not value.strip()):
                 return None
 
-            if field_type == 'title':
-                return {
-                    "title": [{"text": {"content": str(value)[:2000]}}]  # Notion 标题长度限制
-                }
+            if field_type == "title":
+                return {"title": [{"text": {"content": str(value)[:2000]}}]}  # Notion 标题长度限制
 
-            elif field_type == 'rich_text':
-                return {
-                    "rich_text": [{"text": {"content": str(value)[:2000]}}]
-                }
+            elif field_type == "rich_text":
+                return {"rich_text": [{"text": {"content": str(value)[:2000]}}]}
 
-            elif field_type == 'select':
-                return {
-                    "select": {"name": str(value)[:100]}  # Select 选项名称长度限制
-                }
+            elif field_type == "select":
+                return {"select": {"name": str(value)[:100]}}  # Select 选项名称长度限制
 
-            elif field_type == 'number':
+            elif field_type == "number":
                 try:
                     return {"number": float(value)}
                 except (ValueError, TypeError):
                     return None
 
-            elif field_type == 'checkbox':
+            elif field_type == "checkbox":
                 return {"checkbox": bool(value)}
 
-            elif field_type == 'url':
+            elif field_type == "url":
                 url_value = str(value)
-                if url_value.startswith(('http://', 'https://')):
+                if url_value.startswith(("http://", "https://")):
                     return {"url": url_value}
                 return None
 
-            elif field_type == 'date':
+            elif field_type == "date":
                 # 尝试解析日期
                 date_str = self._parse_github_date(value)
                 if date_str:
-                    return {
-                        "date": {"start": date_str}
-                    }
+                    return {"date": {"start": date_str}}
                 return None
 
             else:
                 # 默认作为富文本处理
-                return {
-                    "rich_text": [{"text": {"content": str(value)[:2000]}}]
-                }
+                return {"rich_text": [{"text": {"content": str(value)[:2000]}}]}
 
         except Exception as e:
             logger.error(f"Failed to convert value '{value}' to Notion type '{field_type}': {e}")
@@ -240,36 +233,36 @@ class FieldMapper:
             提取的值或 None
         """
         try:
-            prop_type = notion_property.get('type')
+            prop_type = notion_property.get("type")
 
-            if prop_type == 'title':
-                title_list = notion_property.get('title', [])
-                return ''.join([item.get('plain_text', '') for item in title_list])
+            if prop_type == "title":
+                title_list = notion_property.get("title", [])
+                return "".join([item.get("plain_text", "") for item in title_list])
 
-            elif prop_type == 'rich_text':
-                text_list = notion_property.get('rich_text', [])
-                return ''.join([item.get('plain_text', '') for item in text_list])
+            elif prop_type == "rich_text":
+                text_list = notion_property.get("rich_text", [])
+                return "".join([item.get("plain_text", "") for item in text_list])
 
-            elif prop_type == 'select':
-                select_obj = notion_property.get('select')
-                return select_obj.get('name') if select_obj else None
+            elif prop_type == "select":
+                select_obj = notion_property.get("select")
+                return select_obj.get("name") if select_obj else None
 
-            elif prop_type == 'multi_select':
-                multi_select_list = notion_property.get('multi_select', [])
-                return [item.get('name') for item in multi_select_list]
+            elif prop_type == "multi_select":
+                multi_select_list = notion_property.get("multi_select", [])
+                return [item.get("name") for item in multi_select_list]
 
-            elif prop_type == 'number':
-                return notion_property.get('number')
+            elif prop_type == "number":
+                return notion_property.get("number")
 
-            elif prop_type == 'checkbox':
-                return notion_property.get('checkbox')
+            elif prop_type == "checkbox":
+                return notion_property.get("checkbox")
 
-            elif prop_type == 'url':
-                return notion_property.get('url')
+            elif prop_type == "url":
+                return notion_property.get("url")
 
-            elif prop_type == 'date':
-                date_obj = notion_property.get('date')
-                return date_obj.get('start') if date_obj else None
+            elif prop_type == "date":
+                date_obj = notion_property.get("date")
+                return date_obj.get("start") if date_obj else None
 
             else:
                 logger.debug(f"Unsupported Notion property type: {prop_type}")
@@ -291,7 +284,7 @@ class FieldMapper:
         try:
             # GitHub 使用 ISO 8601 格式
             # 例如: "2023-10-15T10:30:45Z"
-            dt = datetime.fromisoformat(date_str.replace('Z', '+00:00'))
+            dt = datetime.fromisoformat(date_str.replace("Z", "+00:00"))
             return dt.date().isoformat()
         except Exception as e:
             logger.debug(f"Failed to parse GitHub date '{date_str}': {e}")
@@ -307,24 +300,24 @@ class FieldMapper:
         Returns:
             Tuple[是否忽略, 忽略原因]
         """
-        sync_config = self.config.get('sync_config', {})
+        sync_config = self.config.get("sync_config", {})
 
         # 检查双向同步开关
-        if not sync_config.get('bidirectional_sync', True):
+        if not sync_config.get("bidirectional_sync", True):
             return True, "bidirectional_sync_disabled"
 
         # 检查机器人用户
-        if sync_config.get('ignore_bots', True):
-            user_info = data.get('user') or data.get('sender')
-            if user_info and user_info.get('type') == 'Bot':
+        if sync_config.get("ignore_bots", True):
+            user_info = data.get("user") or data.get("sender")
+            if user_info and user_info.get("type") == "Bot":
                 return True, "bot_user"
 
         # 检查忽略标签
-        ignore_labels = sync_config.get('ignore_labels', [])
+        ignore_labels = sync_config.get("ignore_labels", [])
         if ignore_labels:
             issue_labels = []
-            if source == 'github':
-                issue_labels = [label.get('name') for label in data.get('labels', [])]
+            if source == "github":
+                issue_labels = [label.get("name") for label in data.get("labels", [])]
 
             for ignore_label in ignore_labels:
                 if ignore_label in issue_labels:
@@ -334,7 +327,7 @@ class FieldMapper:
 
     def get_sync_config(self) -> Dict[str, Any]:
         """获取同步配置"""
-        return self.config.get('sync_config', {})
+        return self.config.get("sync_config", {})
 
 
 # 全局实例

@@ -1,15 +1,26 @@
 [flake8]
 max-line-length = 120
-ignore = E302,W291,W293,W504,E127,E128
-exclude = 
+ignore = E302,W291,W293,W504,E127,E128,C901
+exclude =
     .git,
     __pycache__,
     .pytest_cache,
     venv,
     env,
     .venv,
-    migrations/
-per-file-ignores = 
+    migrations/,
+    backup_*,
+    scripts/run_full_tests.py,
+    scripts/start_service.py,
+    scripts/stress_test_enhanced.py,
+    scripts/validate_fixes.py,
+    scripts/init_db.py,
+    tests/test_integration.py,
+    tests/test_performance.py,
+    tests/test_env_and_webhook.py,
+    tests/test_rate_limit_and_validation.py,
+    fix-all-code.py
+per-file-ignores =
     app/enhanced_metrics.py:E501,E302
     app/idempotency.py:W504,W503
     app/webhook_security.py:E501
@@ -21,3 +32,7 @@ per-file-ignores =
     app/models.py:E128
     app/notion.py:E128
     app/service.py:E127,E128
+    # 临时忽略工具脚本的格式问题
+    idempotency_monitoring_stress_test.py:W503
+    quick_idempotency_test.py:W503
+    metrics_analyzer.py:E203

@@ -14,16 +14,13 @@ from typing import Any, Dict, List
 import requests
 
 # 配置日志
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-)
+logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)
 
 
 class PerformanceTester:
     def __init__(self, base_url: str, webhook_secret: str = None):
-        self.base_url = base_url.rstrip('/')
+        self.base_url = base_url.rstrip("/")
         self.webhook_secret = webhook_secret
         self.session = requests.Session()
 
@@ -39,56 +36,38 @@ class PerformanceTester:
                 "title": f"Performance Test Issue {datetime.now().isoformat()}",
                 "body": "This is a test issue for performance testing.",
                 "state": "open",
-                "labels": [
-                    {"name": "test"},
-                    {"name": "performance"}
-                ],
+                "labels": [{"name": "test"}, {"name": "performance"}],
                 "created_at": datetime.now().isoformat(),
                 "updated_at": datetime.now().isoformat(),
-                "user": {
-                    "name": "test_user"
-                }
-            }
+                "user": {"name": "test_user"},
+            },
         }
 
     def send_webhook_request(self) -> Dict[str, Any]:
         """发送单个 webhook 请求"""
         start_time = time.time()
         try:
-            headers = {
-                'Content-Type': 'application/json',
-                'X-Gitee-Event': 'Issue Hook'
-            }
+            headers = {"Content-Type": "application/json", "X-Gitee-Event": "Issue Hook"}
 
             if self.webhook_secret:
-                headers['X-Gitee-Token'] = self.webhook_secret
+                headers["X-Gitee-Token"] = self.webhook_secret
 
             payload = self.generate_test_payload()
-            response = self.session.post(
-                f"{self.base_url}/gitee_webhook",
-                json=payload,
-                headers=headers,
-                timeout=30
-            )
+            response = self.session.post(f"{self.base_url}/gitee_webhook", json=payload, headers=headers, timeout=30)
 
             duration = time.time() - start_time
             status_code = response.status_code
 
             return {
-                'duration': duration,
-                'status_code': status_code,
-                'success': 200 <= status_code < 300,
-                'error': None
+                "duration": duration,
+                "status_code": status_code,
+                "success": 200 <= status_code < 300,
+                "error": None,
             }
 
         except Exception as e:
             duration = time.time() - start_time
-            return {
-                'duration': duration,
-                'status_code': None,
-                'success': False,
-                'error': str(e)
-            }
+            return {"duration": duration, "status_code": None, "success": False, "error": str(e)}
 
     def run_load_test(self, num_requests: int, concurrency: int) -> Dict[str, Any]:
         """运行负载测试"""
@@ -99,9 +78,9 @@ class PerformanceTester:
             self.results = [future.result() for future in concurrent.futures.as_completed(futures)]
 
         # 分析结果
-        successful_requests = sum(1 for r in self.results if r['success'])
+        successful_requests = sum(1 for r in self.results if r["success"])
         failed_requests = len(self.results) - successful_requests
-        durations = [r['duration'] for r in self.results]
+        durations = [r["duration"] for r in self.results]
 
         avg_duration = sum(durations) / len(durations)
         max_duration = max(durations)
@@ -113,14 +92,14 @@ class PerformanceTester:
         p99 = sorted_durations[int(len(sorted_durations) * 0.99)]
 
         return {
-            'total_requests': num_requests,
-            'successful_requests': successful_requests,
-            'failed_requests': failed_requests,
-            'average_duration': avg_duration,
-            'max_duration': max_duration,
-            'min_duration': min_duration,
-            'p95_duration': p95,
-            'p99_duration': p99
+            "total_requests": num_requests,
+            "successful_requests": successful_requests,
+            "failed_requests": failed_requests,
+            "average_duration": avg_duration,
+            "max_duration": max_duration,
+            "min_duration": min_duration,
+            "p95_duration": p95,
+            "p99_duration": p99,
         }
 
     def check_health(self) -> bool:
@@ -134,11 +113,11 @@ class PerformanceTester:
 
 
 def main():
-    parser = argparse.ArgumentParser(description='Gitee-Notion 同步服务性能测试工具')
-    parser.add_argument('--url', required=True, help='服务基础 URL')
-    parser.add_argument('--requests', type=int, default=100, help='总请求数')
-    parser.add_argument('--concurrency', type=int, default=10, help='并发数')
-    parser.add_argument('--webhook-secret', help='Webhook 密钥')
+    parser = argparse.ArgumentParser(description="Gitee-Notion 同步服务性能测试工具")
+    parser.add_argument("--url", required=True, help="服务基础 URL")
+    parser.add_argument("--requests", type=int, default=100, help="总请求数")
+    parser.add_argument("--concurrency", type=int, default=10, help="并发数")
+    parser.add_argument("--webhook-secret", help="Webhook 密钥")
 
     args = parser.parse_args()
 

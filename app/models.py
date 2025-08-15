@@ -5,7 +5,7 @@ import os
 from datetime import datetime, timedelta
 from typing import List, Optional
 
-from sqlalchemy import JSON, Column, DateTime, Integer, String, Text, create_engine, Boolean
+from sqlalchemy import JSON, Boolean, Column, DateTime, Integer, String, Text, create_engine
 from sqlalchemy.orm import Session, declarative_base, sessionmaker
 
 DB_URL = os.getenv("DB_URL", "sqlite:///data/sync.db")
@@ -16,6 +16,7 @@ Base = declarative_base()
 
 class Mapping(Base):
     """映射表：支持Gitee、GitHub和Notion之间的关联"""
+
     __tablename__ = "mapping"
     id = Column(Integer, primary_key=True)
 
@@ -40,6 +41,7 @@ class Mapping(Base):
 
 class SyncEvent(Base):
     """同步事件表：用于防止同步循环"""
+
     __tablename__ = "sync_event"
     id = Column(Integer, primary_key=True)
 
@@ -96,6 +98,7 @@ class ProcessedEvent(Base):
 
 class SyncConfig(Base):
     """同步配置表"""
+
     __tablename__ = "sync_config"
     id = Column(Integer, primary_key=True)
 
@@ -155,11 +158,19 @@ def mark_event_processed(db: Session, issue_id: str, event_hash: str, platform: 
     db.commit()
 
 
-def create_sync_event(db: Session, source_platform: str, target_platform: str,
-                      entity_id: str, action: str, event_hash: str,
-                      is_sync_induced: bool = False, parent_event_id: Optional[str] = None) -> str:
+def create_sync_event(
+    db: Session,
+    source_platform: str,
+    target_platform: str,
+    entity_id: str,
+    action: str,
+    event_hash: str,
+    is_sync_induced: bool = False,
+    parent_event_id: Optional[str] = None,
+) -> str:
     """创建同步事件记录"""
     import uuid
+
     event_id = str(uuid.uuid4())
 
     sync_event = SyncEvent(
@@ -172,7 +183,7 @@ def create_sync_event(db: Session, source_platform: str, target_platform: str,
         action=action,
         sync_direction=f"{source_platform}_to_{target_platform}",
         is_sync_induced=is_sync_induced,
-        parent_event_id=parent_event_id
+        parent_event_id=parent_event_id,
     )
 
     db.add(sync_event)
@@ -180,8 +191,9 @@ def create_sync_event(db: Session, source_platform: str, target_platform: str,
     return event_id
 
 
-def should_skip_sync_event(db: Session, event_hash: str, entity_id: str,
-                           source_platform: str, target_platform: str) -> bool:
+def should_skip_sync_event(
+    db: Session, event_hash: str, entity_id: str, source_platform: str, target_platform: str
+) -> bool:
     """检查是否应跳过同步事件（防循环）"""
     # 检查最近是否有相同方向的同步事件
     recent_sync = (
@@ -190,7 +202,7 @@ def should_skip_sync_event(db: Session, event_hash: str, entity_id: str,
             SyncEvent.entity_id == entity_id,
             SyncEvent.source_platform == target_platform,  # 反向同步
             SyncEvent.target_platform == source_platform,
-            SyncEvent.created_at > datetime.utcnow() - timedelta(minutes=10)  # 10分钟窗口
+            SyncEvent.created_at > datetime.utcnow() - timedelta(minutes=10),  # 10分钟窗口
         )
         .first()
     )
@@ -212,9 +224,14 @@ def mark_sync_event_processed(db: Session, event_id: str) -> None:
         db.commit()
 
 
-def upsert_mapping(db: Session, source_platform: str, source_id: str,
-                  notion_page_id: str, source_url: Optional[str] = None,
-                  notion_database_id: Optional[str] = None) -> None:
+def upsert_mapping(
+    db: Session,
+    source_platform: str,
+    source_id: str,
+    notion_page_id: str,
+    source_url: Optional[str] = None,
+    notion_database_id: Optional[str] = None,
+) -> None:
     """更新或插入映射关系"""
     # 查找现有映射
     m = db.query(Mapping).filter_by(source_platform=source_platform, source_id=source_id).first()
@@ -243,13 +260,15 @@ def upsert_mapping(db: Session, source_platform: str, source_id: str,
         return
 
     # 创建新映射
-    db.add(Mapping(
-        source_platform=source_platform,
-        source_id=source_id,
-        source_url=source_url,
-        notion_page_id=notion_page_id,
-        notion_database_id=notion_database_id
-    ))
+    db.add(
+        Mapping(
+            source_platform=source_platform,
+            source_id=source_id,
+            source_url=source_url,
+            notion_page_id=notion_page_id,
+            notion_database_id=notion_database_id,
+        )
+    )
     db.commit()
 
 
@@ -263,8 +282,14 @@ def get_mapping_by_notion_page(db: Session, notion_page_id: str) -> Optional[Map
     return db.query(Mapping).filter_by(notion_page_id=notion_page_id).first()
 
 
-def deadletter_enqueue(db: Session, payload: dict, reason: str, last_error: Optional[str] = None,
-                      source_platform: Optional[str] = None, entity_id: Optional[str] = None) -> None:
+def deadletter_enqueue(
+    db: Session,
+    payload: dict,
+    reason: str,
+    last_error: Optional[str] = None,
+    source_platform: Optional[str] = None,
+    entity_id: Optional[str] = None,
+) -> None:
     dl = DeadLetter(
         payload=payload,
         reason=reason,
@@ -272,7 +297,7 @@ def deadletter_enqueue(db: Session, payload: dict, reason: str, last_error: Opti
         status="failed",
         retries=0,
         source_platform=source_platform,
-        entity_id=entity_id
+        entity_id=entity_id,
     )
     db.add(dl)
     db.commit()
@@ -309,8 +334,9 @@ def get_config(db: Session, key: str) -> Optional[dict]:
     return config.config_value if config else None
 
 
-def set_config(db: Session, key: str, value: dict, description: Optional[str] = None,
-               category: str = "general") -> None:
+def set_config(
+    db: Session, key: str, value: dict, description: Optional[str] = None, category: str = "general"
+) -> None:
     """设置配置"""
     config = db.query(SyncConfig).filter_by(config_key=key).first()
     if config:
@@ -320,11 +346,6 @@ def set_config(db: Session, key: str, value: dict, description: Optional[str] = 
             config.description = description
         config.category = category
     else:
-        config = SyncConfig(
-            config_key=key,
-            config_value=value,
-            description=description,
-            category=category
-        )
+        config = SyncConfig(config_key=key, config_value=value, description=description, category=category)
         db.add(config)
         db.commit()

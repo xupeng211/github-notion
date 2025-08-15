@@ -27,7 +27,7 @@ from alembic.config import Config
 def init_database():
     """初始化数据库"""
     print("开始初始化数据库...")
-    
+
     # 确保数据目录存在
     db_url = os.getenv("DB_URL", "sqlite:///data/sync.db")
     if db_url.startswith("sqlite:///"):
@@ -35,13 +35,13 @@ def init_database():
         data_dir = Path(db_path).parent
         data_dir.mkdir(parents=True, exist_ok=True)
         print(f"✓ 数据目录已创建: {data_dir}")
-    
+
     # 设置 alembic 配置
     alembic_cfg = Config(str(PROJECT_ROOT / "alembic.ini"))
     alembic_cfg.set_main_option("sqlalchemy.url", db_url)
-    
+
     print(f"✓ 数据库连接: {db_url}")
-    
+
     # 运行迁移
     try:
         command.upgrade(alembic_cfg, "head")
@@ -49,11 +49,11 @@ def init_database():
     except Exception as e:
         print(f"✗ 数据库迁移失败: {e}")
         return False
-    
+
     print("✓ 数据库初始化完成")
     return True
 
 
 if __name__ == "__main__":
     success = init_database()
-    sys.exit(0 if success else 1) 
+    sys.exit(0 if success else 1)

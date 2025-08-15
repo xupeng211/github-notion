@@ -1,4 +1,3 @@
-
 from app.notion import NotionClient
 
 
@@ -9,7 +8,7 @@ def test_load_mapping():
     from pathlib import Path
 
     with tempfile.TemporaryDirectory() as d:
-        yml = Path(d)/"mapping.yml"
+        yml = Path(d) / "mapping.yml"
         yml.write_text("mapping:\n  title: Task\n  state: Status\n")
         client = NotionClient("t")
         m = client.load_mapping(str(yml))

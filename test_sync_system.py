@@ -5,21 +5,19 @@ GitHub-Notion 双向同步系统测试脚本
 全面测试所有新功能和优化，确保系统正常工作。
 包含：模块导入测试、配置验证、功能测试、API 连接测试等。
 """
+import asyncio
+import json
+import logging
 import os
 import sys
-import json
-import yaml
-import asyncio
-import logging
 import traceback
-from pathlib import Path
 from datetime import datetime
+from pathlib import Path
+
+import yaml
 
 # 设置测试日志
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-)
+logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)
 
 
@@ -27,7 +25,7 @@ class SyncSystemTester:
     """同步系统测试器"""
 
     def __init__(self):
-        self.project_root = Path('.')
+        self.project_root = Path(".")
         self.test_results = []
         self.failed_tests = []
 
@@ -71,7 +69,7 @@ class SyncSystemTester:
 
             # 总结
             total_tests = len(self.test_results)
-            passed_tests = len([r for r in self.test_results if r['passed']])
+            passed_tests = len([r for r in self.test_results if r["passed"]])
             failed_count = len(self.failed_tests)
 
             print("\n📊 测试结果总结")
@@ -98,10 +96,10 @@ class SyncSystemTester:
         print("测试新增模块导入...")
 
         modules_to_test = [
-            ('app.mapper', 'field_mapper'),
-            ('app.enhanced_service', 'process_github_event_enhanced'),
-            ('app.comment_sync', 'comment_sync_service'),
-            ('app.notion', 'notion_service'),
+            ("app.mapper", "field_mapper"),
+            ("app.enhanced_service", "process_github_event_enhanced"),
+            ("app.comment_sync", "comment_sync_service"),
+            ("app.notion", "notion_service"),
         ]
 
         all_passed = True
@@ -111,25 +109,16 @@ class SyncSystemTester:
                 module = __import__(module_name, fromlist=[attr_name])
                 attr = getattr(module, attr_name)
 
-                self._record_test(
-                    f"导入 {module_name}.{attr_name}",
-                    True,
-                    f"成功导入 {type(attr).__name__}"
-                )
+                self._record_test(f"导入 {module_name}.{attr_name}", True, f"成功导入 {type(attr).__name__}")
                 print(f"  ✅ {module_name}.{attr_name}")
 
             except Exception as e:
-                self._record_test(
-                    f"导入 {module_name}.{attr_name}",
-                    False,
-                    f"导入失败: {str(e)}"
-                )
+                self._record_test(f"导入 {module_name}.{attr_name}", False, f"导入失败: {str(e)}")
                 print(f"  ❌ {module_name}.{attr_name} - {e}")
                 all_passed = False
 
         # 测试兼容性导入
         try:
-            from app.service import process_github_event, process_notion_event
             self._record_test("兼容性导入", True, "旧版本函数仍可导入")
             print("  ✅ 兼容性导入 - 旧版本函数仍可用")
         except Exception as e:
@@ -143,7 +132,7 @@ class SyncSystemTester:
         """测试配置文件验证"""
         print("验证配置文件...")
 
-        config_file = self.project_root / 'app/mapping.yml'
+        config_file = self.project_root / "app/mapping.yml"
 
         if not config_file.exists():
             self._record_test("配置文件存在性", False, "mapping.yml 不存在")
@@ -151,14 +140,14 @@ class SyncSystemTester:
             return False
 
         try:
-            with open(config_file, 'r', encoding='utf-8') as f:
+            with open(config_file, "r", encoding="utf-8") as f:
                 config = yaml.safe_load(f)
 
             self._record_test("YAML 语法", True, "配置文件语法正确")
             print("  ✅ YAML 语法正确")
 
             # 检查必需的配置节
-            required_sections = ['github_to_notion', 'notion_to_github', 'sync_config']
+            required_sections = ["github_to_notion", "notion_to_github", "sync_config"]
             all_sections_present = True
 
             for section in required_sections:
@@ -171,8 +160,8 @@ class SyncSystemTester:
                     all_sections_present = False
 
             # 检查字段映射配置
-            if 'github_to_notion' in config:
-                mapping_count = len(config['github_to_notion'])
+            if "github_to_notion" in config:
+                mapping_count = len(config["github_to_notion"])
                 self._record_test("字段映射数量", mapping_count > 0, f"配置了 {mapping_count} 个字段映射")
                 print(f"  ✅ 配置了 {mapping_count} 个 GitHub → Notion 字段映射")
 
@@ -203,7 +192,7 @@ class SyncSystemTester:
                 "html_url": "https://github.com/test/repo/issues/123",
                 "user": {"login": "testuser"},
                 "labels": [{"name": "bug"}],
-                "created_at": "2023-10-15T10:30:45Z"
+                "created_at": "2023-10-15T10:30:45Z",
             }
 
             notion_props = field_mapper.github_to_notion(github_data)
@@ -223,18 +212,9 @@ class SyncSystemTester:
             # 测试 Notion 到 GitHub 映射
             notion_page = {
                 "properties": {
-                    "Task": {
-                        "type": "title",
-                        "title": [{"plain_text": "测试任务"}]
-                    },
-                    "Status": {
-                        "type": "select",
-                        "select": {"name": "✅ Done"}
-                    },
-                    "Description": {
-                        "type": "rich_text",
-                        "rich_text": [{"plain_text": "任务描述"}]
-                    }
+                    "Task": {"type": "title", "title": [{"plain_text": "测试任务"}]},
+                    "Status": {"type": "select", "select": {"name": "✅ Done"}},
+                    "Description": {"type": "rich_text", "rich_text": [{"plain_text": "任务描述"}]},
                 }
             }
 
@@ -272,9 +252,9 @@ class SyncSystemTester:
         print("测试 API 连接...")
 
         # 检查环境变量
-        github_token = os.getenv('GITHUB_TOKEN')
-        notion_token = os.getenv('NOTION_TOKEN')
-        notion_db_id = os.getenv('NOTION_DATABASE_ID')
+        github_token = os.getenv("GITHUB_TOKEN")
+        notion_token = os.getenv("NOTION_TOKEN")
+        notion_db_id = os.getenv("NOTION_DATABASE_ID")
 
         if not github_token:
             self._record_test("GitHub Token", False, "GITHUB_TOKEN 环境变量未设置")
@@ -286,6 +266,7 @@ class SyncSystemTester:
             try:
                 # 简单的 API 测试（获取用户信息）
                 import requests
+
                 headers = {"Authorization": f"Bearer {github_token}"}
                 response = requests.get("https://api.github.com/user", headers=headers, timeout=10)
 
@@ -311,10 +292,8 @@ class SyncSystemTester:
             try:
                 # 简单的 API 测试（获取用户信息）
                 import httpx
-                headers = {
-                    "Authorization": f"Bearer {notion_token}",
-                    "Notion-Version": "2022-06-28"
-                }
+
+                headers = {"Authorization": f"Bearer {notion_token}", "Notion-Version": "2022-06-28"}
 
                 async with httpx.AsyncClient() as client:
                     response = await client.get("https://api.notion.com/v1/users/me", headers=headers)
@@ -341,17 +320,18 @@ class SyncSystemTester:
             if notion_token:
                 try:
                     from app.notion import notion_service
+
                     schema = await notion_service.get_database_schema()
 
                     if schema:
-                        properties_count = len(schema.get('properties', {}))
+                        properties_count = len(schema.get("properties", {}))
                         self._record_test("Notion 数据库访问", True, f"数据库有 {properties_count} 个属性")
                         print(f"  ✅ Notion 数据库访问成功 - {properties_count} 个属性")
 
                         # 显示数据库属性
-                        properties = schema.get('properties', {})
+                        properties = schema.get("properties", {})
                         for prop_name, prop_info in list(properties.items())[:5]:  # 显示前5个
-                            prop_type = prop_info.get('type', 'unknown')
+                            prop_type = prop_info.get("type", "unknown")
                             print(f"    📋 {prop_name}: {prop_type}")
                     else:
                         self._record_test("Notion 数据库访问", False, "无法获取数据库架构")
@@ -369,10 +349,7 @@ class SyncSystemTester:
 
         try:
             # 测试增强服务导入和初始化
-            from app.enhanced_service import (
-                process_github_event_sync,
-                process_notion_event_sync
-            )
+            pass
 
             self._record_test("增强服务导入", True, "成功导入增强服务函数")
             print("  ✅ 增强服务导入成功")
@@ -380,7 +357,7 @@ class SyncSystemTester:
             # 测试评论同步服务
             from app.comment_sync import comment_sync_service
 
-            if hasattr(comment_sync_service, 'sync_github_comment_to_notion'):
+            if hasattr(comment_sync_service, "sync_github_comment_to_notion"):
                 self._record_test("评论同步服务", True, "评论同步服务初始化完成")
                 print("  ✅ 评论同步服务就绪")
             else:
@@ -389,9 +366,9 @@ class SyncSystemTester:
                 return False
 
             # 测试服务间依赖
+            from app.github import github_service  # noqa: F401
             from app.mapper import field_mapper
             from app.notion import notion_service  # noqa: F401
-            from app.github import github_service  # noqa: F401
 
             # 验证服务可以相互调用
             field_mapper.get_sync_config()
@@ -443,35 +420,32 @@ class SyncSystemTester:
 
     def _record_test(self, test_name: str, passed: bool, message: str):
         """记录测试结果"""
-        self.test_results.append({
-            'name': test_name,
-            'passed': passed,
-            'message': message,
-            'timestamp': datetime.now().isoformat()
-        })
+        self.test_results.append(
+            {"name": test_name, "passed": passed, "message": message, "timestamp": datetime.now().isoformat()}
+        )
 
     def _generate_test_report(self):
         """生成测试报告"""
         report = {
-            'test_summary': {
-                'total_tests': len(self.test_results),
-                'passed': len([r for r in self.test_results if r['passed']]),
-                'failed': len([r for r in self.test_results if not r['passed']]),
-                'errors': len(self.failed_tests),
-                'timestamp': datetime.now().isoformat()
+            "test_summary": {
+                "total_tests": len(self.test_results),
+                "passed": len([r for r in self.test_results if r["passed"]]),
+                "failed": len([r for r in self.test_results if not r["passed"]]),
+                "errors": len(self.failed_tests),
+                "timestamp": datetime.now().isoformat(),
             },
-            'environment': {
-                'github_token_set': bool(os.getenv('GITHUB_TOKEN')),
-                'notion_token_set': bool(os.getenv('NOTION_TOKEN')),
-                'notion_db_id_set': bool(os.getenv('NOTION_DATABASE_ID')),
-                'python_version': sys.version
+            "environment": {
+                "github_token_set": bool(os.getenv("GITHUB_TOKEN")),
+                "notion_token_set": bool(os.getenv("NOTION_TOKEN")),
+                "notion_db_id_set": bool(os.getenv("NOTION_DATABASE_ID")),
+                "python_version": sys.version,
             },
-            'test_results': self.test_results,
-            'failed_tests': self.failed_tests
+            "test_results": self.test_results,
+            "failed_tests": self.failed_tests,
         }
 
-        report_file = self.project_root / 'test_report.json'
-        with open(report_file, 'w', encoding='utf-8') as f:
+        report_file = self.project_root / "test_report.json"
+        with open(report_file, "w", encoding="utf-8") as f:
             json.dump(report, f, indent=2, ensure_ascii=False)
 
         logger.info(f"测试报告已生成: {report_file}")
@@ -480,7 +454,7 @@ class SyncSystemTester:
 
 async def main():
     """主函数"""
-    if len(sys.argv) > 1 and sys.argv[1] in ['--help', '-h']:
+    if len(sys.argv) > 1 and sys.argv[1] in ["--help", "-h"]:
         print("GitHub-Notion 双向同步系统测试脚本")
         print("用法: python test_sync_system.py")
         print("\n测试内容:")

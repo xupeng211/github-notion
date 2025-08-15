@@ -4,6 +4,7 @@
 提供与 Notion API 的全面集成功能，包括页面管理、数据库操作、
 webhook 验证和双向同步支持。
 """
+
 import hashlib
 import hmac
 import json
@@ -38,8 +39,8 @@ class NotionService:
             headers={
                 "Authorization": f"Bearer {self.token}",
                 "Content-Type": "application/json",
-                "Notion-Version": "2022-06-28"
-            }
+                "Notion-Version": "2022-06-28",
+            },
         )
 
         logger.info("Notion service initialized")
@@ -67,11 +68,7 @@ class NotionService:
 
         try:
             # Notion 使用 HMAC-SHA256
-            expected_signature = hmac.new(
-                self.webhook_secret.encode(),
-                payload,
-                hashlib.sha256
-            ).hexdigest()
+            expected_signature = hmac.new(self.webhook_secret.encode(), payload, hashlib.sha256).hexdigest()
 
             # 移除可能的前缀
             if signature.startswith("sha256="):
@@ -103,10 +100,13 @@ class NotionService:
             logger.error(f"Failed to get Notion page {page_id}: {e}")
             return None
 
-    async def query_database(self, database_id: Optional[str] = None,
-                             filter_conditions: Optional[Dict[str, Any]] = None,
-                             sorts: Optional[List[Dict[str, Any]]] = None,
-                             page_size: int = 100) -> Optional[Dict[str, Any]]:
+    async def query_database(
+        self,
+        database_id: Optional[str] = None,
+        filter_conditions: Optional[Dict[str, Any]] = None,
+        sorts: Optional[List[Dict[str, Any]]] = None,
+        page_size: int = 100,
+    ) -> Optional[Dict[str, Any]]:
         """查询 Notion 数据库
 
         Args:
@@ -139,8 +139,7 @@ class NotionService:
             logger.error(f"Failed to query Notion database: {e}")
             return None
 
-    async def create_page(self, properties: Dict[str, Any],
-                         database_id: Optional[str] = None) -> Tuple[bool, str]:
+    async def create_page(self, properties: Dict[str, Any], database_id: Optional[str] = None) -> Tuple[bool, str]:
         """创建 Notion 页面
 
         Args:
@@ -156,10 +155,7 @@ class NotionService:
                 return False, "No database ID configured"
 
             url = f"{self.base_url}/pages"
-            payload = {
-                "parent": {"database_id": db_id},
-                "properties": properties
-            }
+            payload = {"parent": {"database_id": db_id}, "properties": properties}
 
             response = await self.client.post(url, json=payload)
             response.raise_for_status()
@@ -205,8 +201,7 @@ class NotionService:
             logger.error(f"Failed to update Notion page {page_id}: {e}")
             return False, str(e)
 
-    async def find_page_by_title(self, title: str,
-                                database_id: Optional[str] = None) -> Optional[Dict[str, Any]]:
+    async def find_page_by_title(self, title: str, database_id: Optional[str] = None) -> Optional[Dict[str, Any]]:
         """根据标题查找页面
 
         Args:
@@ -217,15 +212,9 @@ class NotionService:
             页面数据或 None
         """
         try:
-            filter_conditions = {
-                "property": "Task",  # 根据配置调整标题字段名
-                "title": {"equals": title}
-            }
+            filter_conditions = {"property": "Task", "title": {"equals": title}}  # 根据配置调整标题字段名
 
-            result = await self.query_database(
-                database_id=database_id,
-                filter_conditions=filter_conditions
-            )
+            result = await self.query_database(database_id=database_id, filter_conditions=filter_conditions)
 
             if result and result.get("results"):
                 return result["results"][0]
@@ -235,8 +224,7 @@ class NotionService:
             logger.error(f"Failed to find page by title '{title}': {e}")
             return None
 
-    async def find_page_by_issue_id(self, issue_id: str,
-                                   database_id: Optional[str] = None) -> Optional[Dict[str, Any]]:
+    async def find_page_by_issue_id(self, issue_id: str, database_id: Optional[str] = None) -> Optional[Dict[str, Any]]:
         """根据 Issue ID 查找页面
 
         Args:
@@ -247,15 +235,9 @@ class NotionService:
             页面数据或 None
         """
         try:
-            filter_conditions = {
-                "property": "Issue ID",
-                "rich_text": {"contains": str(issue_id)}
-            }
+            filter_conditions = {"property": "Issue ID", "rich_text": {"contains": str(issue_id)}}
 
-            result = await self.query_database(
-                database_id=database_id,
-                filter_conditions=filter_conditions
-            )
+            result = await self.query_database(database_id=database_id, filter_conditions=filter_conditions)
 
             if result and result.get("results"):
                 return result["results"][0]
@@ -265,8 +247,7 @@ class NotionService:
             logger.error(f"Failed to find page by issue ID '{issue_id}': {e}")
             return None
 
-    async def upsert_page_from_github(self, github_data: Dict[str, Any],
-                                     field_mapper) -> Tuple[bool, str]:
+    async def upsert_page_from_github(self, github_data: Dict[str, Any], field_mapper) -> Tuple[bool, str]:
         """从 GitHub 数据创建或更新 Notion 页面
 
         Args:
@@ -278,7 +259,7 @@ class NotionService:
         """
         try:
             # 检查是否应该忽略此事件
-            should_ignore, reason = field_mapper.should_ignore_event(github_data, 'github')
+            should_ignore, reason = field_mapper.should_ignore_event(github_data, "github")
             if should_ignore:
                 logger.info(f"Ignoring GitHub event: {reason}")
                 return True, f"ignored:{reason}"
@@ -348,7 +329,7 @@ class NotionService:
                 "title": data.get("title", ""),
                 "body": data.get("body", ""),
                 "updated_time": data.get("last_edited_time", ""),
-                "page_id": data.get("id", "")
+                "page_id": data.get("id", ""),
             }
             content = json.dumps(key_fields, sort_keys=True)
             return hashlib.sha256(content.encode()).hexdigest()
@@ -374,14 +355,7 @@ class NotionService:
                     {
                         "object": "block",
                         "type": "paragraph",
-                        "paragraph": {
-                            "rich_text": [
-                                {
-                                    "type": "text",
-                                    "text": {"content": comment}
-                                }
-                            ]
-                        }
+                        "paragraph": {"rich_text": [{"type": "text", "text": {"content": comment}}]},
                     }
                 ]
             }
@@ -424,4 +398,3 @@ class NotionClient(NotionService):
         """同步 Issue 到 Notion（兼容旧接口）"""
         logger.warning("Using deprecated sync_issue_to_notion method")
         # 这里可以调用新的方法或保持向后兼容
-        pass

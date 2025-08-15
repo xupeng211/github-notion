@@ -94,6 +94,7 @@ def main() -> int:
     if env_file.exists():
         try:
             from dotenv import load_dotenv  # type: ignore
+
             load_dotenv(env_file)
         except Exception:
             pass

@@ -3,12 +3,13 @@ Webhook安全验证模块
 提供签名验证、重放攻击保护等安全功能
 """
 
-import hmac
 import hashlib
-import time
-import os
+import hmac
 import logging
+import os
+import time
 from typing import Optional, Tuple
+
 from fastapi import HTTPException
 
 logger = logging.getLogger(__name__)
@@ -40,8 +41,7 @@ class WebhookSecurityValidator:
         self.secret = secret
         self.provider = provider.lower()
 
-    def verify_signature(self, body: bytes, signature: str,
-                         timestamp: Optional[str] = None) -> bool:
+    def verify_signature(self, body: bytes, signature: str, timestamp: Optional[str] = None) -> bool:
         """
         验证webhook签名
 
@@ -77,23 +77,14 @@ class WebhookSecurityValidator:
             return False
 
         expected_sig = signature[7:]  # 移除 "sha256=" 前缀
-        computed_sig = hmac.new(
-            self.secret.encode(),
-            body,
-            hashlib.sha256
-        ).hexdigest()
+        computed_sig = hmac.new(self.secret.encode(), body, hashlib.sha256).hexdigest()
 
         return hmac.compare_digest(expected_sig, computed_sig)
 
-    def _verify_gitee_signature(self, body: bytes, signature: str,
-                                timestamp: Optional[str] = None) -> bool:
+    def _verify_gitee_signature(self, body: bytes, signature: str, timestamp: Optional[str] = None) -> bool:
         """Gitee签名验证"""
         # Gitee使用标准的HMAC-SHA256验证
-        computed_sig = hmac.new(
-            self.secret.encode(),
-            body,
-            hashlib.sha256
-        ).hexdigest()
+        computed_sig = hmac.new(self.secret.encode(), body, hashlib.sha256).hexdigest()
 
         return hmac.compare_digest(signature, computed_sig)
 
@@ -104,34 +95,21 @@ class WebhookSecurityValidator:
 
         # Notion风格：timestamp.body的SHA256-HMAC
         payload_to_sign = f"{timestamp}.{body.decode('utf-8', errors='ignore')}"
-        computed_sig = hmac.new(
-            self.secret.encode(),
-            payload_to_sign.encode(),
-            hashlib.sha256
-        ).hexdigest()
+        computed_sig = hmac.new(self.secret.encode(), payload_to_sign.encode(), hashlib.sha256).hexdigest()
 
         return hmac.compare_digest(signature, f"sha256={computed_sig}")
 
-    def _verify_generic_signature(self, body: bytes, signature: str,
-                                  timestamp: Optional[str] = None) -> bool:
+    def _verify_generic_signature(self, body: bytes, signature: str, timestamp: Optional[str] = None) -> bool:
         """通用签名验证"""
         if timestamp:
             payload = f"{timestamp}.{body.decode('utf-8', errors='ignore')}"
         else:
-            payload = body.decode('utf-8', errors='ignore')
+            payload = body.decode("utf-8", errors="ignore")
 
-        computed_sig = hmac.new(
-            self.secret.encode(),
-            payload.encode(),
-            hashlib.sha256
-        ).hexdigest()
+        computed_sig = hmac.new(self.secret.encode(), payload.encode(), hashlib.sha256).hexdigest()
 
         # 支持多种签名格式
-        expected_signatures = [
-            signature,
-            f"sha256={computed_sig}",
-            computed_sig
-        ]
+        expected_signatures = [signature, f"sha256={computed_sig}", computed_sig]
 
         return any(hmac.compare_digest(sig, computed_sig) for sig in expected_signatures)
 
@@ -155,8 +133,7 @@ class WebhookSecurityValidator:
                 current_time = int(time.time())
 
                 if abs(current_time - ts) > MAX_TIMESTAMP_SKEW:
-                    logger.warning(f"{self.provider}_timestamp_skew_too_large",
-                                   extra={"skew": abs(current_time - ts)})
+                    logger.warning(f"{self.provider}_timestamp_skew_too_large", extra={"skew": abs(current_time - ts)})
                     return False
             except (ValueError, TypeError):
                 logger.warning(f"{self.provider}_invalid_timestamp", extra={"timestamp": timestamp})
@@ -177,7 +154,7 @@ def validate_webhook_security(
     secret: str,
     provider: str,
     request_id: Optional[str] = None,
-    timestamp: Optional[str] = None
+    timestamp: Optional[str] = None,
 ) -> Tuple[bool, str]:
     """
     完整的webhook安全验证
@@ -218,6 +195,7 @@ def secure_webhook_decorator(provider: str):
     async def github_webhook(request: Request):
         # webhook处理逻辑
     """
+
     def decorator(func):
         async def wrapper(request, *args, **kwargs):
             body = await request.body()
@@ -242,20 +220,18 @@ def secure_webhook_decorator(provider: str):
                 raise HTTPException(status_code=400, detail="unsupported_webhook_provider")
 
             # 安全验证
-            is_valid, error_msg = validate_webhook_security(
-                body, signature, secret, provider, request_id, timestamp
-            )
+            is_valid, error_msg = validate_webhook_security(body, signature, secret, provider, request_id, timestamp)
 
             if not is_valid:
-                logger.warning("webhook_security_failed", extra={
-                    "provider": provider,
-                    "error": error_msg,
-                    "request_id": request_id
-                })
+                logger.warning(
+                    "webhook_security_failed",
+                    extra={"provider": provider, "error": error_msg, "request_id": request_id},
+                )
                 raise HTTPException(status_code=403, detail=error_msg)
 
             # 通过验证，继续处理
             return await func(request, *args, **kwargs)
 
         return wrapper
+
     return decorator

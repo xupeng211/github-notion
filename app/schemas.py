@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import List, Optional, Union, Any, Dict
+from typing import Any, Dict, List, Optional, Union
 
 from pydantic import BaseModel
 
@@ -103,6 +103,7 @@ class NotionWebhookPayload(BaseModel):
 # Sync Event Models for preventing loops
 class SyncEvent(BaseModel):
     """同步事件模型，用于防循环"""
+
     event_id: str
     source: str  # 'github', 'notion'
     target: str  # 'github', 'notion'

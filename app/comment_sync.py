@@ -4,13 +4,14 @@
 实现 GitHub Issues 和 Notion 页面之间的评论双向同步功能。
 支持评论的创建、更新和删除同步。
 """
+
 import logging
-from typing import Dict, Any, List, Tuple
 from datetime import datetime
+from typing import Any, Dict, List, Tuple
 
 from app.github import github_service
-from app.notion import notion_service
 from app.mapper import field_mapper
+from app.notion import notion_service
 
 logger = logging.getLogger(__name__)
 
@@ -26,8 +27,9 @@ class CommentSyncService:
 
         logger.info("Comment sync service initialized")
 
-    async def sync_github_comment_to_notion(self, comment_data: Dict[str, Any],
-                                             issue_data: Dict[str, Any]) -> Tuple[bool, str]:
+    async def sync_github_comment_to_notion(
+        self, comment_data: Dict[str, Any], issue_data: Dict[str, Any]
+    ) -> Tuple[bool, str]:
         """将 GitHub 评论同步到 Notion
 
         Args:
@@ -40,22 +42,22 @@ class CommentSyncService:
         try:
             # 检查同步配置
             sync_config = self.field_mapper.get_sync_config()
-            if not sync_config.get('sync_comments', True):
+            if not sync_config.get("sync_comments", True):
                 return True, "comment_sync_disabled"
 
             # 获取评论信息
-            comment_body = comment_data.get('body', '')
-            comment_author = comment_data.get('user', {}).get('login', 'Unknown')
-            comment_created = comment_data.get('created_at', '')
-            comment_url = comment_data.get('html_url', '')
+            comment_body = comment_data.get("body", "")
+            comment_author = comment_data.get("user", {}).get("login", "Unknown")
+            comment_created = comment_data.get("created_at", "")
+            comment_url = comment_data.get("html_url", "")
 
             # 检查是否是同步标记（防循环）
-            if self.github_service.has_sync_marker(comment_body, 'notion-sync'):
+            if self.github_service.has_sync_marker(comment_body, "notion-sync"):
                 logger.debug("Skipping sync marker comment from GitHub")
                 return True, "sync_marker_detected"
 
             # 查找对应的 Notion 页面
-            issue_number = str(issue_data.get('number', ''))
+            issue_number = str(issue_data.get("number", ""))
             if not issue_number:
                 return False, "missing_issue_number"
 
@@ -64,7 +66,7 @@ class CommentSyncService:
                 logger.warning(f"No Notion page found for GitHub issue #{issue_number}")
                 return False, "notion_page_not_found"
 
-            page_id = notion_page['id']
+            page_id = notion_page["id"]
 
             # 构建评论内容，包含元数据
             formatted_comment = self._format_github_comment_for_notion(
@@ -75,9 +77,7 @@ class CommentSyncService:
             formatted_comment += f"\n\n<!-- notion-sync:{comment_data.get('id', '')} -->"
 
             # 添加评论到 Notion 页面
-            success, result = await self.notion_service.add_comment_to_page(
-                page_id, formatted_comment
-            )
+            success, result = await self.notion_service.add_comment_to_page(page_id, formatted_comment)
 
             if success:
                 logger.info(f"Successfully synced GitHub comment to Notion page {page_id}")
@@ -90,8 +90,9 @@ class CommentSyncService:
             logger.error(f"Failed to sync GitHub comment to Notion: {e}")
             return False, str(e)
 
-    async def sync_notion_comment_to_github(self, notion_block: Dict[str, Any],
-                                          page_data: Dict[str, Any]) -> Tuple[bool, str]:
+    async def sync_notion_comment_to_github(
+        self, notion_block: Dict[str, Any], page_data: Dict[str, Any]
+    ) -> Tuple[bool, str]:
         """将 Notion 评论同步到 GitHub
 
         Args:
@@ -104,7 +105,7 @@ class CommentSyncService:
         try:
             # 检查同步配置
             sync_config = self.field_mapper.get_sync_config()
-            if not sync_config.get('sync_comments', True):
+            if not sync_config.get("sync_comments", True):
                 return True, "comment_sync_disabled"
 
             # 提取评论内容
@@ -118,9 +119,9 @@ class CommentSyncService:
                 return True, "sync_marker_detected"
 
             # 从页面属性中获取 GitHub 仓库信息
-            properties = page_data.get('properties', {})
-            github_url_prop = properties.get('GitHub URL', {})
-            github_url = github_url_prop.get('url', '') if github_url_prop else ''
+            properties = page_data.get("properties", {})
+            github_url_prop = properties.get("GitHub URL", {})
+            github_url = github_url_prop.get("url", "") if github_url_prop else ""
 
             if not github_url:
                 return False, "missing_github_url"
@@ -133,12 +134,12 @@ class CommentSyncService:
             owner, repo = repo_info
 
             # 获取 Issue 编号
-            issue_id_prop = properties.get('Issue ID', {})
+            issue_id_prop = properties.get("Issue ID", {})
             issue_number = None
 
-            if issue_id_prop.get('rich_text'):
+            if issue_id_prop.get("rich_text"):
                 try:
-                    issue_text = issue_id_prop['rich_text'][0].get('plain_text', '')
+                    issue_text = issue_id_prop["rich_text"][0].get("plain_text", "")
                     issue_number = int(issue_text)
                 except (ValueError, IndexError, TypeError):
                     return False, "invalid_issue_number"
@@ -168,8 +169,7 @@ class CommentSyncService:
             logger.error(f"Failed to sync Notion comment to GitHub: {e}")
             return False, str(e)
 
-    def _format_github_comment_for_notion(self, body: str, author: str,
-                                         created_at: str, html_url: str) -> str:
+    def _format_github_comment_for_notion(self, body: str, author: str, created_at: str, html_url: str) -> str:
         """格式化 GitHub 评论用于 Notion 显示
 
         Args:
@@ -185,8 +185,8 @@ class CommentSyncService:
             # 解析创建时间
             if created_at:
                 try:
-                    dt = datetime.fromisoformat(created_at.replace('Z', '+00:00'))
-                    formatted_date = dt.strftime('%Y-%m-%d %H:%M')
+                    dt = datetime.fromisoformat(created_at.replace("Z", "+00:00"))
+                    formatted_date = dt.strftime("%Y-%m-%d %H:%M")
                 except Exception:
                     formatted_date = created_at
             else:
@@ -215,40 +215,39 @@ class CommentSyncService:
             提取的文本内容
         """
         try:
-            block_type = block.get('type', '')
+            block_type = block.get("type", "")
 
-            if block_type == 'paragraph':
-                rich_text = block.get('paragraph', {}).get('rich_text', [])
-            elif block_type == 'heading_1':
-                rich_text = block.get('heading_1', {}).get('rich_text', [])
-            elif block_type == 'heading_2':
-                rich_text = block.get('heading_2', {}).get('rich_text', [])
-            elif block_type == 'heading_3':
-                rich_text = block.get('heading_3', {}).get('rich_text', [])
-            elif block_type == 'bulleted_list_item':
-                rich_text = block.get('bulleted_list_item', {}).get('rich_text', [])
-            elif block_type == 'numbered_list_item':
-                rich_text = block.get('numbered_list_item', {}).get('rich_text', [])
+            if block_type == "paragraph":
+                rich_text = block.get("paragraph", {}).get("rich_text", [])
+            elif block_type == "heading_1":
+                rich_text = block.get("heading_1", {}).get("rich_text", [])
+            elif block_type == "heading_2":
+                rich_text = block.get("heading_2", {}).get("rich_text", [])
+            elif block_type == "heading_3":
+                rich_text = block.get("heading_3", {}).get("rich_text", [])
+            elif block_type == "bulleted_list_item":
+                rich_text = block.get("bulleted_list_item", {}).get("rich_text", [])
+            elif block_type == "numbered_list_item":
+                rich_text = block.get("numbered_list_item", {}).get("rich_text", [])
             else:
                 return ""
 
             # 提取纯文本
             text_content = []
             for text_obj in rich_text:
-                if text_obj.get('type') == 'text':
-                    content = text_obj.get('text', {}).get('content', '')
+                if text_obj.get("type") == "text":
+                    content = text_obj.get("text", {}).get("content", "")
                     text_content.append(content)
-                elif text_obj.get('plain_text'):
-                    text_content.append(text_obj['plain_text'])
+                elif text_obj.get("plain_text"):
+                    text_content.append(text_obj["plain_text"])
 
-            return ''.join(text_content).strip()
+            return "".join(text_content).strip()
 
         except Exception as e:
             logger.error(f"Failed to extract text from Notion block: {e}")
             return ""
 
-    async def get_github_comments(self, owner: str, repo: str,
-                                issue_number: int) -> List[Dict[str, Any]]:
+    async def get_github_comments(self, owner: str, repo: str, issue_number: int) -> List[Dict[str, Any]]:
         """获取 GitHub Issue 的所有评论
 
         Args:
@@ -285,11 +284,11 @@ class CommentSyncService:
 
             # 过滤出可能包含评论的块
             comments = []
-            for block in result.get('results', []):
-                block_type = block.get('type', '')
-                if block_type in ['paragraph', 'bulleted_list_item', 'numbered_list_item']:
+            for block in result.get("results", []):
+                block_type = block.get("type", "")
+                if block_type in ["paragraph", "bulleted_list_item", "numbered_list_item"]:
                     text_content = self._extract_notion_block_text(block)
-                    if text_content and not text_content.startswith('<!--'):  # 排除 HTML 注释
+                    if text_content and not text_content.startswith("<!--"):  # 排除 HTML 注释
                         comments.append(block)
 
             return comments
@@ -298,9 +297,9 @@ class CommentSyncService:
             logger.error(f"Failed to get Notion page comments: {e}")
             return []
 
-    async def sync_all_comments_github_to_notion(self, owner: str, repo: str,
-                                               issue_number: int,
-                                               notion_page_id: str) -> Tuple[bool, str]:
+    async def sync_all_comments_github_to_notion(
+        self, owner: str, repo: str, issue_number: int, notion_page_id: str
+    ) -> Tuple[bool, str]:
         """同步 GitHub Issue 的所有评论到 Notion
 
         Args:
@@ -326,8 +325,8 @@ class CommentSyncService:
             success_count = 0
             for comment in github_comments:
                 # 跳过已同步的评论（检查同步标记）
-                comment_body = comment.get('body', '')
-                if self.github_service.has_sync_marker(comment_body, 'notion-sync'):
+                comment_body = comment.get("body", "")
+                if self.github_service.has_sync_marker(comment_body, "notion-sync"):
                     continue
 
                 success, message = await self.sync_github_comment_to_notion(comment, issue_data)

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import hashlib
 import hmac
 import json
@@ -12,36 +13,33 @@ from contextlib import contextmanager
 from threading import Lock
 from typing import Any, Dict, Tuple
 
-import requests
 import httpx
-import asyncio
+import requests
 from apscheduler.schedulers.background import BackgroundScheduler
 from prometheus_client import Counter, Gauge, Histogram
+
+from app.github import github_service
 from app.models import (
     SessionLocal,
+    create_sync_event,
     deadletter_count,
     deadletter_enqueue,
     event_hash_from_bytes,
-    mark_event_processed,
-    should_skip_event,
-    upsert_mapping,
-    create_sync_event,
-    should_skip_sync_event,
-    mark_sync_event_processed,
     get_mapping_by_notion_page,
+    mark_event_processed,
+    mark_sync_event_processed,
+    should_skip_event,
+    should_skip_sync_event,
+    upsert_mapping,
 )
-from app.github import github_service
 
 # Metrics (allow disabling in tests to avoid duplicate registration)
-DISABLE_METRICS = os.getenv(
-    "DISABLE_METRICS",
-    "").lower() in (
-        "1",
-        "true",
-        "yes") or bool(
-            os.getenv("PYTEST_CURRENT_TEST"))
+DISABLE_METRICS = os.getenv("DISABLE_METRICS", "").lower() in ("1", "true", "yes") or bool(
+    os.getenv("PYTEST_CURRENT_TEST")
+)
 
 if DISABLE_METRICS:
+
     class _Noop:
         def labels(self, *args, **kwargs):
             return self
@@ -54,6 +52,7 @@ if DISABLE_METRICS:
 
         def set(self, *args, **kwargs):
             pass
+
     EVENTS_TOTAL = _Noop()
     RETRIES_TOTAL = _Noop()
     PROCESS_LATENCY = _Noop()
@@ -88,8 +87,8 @@ else:
 
     # 数据库操作指标
     DATABASE_OPERATIONS_TOTAL = Counter(
-        "database_operations_total", "Total database operations", [
-            "operation", "status"])
+        "database_operations_total", "Total database operations", ["operation", "status"]
+    )
 
     # 速率限制指标
     RATE_LIMIT_HITS_TOTAL = Counter("rate_limit_hits_total", "Total rate limit hits")
@@ -173,9 +172,14 @@ def verify_notion_signature(secret: str, payload: bytes, signature: str) -> bool
     return hmac.compare_digest(expected, signature)
 
 
-async def async_exponential_backoff_request(method: str, url: str, headers: Dict[str, str] = None,
-                                           json_data: Dict[str, Any] = None, max_retries: int = 5,
-                                           base_delay: float = 0.5) -> Tuple[bool, Dict[str, Any]]:
+async def async_exponential_backoff_request(
+    method: str,
+    url: str,
+    headers: Dict[str, str] = None,
+    json_data: Dict[str, Any] = None,
+    max_retries: int = 5,
+    base_delay: float = 0.5,
+) -> Tuple[bool, Dict[str, Any]]:
     """
     异步版本的指数退避HTTP请求重试机制
 
@@ -225,7 +229,7 @@ async def async_exponential_backoff_request(method: str, url: str, headers: Dict
                 if resp.status_code in (429,) or 500 <= resp.status_code < 600:
                     if attempt < max_retries:
                         RETRIES_TOTAL.inc()
-                        await asyncio.sleep(base_delay * (2 ** attempt))
+                        await asyncio.sleep(base_delay * (2**attempt))
                         continue
                     else:
                         return False, {"status": resp.status_code, "text": resp.text}
@@ -244,7 +248,7 @@ async def async_exponential_backoff_request(method: str, url: str, headers: Dict
             except httpx.RequestError as e:
                 if attempt < max_retries:
                     RETRIES_TOTAL.inc()
-                    await asyncio.sleep(base_delay * (2 ** attempt))
+                    await asyncio.sleep(base_delay * (2**attempt))
                     continue
 
                 # 记录失败的 API 调用
@@ -256,8 +260,14 @@ async def async_exponential_backoff_request(method: str, url: str, headers: Dict
                 return False, {"error": str(e)}
 
 
-def exponential_backoff_request(method: str, url: str, headers: Dict[str, str] = None, json_data: Dict[str, Any] = None,
-                                max_retries: int = 5, base_delay: float = 0.5) -> Tuple[bool, Dict[str, Any]]:
+def exponential_backoff_request(
+    method: str,
+    url: str,
+    headers: Dict[str, str] = None,
+    json_data: Dict[str, Any] = None,
+    max_retries: int = 5,
+    base_delay: float = 0.5,
+) -> Tuple[bool, Dict[str, Any]]:
     """
     带指数退避策略的HTTP请求重试机制
 
@@ -329,7 +339,7 @@ def exponential_backoff_request(method: str, url: str, headers: Dict[str, str] =
             if resp.status_code in (429,) or 500 <= resp.status_code < 600:
                 if attempt < max_retries:
                     RETRIES_TOTAL.inc()
-                    time.sleep(base_delay * (2 ** attempt))
+                    time.sleep(base_delay * (2**attempt))
                     continue
                 else:
                     return False, {"status": resp.status_code, "text": resp.text}
@@ -346,7 +356,7 @@ def exponential_backoff_request(method: str, url: str, headers: Dict[str, str] =
         except requests.RequestException as e:
             if attempt < max_retries:
                 RETRIES_TOTAL.inc()
-                time.sleep(base_delay * (2 ** attempt))
+                time.sleep(base_delay * (2**attempt))
                 continue
 
             # 记录失败的 API 调用
@@ -386,10 +396,8 @@ async def async_notion_upsert_page(issue: Dict[str, Any]) -> Tuple[bool, str]:
 
     # 使用异步请求查询现有页面
     ok, data = await async_exponential_backoff_request(
-        "POST", q_url, headers, {
-            "filter": {
-                "property": "Task", "title": {
-                    "equals": title}}})
+        "POST", q_url, headers, {"filter": {"property": "Task", "title": {"equals": title}}}
+    )
 
     if not ok:
         return False, json.dumps(data)
@@ -412,7 +420,7 @@ async def async_notion_upsert_page(issue: Dict[str, Any]) -> Tuple[bool, str]:
         "properties": {
             "Task": {"title": [{"text": {"content": title}}]},
             "Issue ID": {"rich_text": [{"text": {"content": str(issue.get("number"))}}]},
-        }
+        },
     }
     ok3, res = await async_exponential_backoff_request("POST", c_url, headers, payload)
     if ok3:
@@ -470,10 +478,8 @@ def notion_upsert_page(issue: Dict[str, Any]) -> Tuple[bool, str]:
     title = issue.get("title", "")
     q_url = f"https://api.notion.com/v1/databases/{NOTION_DATABASE_ID}/query"
     ok, data = exponential_backoff_request(
-        "POST", q_url, headers, {
-            "filter": {
-                "property": "Task", "title": {
-                    "equals": title}}})
+        "POST", q_url, headers, {"filter": {"property": "Task", "title": {"equals": title}}}
+    )
     if not ok:
         return False, json.dumps(data)
     results = data.get("results", [])
@@ -491,7 +497,7 @@ def notion_upsert_page(issue: Dict[str, Any]) -> Tuple[bool, str]:
         "properties": {
             "Task": {"title": [{"text": {"content": title}}]},
             "Issue ID": {"rich_text": [{"text": {"content": str(issue.get("number"))}}]},
-        }
+        },
     }
     ok3, res = exponential_backoff_request("POST", c_url, headers, payload)
     if ok3:
@@ -564,8 +570,14 @@ def process_gitee_event(body_bytes: bytes, secret: str, signature: str, event_ty
                 ok, page_or_err = notion_upsert_page(issue)
                 if not ok:
                     # 第七步：失败处理 - 将事件放入死信队列以便后续重试
-                    deadletter_enqueue(db, payload, reason="notion_error", last_error=str(page_or_err),
-                                       source_platform="gitee", entity_id=issue_id)
+                    deadletter_enqueue(
+                        db,
+                        payload,
+                        reason="notion_error",
+                        last_error=str(page_or_err),
+                        source_platform="gitee",
+                        entity_id=issue_id,
+                    )
                     DEADLETTER_SIZE.set(deadletter_count(db))
                     EVENTS_TOTAL.labels("fail").inc()
                     return False, "notion_error"
@@ -581,7 +593,7 @@ def process_gitee_event(body_bytes: bytes, secret: str, signature: str, event_ty
 
     finally:
         # 无论成功失败都记录处理时间用于性能分析
-        dur = (time.time() - start)
+        dur = time.time() - start
         PROCESS_LATENCY.observe(dur)
         # update p95 gauge using sliding window
         _durations.append(dur * 1000.0)
@@ -590,6 +602,7 @@ def process_gitee_event(body_bytes: bytes, secret: str, signature: str, event_ty
             k = max(0, int(math.ceil(0.95 * len(arr)) - 1))
 
             PROCESS_P95_MS.set(arr[k])
+
 
 # Deadletter replay logic
 
@@ -634,13 +647,17 @@ def replay_deadletters_once(secret_token: str) -> int:
     if token_env and secret_token and token_env != secret_token:
         return 0  # 权限验证失败，拒绝执行
     from app.models import SessionLocal, deadletter_list, deadletter_mark_replayed
+
     cnt = 0
     with SessionLocal() as s:
         items = deadletter_list(s)
         for it in items:
             payload = json.dumps(it.payload).encode()
-            sig = hmac.new(os.getenv("GITEE_WEBHOOK_SECRET", "").encode(), payload,
-                            hashlib.sha256).hexdigest() if os.getenv("GITEE_WEBHOOK_SECRET") else ""
+            sig = (
+                hmac.new(os.getenv("GITEE_WEBHOOK_SECRET", "").encode(), payload, hashlib.sha256).hexdigest()
+                if os.getenv("GITEE_WEBHOOK_SECRET")
+                else ""
+            )
             ok, _ = process_gitee_event(payload, os.getenv("GITEE_WEBHOOK_SECRET", ""), sig, "replay")
             if ok:
                 deadletter_mark_replayed(s, it.id)
@@ -703,6 +720,7 @@ def start_deadletter_scheduler():
 
 # 新增：处理 GitHub 事件
 
+
 async def async_process_github_event(body_bytes: bytes, event: str) -> Tuple[bool, str]:
     """
     异步版本的 GitHub 事件处理函数
@@ -752,37 +770,58 @@ async def async_process_github_event(body_bytes: bytes, event: str) -> Tuple[boo
                     return True, "duplicate"
 
                 # 防循环：最近是否有 Notion -> GitHub 的同步
-                if should_skip_sync_event(db, event_hash, entity_id=issue_number,
-                                          source_platform="github", target_platform="notion"):
+                if should_skip_sync_event(
+                    db, event_hash, entity_id=issue_number, source_platform="github", target_platform="notion"
+                ):
                     EVENTS_TOTAL.labels("skip").inc()
                     return True, "loop_prevented"
 
                 # 将 Issue 同步到 Notion (使用异步函数)
-                notion_ok, page_or_err = await async_notion_upsert_page({
-                    "title": issue.get("title"),
-                    "number": issue.get("number"),
-                    "body": issue.get("body", ""),
-                })
+                notion_ok, page_or_err = await async_notion_upsert_page(
+                    {
+                        "title": issue.get("title"),
+                        "number": issue.get("number"),
+                        "body": issue.get("body", ""),
+                    }
+                )
                 if not notion_ok:
-                    deadletter_enqueue(db, payload, reason="notion_error", last_error=str(page_or_err),
-                                       source_platform="github", entity_id=issue_number)
+                    deadletter_enqueue(
+                        db,
+                        payload,
+                        reason="notion_error",
+                        last_error=str(page_or_err),
+                        source_platform="github",
+                        entity_id=issue_number,
+                    )
                     DEADLETTER_SIZE.set(deadletter_count(db))
                     EVENTS_TOTAL.labels("fail").inc()
                     return False, "notion_error"
 
                 page_id = page_or_err
-                upsert_mapping(db, "github", issue_number, page_id,
-                                source_url=issue.get("html_url"), notion_database_id=NOTION_DATABASE_ID)
+                upsert_mapping(
+                    db,
+                    "github",
+                    issue_number,
+                    page_id,
+                    source_url=issue.get("html_url"),
+                    notion_database_id=NOTION_DATABASE_ID,
+                )
                 mark_event_processed(db, issue_number, event_hash, platform="github")
-                ev_id = create_sync_event(db, source_platform="github", target_platform="notion",
-                                          entity_id=issue_number, action=action or "updated", event_hash=event_hash,
-                                          is_sync_induced=False)
+                ev_id = create_sync_event(
+                    db,
+                    source_platform="github",
+                    target_platform="notion",
+                    entity_id=issue_number,
+                    action=action or "updated",
+                    event_hash=event_hash,
+                    is_sync_induced=False,
+                )
                 mark_sync_event_processed(db, ev_id)
 
         EVENTS_TOTAL.labels("success").inc()
         return True, "ok"
     finally:
-        dur = (time.time() - start)
+        dur = time.time() - start
         PROCESS_LATENCY.observe(dur)
         _durations.append(dur * 1000.0)
         arr = sorted(_durations)
@@ -827,37 +866,58 @@ def process_github_event(body_bytes: bytes, event: str) -> Tuple[bool, str]:
                     return True, "duplicate"
 
                 # 防循环：最近是否有 Notion -> GitHub 的同步
-                if should_skip_sync_event(db, event_hash, entity_id=issue_number,
-                                          source_platform="github", target_platform="notion"):
+                if should_skip_sync_event(
+                    db, event_hash, entity_id=issue_number, source_platform="github", target_platform="notion"
+                ):
                     EVENTS_TOTAL.labels("skip").inc()
                     return True, "loop_prevented"
 
                 # 将 Issue 同步到 Notion
-                notion_ok, page_or_err = notion_upsert_page({
-                    "title": issue.get("title"),
-                    "number": issue.get("number"),
-                    "body": issue.get("body", ""),
-                })
+                notion_ok, page_or_err = notion_upsert_page(
+                    {
+                        "title": issue.get("title"),
+                        "number": issue.get("number"),
+                        "body": issue.get("body", ""),
+                    }
+                )
                 if not notion_ok:
-                    deadletter_enqueue(db, payload, reason="notion_error", last_error=str(page_or_err),
-                                       source_platform="github", entity_id=issue_number)
+                    deadletter_enqueue(
+                        db,
+                        payload,
+                        reason="notion_error",
+                        last_error=str(page_or_err),
+                        source_platform="github",
+                        entity_id=issue_number,
+                    )
                     DEADLETTER_SIZE.set(deadletter_count(db))
                     EVENTS_TOTAL.labels("fail").inc()
                     return False, "notion_error"
 
                 page_id = page_or_err
-                upsert_mapping(db, "github", issue_number, page_id,
-                                source_url=issue.get("html_url"), notion_database_id=NOTION_DATABASE_ID)
+                upsert_mapping(
+                    db,
+                    "github",
+                    issue_number,
+                    page_id,
+                    source_url=issue.get("html_url"),
+                    notion_database_id=NOTION_DATABASE_ID,
+                )
                 mark_event_processed(db, issue_number, event_hash, platform="github")
-                ev_id = create_sync_event(db, source_platform="github", target_platform="notion",
-                                          entity_id=issue_number, action=action or "updated", event_hash=event_hash,
-                                          is_sync_induced=False)
+                ev_id = create_sync_event(
+                    db,
+                    source_platform="github",
+                    target_platform="notion",
+                    entity_id=issue_number,
+                    action=action or "updated",
+                    event_hash=event_hash,
+                    is_sync_induced=False,
+                )
                 mark_sync_event_processed(db, ev_id)
 
         EVENTS_TOTAL.labels("success").inc()
         return True, "ok"
     finally:
-        dur = (time.time() - start)
+        dur = time.time() - start
         PROCESS_LATENCY.observe(dur)
         _durations.append(dur * 1000.0)
         arr = sorted(_durations)
@@ -867,6 +927,7 @@ def process_github_event(body_bytes: bytes, event: str) -> Tuple[bool, str]:
 
 
 # 新增：处理 Notion 事件（页面更新 => 回写 GitHub）
+
 
 def process_notion_event(body_bytes: bytes) -> Tuple[bool, str]:
     start = time.time()
@@ -900,8 +961,9 @@ def process_notion_event(body_bytes: bytes) -> Tuple[bool, str]:
                 return True, "duplicate"
 
             # 防循环：最近是否有 GitHub -> Notion 的同步
-            if should_skip_sync_event(db, event_hash, entity_id=issue_number,
-                                      source_platform="notion", target_platform="github"):
+            if should_skip_sync_event(
+                db, event_hash, entity_id=issue_number, source_platform="notion", target_platform="github"
+            ):
                 EVENTS_TOTAL.labels("skip").inc()
                 return True, "loop_prevented"
 
@@ -910,24 +972,22 @@ def process_notion_event(body_bytes: bytes) -> Tuple[bool, str]:
             body = None
             state = None
 
-            properties = (page.get("properties") or {})
+            properties = page.get("properties") or {}
             # 简单映射：Task -> title, Output -> body, Status -> state
             task_prop = properties.get("Task") or {}
             if task_prop.get("title"):
                 try:
-                    title = "".join([
-                        t.get("plain_text") or t.get("text", {}).get("content", "")
-                        for t in task_prop["title"]
-                    ])
+                    title = "".join(
+                        [t.get("plain_text") or t.get("text", {}).get("content", "") for t in task_prop["title"]]
+                    )
                 except Exception:
                     pass
             output_prop = properties.get("Output") or {}
             if output_prop.get("rich_text"):
                 try:
-                    body = "".join([
-                        t.get("plain_text") or t.get("text", {}).get("content", "")
-                        for t in output_prop["rich_text"]
-                    ])
+                    body = "".join(
+                        [t.get("plain_text") or t.get("text", {}).get("content", "") for t in output_prop["rich_text"]]
+                    )
                 except Exception:
                     pass
             status_prop = properties.get("Status") or {}
@@ -951,25 +1011,32 @@ def process_notion_event(body_bytes: bytes) -> Tuple[bool, str]:
 
             # 更新 GitHub Issue
             ok, msg = github_service.update_issue(
-                owner, repo, int(issue_number), title=title, body=body,
-                state=state, sync_marker=sync_marker)
+                owner, repo, int(issue_number), title=title, body=body, state=state, sync_marker=sync_marker
+            )
             if not ok:
-                deadletter_enqueue(db, payload, reason="github_error", last_error=msg,
-                                    source_platform="notion", entity_id=str(page_id))
+                deadletter_enqueue(
+                    db, payload, reason="github_error", last_error=msg, source_platform="notion", entity_id=str(page_id)
+                )
                 DEADLETTER_SIZE.set(deadletter_count(db))
                 EVENTS_TOTAL.labels("fail").inc()
                 return False, "github_error"
 
             mark_event_processed(db, issue_number, event_hash, platform="notion")
-            ev_id = create_sync_event(db, source_platform="notion", target_platform="github",
-                                      entity_id=issue_number, action="updated", event_hash=event_hash,
-                                      is_sync_induced=True)
+            ev_id = create_sync_event(
+                db,
+                source_platform="notion",
+                target_platform="github",
+                entity_id=issue_number,
+                action="updated",
+                event_hash=event_hash,
+                is_sync_induced=True,
+            )
             mark_sync_event_processed(db, ev_id)
 
         EVENTS_TOTAL.labels("success").inc()
         return True, "ok"
     finally:
-        dur = (time.time() - start)
+        dur = time.time() - start
         PROCESS_LATENCY.observe(dur)
         _durations.append(dur * 1000.0)
         arr = sorted(_durations)
