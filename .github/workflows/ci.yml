@@ -119,11 +119,12 @@ jobs:
       - name: "Run Unit Tests with Coverage"
         env:
           PYTHONPATH: ${{ github.workspace }}
+          ENVIRONMENT: "testing"
           DISABLE_METRICS: "1"
           DISABLE_NOTION: "1"
-          GITEE_WEBHOOK_SECRET: "ci-test-secret"
-          GITHUB_WEBHOOK_SECRET: "ci-test-secret"
-          DEADLETTER_REPLAY_TOKEN: "ci-test-deadletter-token"
+          GITEE_WEBHOOK_SECRET: "secure-ci-test-webhook-secret-minimum-16-chars"
+          GITHUB_WEBHOOK_SECRET: "secure-ci-test-webhook-secret-minimum-16-chars"
+          DEADLETTER_REPLAY_TOKEN: "secure-ci-test-deadletter-replay-token-minimum-16-chars"
           DB_URL: "sqlite:///data/test.db"
           LOG_LEVEL: "WARNING"
         run: |
@@ -150,7 +151,7 @@ jobs:
 
       - name: "Container Smoke Test"
         run: |
-          docker run -d --name ci-test-app -p 8000:8000 -e APP_PORT=8000 -e LOG_LEVEL=INFO -e GITEE_WEBHOOK_SECRET=ci-secret -e GITHUB_WEBHOOK_SECRET=ci-secret -e DEADLETTER_REPLAY_TOKEN=ci-deadletter-token -e DISABLE_NOTION=1 -e DISABLE_METRICS="" -e DB_URL=sqlite:///data/sync.db ${{ env.IMAGE_LOCAL }}
+          docker run -d --name ci-test-app -p 8000:8000 -e APP_PORT=8000 -e ENVIRONMENT=testing -e LOG_LEVEL=INFO -e GITEE_WEBHOOK_SECRET=secure-ci-webhook-secret-minimum-16-chars -e GITHUB_WEBHOOK_SECRET=secure-ci-webhook-secret-minimum-16-chars -e DEADLETTER_REPLAY_TOKEN=secure-ci-deadletter-replay-token-minimum-16-chars -e DISABLE_NOTION=1 -e DISABLE_METRICS="" -e DB_URL=sqlite:///data/sync.db ${{ env.IMAGE_LOCAL }}
           echo "等待应用启动..."
           for i in {1..30}; do
             if curl -f http://127.0.0.1:8000/health >/dev/null 2>&1; then
