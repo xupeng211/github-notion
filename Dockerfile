@@ -3,19 +3,22 @@ FROM python:3.11-slim AS builder
 WORKDIR /app
 
 # Install build dependencies for cryptography and other packages
-RUN apt-get update && apt-get install -y \
+# Optimize for GitHub Actions build speed and reliability
+RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y \
     gcc \
     g++ \
     libffi-dev \
     libssl-dev \
     build-essential \
     pkg-config \
-    cargo \
-    rustc \
-    && rm -rf /var/lib/apt/lists/*
+    && rm -rf /var/lib/apt/lists/* \
+    && apt-get clean
 
 COPY requirements.txt .
-RUN pip install --user --no-cache-dir -r requirements.txt
+# Upgrade pip and setuptools for better compatibility
+RUN pip install --user --upgrade pip setuptools wheel
+# Install Python packages with optimized settings
+RUN pip install --user --no-cache-dir --prefer-binary -r requirements.txt
 
 FROM python:3.11-slim
 WORKDIR /app
