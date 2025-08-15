@@ -10,7 +10,10 @@ python3 -m pip install -q flake8 >/dev/null 2>&1 || true
 flake8
 
 echo "[2/4] Tests (minimal)..."
+python3 -m pip install -q --upgrade pip >/dev/null 2>&1 || true
 python3 -m pip install -q -r requirements.txt >/dev/null 2>&1 || true
+# 若依赖安装失败，显式报错而非静默跳过
+python3 -c "import httpx,fastapi,sqlalchemy,pytest" >/dev/null 2>&1 || { echo "deps missing, please run: pip install -r requirements.txt" >&2; exit 1; }
 PYTHONPATH="$ROOT_DIR" DISABLE_METRICS=1 pytest -q tests/test_mapping.py tests/test_service_flow.py
 
 echo "[3/4] Docker build..."
@@ -46,5 +49,3 @@ curl -fsS -H "X-Gitee-Token: $SIG" -H "X-Gitee-Event: Issue Hook" -H "Content-Ty
 docker logs --tail 50 ci-local-app | tail -n 50
 docker rm -f ci-local-app >/dev/null 2>&1 || true
 echo "All good."
-
-
