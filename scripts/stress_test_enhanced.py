@@ -334,13 +334,13 @@ async def main():
     print("✅ 服务健康检查通过")
 
     # 1. 运行主要压力测试
-    print(f"\n🚀 开始主要压力测试")
+    print("\n🚀 开始主要压力测试")
     start_time = time.time()
     results = await tester.run_concurrent_test(args.requests, args.concurrency, providers)
     test_duration = time.time() - start_time
 
     # 2. 测试幂等性
-    print(f"\n🔄 测试幂等性功能")
+    print("\n🔄 测试幂等性功能")
     idempotency_results = await tester.test_idempotency()
 
     # 3. 分析结果
@@ -348,7 +348,7 @@ async def main():
 
     # 4. 生成报告
     print(f"\n{'='*60}")
-    print(f"📊 压力测试报告")
+    print("📊 压力测试报告")
     print(f"{'='*60}")
     print(f"测试时长: {test_duration:.2f} 秒")
     print(f"总请求数: {analysis['summary']['total_requests']}")
@@ -360,7 +360,7 @@ async def main():
     print(f"P99响应时间: {analysis['performance']['p99_duration']*1000:.1f} ms")
     print(f"QPS: {analysis['summary']['total_requests']/test_duration:.1f}")
 
-    print(f"\n📋 各提供商性能:")
+    print("\n📋 各提供商性能:")
     for provider, stats in analysis["provider_breakdown"].items():
         success_rate = (stats["success"] / stats["total"]) * 100 if stats["total"] > 0 else 0
         print(f"  {provider}:")
@@ -368,19 +368,19 @@ async def main():
         print(f"    平均响应: {stats['avg_duration']*1000:.1f} ms")
         print(f"    P95: {stats['p95_duration']*1000:.1f} ms")
 
-    print(f"\n🔄 幂等性测试结果:")
+    print("\n🔄 幂等性测试结果:")
     print(f"  重复发送: {idempotency_results['duplicate_sends']} 次")
     print(f"  成功响应: {idempotency_results['successful_responses']} 次")
     print(f"  检测到重复: {idempotency_results['duplicate_detected']} 次")
     print(f"  幂等性正常: {'✅' if idempotency_results['idempotency_working'] else '❌'}")
 
     if analysis["status_codes"]:
-        print(f"\n📈 状态码分布:")
+        print("\n📈 状态码分布:")
         for code, count in analysis["status_codes"].items():
             print(f"  {code}: {count}")
 
     if analysis["error_samples"]:
-        print(f"\n❌ 错误样例:")
+        print("\n❌ 错误样例:")
         for error in analysis["error_samples"]:
             print(f"  - {error}")
 
@@ -389,7 +389,7 @@ async def main():
     success_rate = analysis["summary"]["success_rate"]
     qps = analysis["summary"]["total_requests"] / test_duration
 
-    print(f"\n🎯 性能评估:")
+    print("\n🎯 性能评估:")
     if success_rate >= 95 and avg_duration_ms < 500 and qps >= 10:
         print("  ✅ 优秀 - 性能表现良好，可以部署")
     elif success_rate >= 90 and avg_duration_ms < 1000 and qps >= 5:

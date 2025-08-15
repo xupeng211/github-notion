@@ -3,12 +3,12 @@ import os
 import pytest
 from fastapi.testclient import TestClient
 
+from app.server import app  # noqa
+
 pytestmark = pytest.mark.skipif(
     os.getenv("RUN_RATE_LIMIT_TESTS") != "1",
     reason="Set RUN_RATE_LIMIT_TESTS=1 to enable rate limit tests",
 )
-
-from app.server import app
 
 client = TestClient(app)
 

@@ -37,11 +37,11 @@ class FixValidator:
             print(f"🧪 测试: {name}")
             result = func()
             if result:
-                print(f"  ✅ 通过")
+                print("  ✅ 通过")
                 self.passed += 1
                 return True
             else:
-                print(f"  ❌ 失败")
+                print("  ❌ 失败")
                 self.failed += 1
                 return False
         except Exception as e:
@@ -57,14 +57,14 @@ class FixValidator:
     def summary(self):
         """输出测试总结"""
         total = self.passed + self.failed
-        print(f"\n📊 测试总结:")
+        print("\n📊 测试总结:")
         print(f"  总测试数: {total}")
         print(f"  通过: {self.passed}")
         print(f"  失败: {self.failed}")
         print(f"  警告: {self.warnings}")
 
         if self.failed == 0:
-            print(f"\n🎉 所有测试通过！架构修复验证成功")
+            print("\n🎉 所有测试通过！架构修复验证成功")
             return True
         else:
             print(f"\n❌ 有 {self.failed} 个测试失败，需要进一步修复")
@@ -86,16 +86,16 @@ def test_environment_variables():
     # 检查 env.example 中是否使用 DB_URL
     env_example = PROJECT_ROOT / "env.example"
     if not env_example.exists():
-        print(f"    env.example 文件不存在")
+        print("    env.example 文件不存在")
         return False
 
     content = env_example.read_text()
     if "DATABASE_URL=" in content:
-        print(f"    env.example 中仍使用 DATABASE_URL，应该是 DB_URL")
+        print("    env.example 中仍使用 DATABASE_URL，应该是 DB_URL")
         return False
 
     if "DB_URL=" not in content:
-        print(f"    env.example 中缺少 DB_URL 配置")
+        print("    env.example 中缺少 DB_URL 配置")
         return False
 
     return True
@@ -110,15 +110,15 @@ def test_async_architecture():
         from app.service import async_exponential_backoff_request, async_notion_upsert_page, async_process_github_event
 
         if not inspect.iscoroutinefunction(async_process_github_event):
-            print(f"    async_process_github_event 不是协程函数")
+            print("    async_process_github_event 不是协程函数")
             return False
 
         if not inspect.iscoroutinefunction(async_notion_upsert_page):
-            print(f"    async_notion_upsert_page 不是协程函数")
+            print("    async_notion_upsert_page 不是协程函数")
             return False
 
         if not inspect.iscoroutinefunction(async_exponential_backoff_request):
-            print(f"    async_exponential_backoff_request 不是协程函数")
+            print("    async_exponential_backoff_request 不是协程函数")
             return False
 
         return True
@@ -132,18 +132,18 @@ def test_database_migration():
     # 检查 alembic 配置
     alembic_ini = PROJECT_ROOT / "alembic.ini"
     if not alembic_ini.exists():
-        print(f"    alembic.ini 文件不存在")
+        print("    alembic.ini 文件不存在")
         return False
 
     # 检查迁移文件存在
     versions_dir = PROJECT_ROOT / "alembic" / "versions"
     if not versions_dir.exists():
-        print(f"    alembic/versions 目录不存在")
+        print("    alembic/versions 目录不存在")
         return False
 
     migration_files = list(versions_dir.glob("*.py"))
     if len(migration_files) == 0:
-        print(f"    没有找到数据库迁移文件")
+        print("    没有找到数据库迁移文件")
         return False
 
     return True
@@ -158,7 +158,7 @@ def test_error_handling():
         # 检查是否有全局异常处理器
         exception_handlers = app.exception_handlers
         if Exception not in exception_handlers:
-            print(f"    缺少全局异常处理器")
+            print("    缺少全局异常处理器")
             return False
 
         return True
@@ -175,15 +175,15 @@ def test_core_services():
 
         # 检查关键方法存在
         if not hasattr(github_service, "update_issue"):
-            print(f"    GitHub 服务缺少 update_issue 方法")
+            print("    GitHub 服务缺少 update_issue 方法")
             return False
 
         if not hasattr(github_service, "extract_repo_info"):
-            print(f"    GitHub 服务缺少 extract_repo_info 方法")
+            print("    GitHub 服务缺少 extract_repo_info 方法")
             return False
 
         if not hasattr(notion_service, "find_page_by_issue_id"):
-            print(f"    Notion 服务缺少 find_page_by_issue_id 方法")
+            print("    Notion 服务缺少 find_page_by_issue_id 方法")
             return False
 
         return True
@@ -198,20 +198,20 @@ def test_startup_scripts():
     start_script = PROJECT_ROOT / "scripts" / "start_service.py"
 
     if not init_script.exists():
-        print(f"    缺少数据库初始化脚本")
+        print("    缺少数据库初始化脚本")
         return False
 
     if not start_script.exists():
-        print(f"    缺少服务启动脚本")
+        print("    缺少服务启动脚本")
         return False
 
     # 检查脚本是否可执行
     if not os.access(init_script, os.X_OK):
-        print(f"    init_db.py 没有执行权限")
+        print("    init_db.py 没有执行权限")
         return False
 
     if not os.access(start_script, os.X_OK):
-        print(f"    start_service.py 没有执行权限")
+        print("    start_service.py 没有执行权限")
         return False
 
     return True
@@ -233,12 +233,12 @@ def test_fastapi_configuration():
                 continue
             # 检查实际的代码调用
             if "init_db()" in line:
-                print(f"    server.py 中仍包含 init_db() 函数调用")
+                print("    server.py 中仍包含 init_db() 函数调用")
                 return False
 
         # 检查是否有正确的注释说明
         if "通过 alembic 管理" not in content:
-            print(f"    缺少 alembic 管理的说明注释")
+            print("    缺少 alembic 管理的说明注释")
             return False
 
         return True
@@ -304,11 +304,11 @@ def main():
     success = validator.summary()
 
     if success:
-        print(f"\n🚀 架构修复验证完成！")
-        print(f"💡 下一步：")
-        print(f"   1. 配置环境变量 (参考 env.example)")
-        print(f"   2. 运行 python scripts/start_service.py")
-        print(f"   3. 测试 API 端点")
+        print("\n🚀 架构修复验证完成！")
+        print("💡 下一步：")
+        print("   1. 配置环境变量 (参考 env.example)")
+        print("   2. 运行 python scripts/start_service.py")
+        print("   3. 测试 API 端点")
 
     return success
 

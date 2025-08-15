@@ -16,12 +16,12 @@ import os
 import sys
 from pathlib import Path
 
+from alembic import command
+from alembic.config import Config
+
 # 添加项目根目录到 Python 路径
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(PROJECT_ROOT))
-
-from alembic import command
-from alembic.config import Config
 
 
 def init_database():

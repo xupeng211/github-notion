@@ -245,7 +245,7 @@ class TestRunner:
             # 清理临时数据库
             try:
                 os.unlink(test_db_path)
-            except:
+            except Exception:
                 pass
 
     def test_unit_functions(self):
@@ -535,7 +535,7 @@ class TestRunner:
         report = self.generate_test_report()
 
         # 输出测试总结
-        print(f"\n📊 测试总结:")
+        print("\n📊 测试总结:")
         print(f"  总测试数: {report['summary']['total_tests']}")
         print(f"  通过: {report['summary']['passed']} ✅")
         print(f"  失败: {report['summary']['failed']} ❌")
@@ -551,7 +551,7 @@ class TestRunner:
 
         # 判断是否可以推送
         if report["summary"]["failed"] == 0:
-            print(f"\n🎉 所有测试通过！代码可以安全推送到仓库。")
+            print("\n🎉 所有测试通过！代码可以安全推送到仓库。")
             return True
         else:
             print(f"\n❌ 有 {report['summary']['failed']} 个测试失败，请修复后再推送。")

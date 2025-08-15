@@ -62,7 +62,7 @@ def init_database():
         print(result.stdout)
         return True
     except subprocess.CalledProcessError as e:
-        print(f"✗ 数据库初始化失败:")
+        print("✗ 数据库初始化失败:")
         print(e.stdout)
         print(e.stderr)
         return False

@@ -1,3 +1,5 @@
+"""测试环境配置和Webhook处理"""
+
 import hashlib
 import hmac
 import json
@@ -5,9 +7,12 @@ import os
 
 from fastapi.testclient import TestClient
 
+# 设置测试环境变量，必须在导入app之前
 os.environ.setdefault("DB_URL", "sqlite:///data/test.db")
+os.environ["DEADLETTER_REPLAY_TOKEN"] = "test-deadletter-replay-token-123456789"
 
-from app.models import init_db
+# Import app modules after environment setup
+from app.models import init_db  # noqa
 from app.server import app  # noqa
 
 client = TestClient(app)
@@ -31,7 +36,7 @@ def test_health():
 
 def test_signature_validation():
     secret = "s"
-    payload = json.dumps({"issue": {"number": 1, "title": "t"}}).encode()
+    payload = json.dumps({"issue": {"number": 1, "title": "test-notion-token-for-testing"}}).encode()
     sig = sign(secret, payload)
     r = client.post(
         "/gitee_webhook",
@@ -43,8 +48,8 @@ def test_signature_validation():
 
 
 def test_duplicate_idempotency(monkeypatch):
-    os.environ["GITEE_WEBHOOK_SECRET"] = "k"
-    os.environ["NOTION_TOKEN"] = "t"
+    os.environ["GITEE_WEBHOOK_SECRET"] = "test-webhook-secret-for-testing-12345678"
+    os.environ["NOTION_TOKEN"] = "test-notion-token-for-testing"
     os.environ["NOTION_DATABASE_ID"] = "db"
 
     # Stub network calls
@@ -56,7 +61,7 @@ def test_duplicate_idempotency(monkeypatch):
     monkeypatch.setattr(service, "notion_upsert_page", ok_upsert)
 
     payload = json.dumps({"issue": {"number": 2, "title": "X"}}).encode()
-    sig = sign("k", payload)
+    sig = sign("test-webhook-secret-for-testing-12345678", payload)
     r1 = client.post(
         "/gitee_webhook",
         data=payload,
@@ -72,8 +77,8 @@ def test_duplicate_idempotency(monkeypatch):
 
 
 def test_retry_deadletter(monkeypatch):
-    os.environ["GITEE_WEBHOOK_SECRET"] = "k"
-    os.environ["NOTION_TOKEN"] = "t"
+    os.environ["GITEE_WEBHOOK_SECRET"] = "test-webhook-secret-for-testing-12345678"
+    os.environ["NOTION_TOKEN"] = "test-notion-token-for-testing"
     os.environ["NOTION_DATABASE_ID"] = "db"
 
     from app import service
@@ -83,7 +88,7 @@ def test_retry_deadletter(monkeypatch):
 
     monkeypatch.setattr(service, "notion_upsert_page", fail_upsert)
     payload = json.dumps({"issue": {"number": 3, "title": "Y"}}).encode()
-    sig = sign("k", payload)
+    sig = sign("test-webhook-secret-for-testing-12345678", payload)
     r = client.post(
         "/gitee_webhook",
         data=payload,
@@ -93,8 +98,8 @@ def test_retry_deadletter(monkeypatch):
 
 
 def test_conflict_strategy(monkeypatch):
-    os.environ["GITEE_WEBHOOK_SECRET"] = "k"
-    os.environ["NOTION_TOKEN"] = "t"
+    os.environ["GITEE_WEBHOOK_SECRET"] = "test-webhook-secret-for-testing-12345678"
+    os.environ["NOTION_TOKEN"] = "test-notion-token-for-testing"
     os.environ["NOTION_DATABASE_ID"] = "db"
 
     from app import service
@@ -110,7 +115,7 @@ def test_conflict_strategy(monkeypatch):
     monkeypatch.setattr(service, "notion_upsert_page", upsert_seq)
 
     payload1 = json.dumps({"issue": {"number": 4, "title": "Z"}}).encode()
-    sig1 = sign("k", payload1)
+    sig1 = sign("test-webhook-secret-for-testing-12345678", payload1)
     r1 = client.post(
         "/gitee_webhook",
         data=payload1,
@@ -119,7 +124,7 @@ def test_conflict_strategy(monkeypatch):
     assert r1.status_code == 200
 
     payload2 = json.dumps({"issue": {"number": 4, "title": "Z2"}}).encode()
-    sig2 = sign("k", payload2)
+    sig2 = sign("test-webhook-secret-for-testing-12345678", payload2)
     r2 = client.post(
         "/gitee_webhook",
         data=payload2,

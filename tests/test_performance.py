@@ -1,24 +1,27 @@
-import os
-
-import pytest
-
 #!/usr/bin/env python3
 
-
-pytestmark = pytest.mark.skipif(
-    os.getenv("RUN_PERF_TESTS") != "1",
-    reason="Set RUN_PERF_TESTS=1 to enable performance tests",
-)
 import concurrent.futures
 import hashlib
 import hmac
 import json
+import os
 import statistics
 import time
 from datetime import datetime, timezone
 from typing import Any, Dict, List
 
+import pytest
 import requests
+
+# 设置测试环境变量
+os.environ.setdefault("DB_URL", "sqlite:///data/perf_test.db")
+os.environ.setdefault("LOG_LEVEL", "ERROR")
+os.environ.setdefault("DISABLE_NOTION", "1")
+
+pytestmark = pytest.mark.skipif(
+    os.getenv("RUN_PERF_TESTS") != "1",
+    reason="Set RUN_PERF_TESTS=1 to enable performance tests",
+)
 
 # 测试配置
 TEST_CONFIG = {
@@ -117,7 +120,7 @@ class PerformanceTest:
 
     def run_load_test(self):
         """运行负载测试"""
-        print(f"开始负载测试:")
+        print("开始负载测试:")
         print(f"- 基础 URL: {TEST_CONFIG['base_url']}")
         print(f"- 测试时长: {TEST_CONFIG['test_duration']} 秒")
         print(f"- 并发用户: {TEST_CONFIG['concurrent_users']}")
@@ -158,7 +161,7 @@ class PerformanceTest:
         print(f"成功请求: {successful_requests}")
         print(f"失败请求: {failed_requests}")
         print(f"成功率: {(successful_requests/total_requests)*100:.2f}%")
-        print(f"\n响应时间统计:")
+        print("\n响应时间统计:")
         print(f"- 平均响应时间: {avg_duration:.3f} 秒")
         print(f"- 中位数响应时间: {median_duration:.3f} 秒")
         print(f"- 95% 响应时间: {p95_duration:.3f} 秒")
@@ -177,7 +180,7 @@ class PerformanceTest:
         # 计算每秒请求数
         test_duration = self.results[-1]["timestamp"] - self.results[0]["timestamp"]
         requests_per_second = total_requests / test_duration
-        print(f"\n性能指标:")
+        print("\n性能指标:")
         print(f"- 每秒请求数: {requests_per_second:.2f}")
         print(f"- 总测试时长: {test_duration:.2f} 秒")
 

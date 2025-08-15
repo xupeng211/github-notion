@@ -1,23 +1,21 @@
-import json
-import os
-
-import pytest
-
 #!/usr/bin/env python3
 
+import hashlib
+import hmac
+import json
+import os
+from datetime import datetime, timezone
+from typing import Any, Dict
 
+import pytest
+import requests
+
+# 测试配置
 pytestmark = pytest.mark.skipif(
     os.getenv("RUN_INTEGRATION_TESTS") != "1",
     reason="Set RUN_INTEGRATION_TESTS=1 to enable integration tests",
 )
-import hashlib
-import hmac
-from datetime import datetime, timezone
-from typing import Any, Dict
 
-import requests
-
-# 测试配置
 TEST_CONFIG = {
     "base_url": os.getenv("TEST_BASE_URL", "http://localhost:8787"),
     "gitee_webhook_secret": os.getenv("TEST_GITEE_WEBHOOK_SECRET", "test-secret"),

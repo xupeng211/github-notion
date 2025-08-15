@@ -368,7 +368,13 @@ class TestIdempotencyManager:
         assert content_hash == content_hash2
 
         # 不同内容应该生成不同哈希
-        different_payload = {"issue": {"title": "Different Issue", "body": "Different body", "state": "closed"}}
+        different_payload = {
+            "issue": {
+                "title": "Different Issue",
+                "body": "Different body",
+                "state": "closed",
+            }
+        }
         different_hash = manager.generate_content_hash(different_payload)
         assert content_hash != different_hash
 
