@@ -181,7 +181,12 @@ async def validation_exception_handler(request: Request, exc: ValidationError):
         },
     )
 
-    return {"error": "validation_error", "message": "请求数据验证失败", "details": str(exc), "request_id": request_id}
+    return {
+        "error": "validation_error",
+        "message": "请求数据验证失败",
+        "details": str(exc),
+        "request_id": request_id,
+    }
 
 
 @app.exception_handler(ValueError)
@@ -191,10 +196,20 @@ async def value_error_handler(request: Request, exc: ValueError):
 
     logger.warning(
         "value_error",
-        extra={"request_id": request_id, "url": str(request.url), "method": request.method, "error": str(exc)},
+        extra={
+            "request_id": request_id,
+            "url": str(request.url),
+            "method": request.method,
+            "error": str(exc),
+        },
     )
 
-    return {"error": "value_error", "message": "请求参数错误", "details": str(exc), "request_id": request_id}
+    return {
+        "error": "value_error",
+        "message": "请求参数错误",
+        "details": str(exc),
+        "request_id": request_id,
+    }
 
 
 @app.exception_handler(500)
@@ -217,7 +232,11 @@ async def internal_server_error_handler(request: Request, exc):
         },
     )
 
-    return {"error": "internal_server_error", "message": "内部服务器错误，请稍后重试", "request_id": request_id}
+    return {
+        "error": "internal_server_error",
+        "message": "内部服务器错误，请稍后重试",
+        "request_id": request_id,
+    }
 
 
 @app.exception_handler(Exception)
@@ -245,7 +264,11 @@ async def global_exception_handler(request: Request, exc: Exception):
         # HTTPException 应该由 FastAPI 自动处理，但这里提供备用
         raise exc
 
-    return {"error": "unexpected_error", "message": "发生了意外错误，请联系管理员", "request_id": request_id}
+    return {
+        "error": "unexpected_error",
+        "message": "发生了意外错误，请联系管理员",
+        "request_id": request_id,
+    }
 
 
 # health
@@ -266,7 +289,11 @@ async def health():
         "status": "healthy",
         "timestamp": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
         "environment": os.getenv("ENVIRONMENT", os.getenv("PY_ENV", "development")),
-        "app_info": {"app": "fastapi", "log_level": os.getenv("LOG_LEVEL", "INFO"), "version": "1.0.0"},
+        "app_info": {
+            "app": "fastapi",
+            "log_level": os.getenv("LOG_LEVEL", "INFO"),
+            "version": "1.0.0",
+        },
         "checks": {},
     }
 
@@ -276,9 +303,15 @@ async def health():
 
         with SessionLocal() as db:
             db.execute(text("SELECT 1"))
-        health_data["checks"]["database"] = {"status": "ok", "message": "Database connection successful"}
+        health_data["checks"]["database"] = {
+            "status": "ok",
+            "message": "Database connection successful",
+        }
     except Exception as e:
-        health_data["checks"]["database"] = {"status": "error", "message": f"Database error: {str(e)}"}
+        health_data["checks"]["database"] = {
+            "status": "error",
+            "message": f"Database error: {str(e)}",
+        }
         health_data["status"] = "degraded"
 
     # 检查 Notion API 连接
@@ -302,7 +335,9 @@ async def health():
             if notion_database_id:
                 try:
                     db_response = requests.get(
-                        f"https://api.notion.com/v1/databases/{notion_database_id}", headers=headers, timeout=5
+                        f"https://api.notion.com/v1/databases/{notion_database_id}",
+                        headers=headers,
+                        timeout=5,
                     )
                     db_response.raise_for_status()
                 except requests.RequestException:
@@ -310,10 +345,10 @@ async def health():
 
             health_data["checks"]["notion_api"] = {
                 "status": "ok" if db_accessible else "warning",
-                "message": "Notion API connection successful" if db_accessible else "API连接成功但数据库访问受限",
+                "message": ("Notion API connection successful" if db_accessible else "API连接成功但数据库访问受限"),
                 "version": "2022-06-28",
                 "database_accessible": db_accessible,
-                "database_id": notion_database_id[:8] + "..." if notion_database_id else None,
+                "database_id": (notion_database_id[:8] + "..." if notion_database_id else None),
             }
 
             if not db_accessible and notion_database_id:
@@ -366,10 +401,16 @@ async def health():
                 health_data["checks"]["github_api"]["message"] = f"GitHub API rate limit低 ({remaining}/{limit})"
 
         except requests.RequestException as e:
-            health_data["checks"]["github_api"] = {"status": "error", "message": f"GitHub API error: {str(e)}"}
+            health_data["checks"]["github_api"] = {
+                "status": "error",
+                "message": f"GitHub API error: {str(e)}",
+            }
             health_data["status"] = "degraded"
     else:
-        health_data["checks"]["github_api"] = {"status": "warning", "message": "GitHub API token not configured"}
+        health_data["checks"]["github_api"] = {
+            "status": "warning",
+            "message": "GitHub API token not configured",
+        }
 
     # 检查磁盘空间
     try:
@@ -404,7 +445,10 @@ async def health():
             },
         }
     except Exception as e:
-        health_data["checks"]["disk_space"] = {"status": "error", "message": f"无法检查磁盘空间: {str(e)}"}
+        health_data["checks"]["disk_space"] = {
+            "status": "error",
+            "message": f"无法检查磁盘空间: {str(e)}",
+        }
 
     # 检查死信队列状态
     try:
@@ -419,7 +463,10 @@ async def health():
                 health_data["checks"]["deadletter_queue"]["status"] = "error"
                 health_data["status"] = "degraded"
     except Exception as e:
-        health_data["checks"]["deadletter_queue"] = {"status": "error", "message": f"无法检查死信队列: {str(e)}"}
+        health_data["checks"]["deadletter_queue"] = {
+            "status": "error",
+            "message": f"无法检查死信队列: {str(e)}",
+        }
 
     return health_data
 
@@ -461,7 +508,10 @@ async def gitee_webhook(request: Request):
     # Webhook安全验证（签名+重放保护）
     is_valid, error_msg = validate_webhook_security(body, signature, secret, "gitee", request_id, timestamp)
     if not is_valid:
-        logger.warning("gitee_webhook_security_failed", extra={"error": error_msg, "request_id": request_id})
+        logger.warning(
+            "gitee_webhook_security_failed",
+            extra={"error": error_msg, "request_id": request_id},
+        )
         # 记录安全失败的指标
         duration = time.time() - start_time
         record_webhook_request("gitee", event_type, "failed", duration)
@@ -539,7 +589,10 @@ async def github_webhook(request: Request):
     # Webhook安全验证（签名+重放保护）
     is_valid, error_msg = validate_webhook_security(body, signature, secret, "github", request_id)
     if not is_valid:
-        logger.warning("github_webhook_security_failed", extra={"error": error_msg, "request_id": request_id})
+        logger.warning(
+            "github_webhook_security_failed",
+            extra={"error": error_msg, "request_id": request_id},
+        )
         raise HTTPException(status_code=403, detail=error_msg)
 
     # Pydantic 校验（尽量宽松，仅用于基础字段）
@@ -567,7 +620,11 @@ async def github_webhook(request: Request):
         if is_duplicate:
             logger.info(
                 "github_duplicate_event_skipped",
-                extra={"event_id": event_id, "reason": reason, "request_id": request_id},
+                extra={
+                    "event_id": event_id,
+                    "reason": reason,
+                    "request_id": request_id,
+                },
             )
             return {"message": f"duplicate_event_skipped:{reason}"}
 
@@ -619,7 +676,10 @@ async def notion_webhook(request: Request):
     if secret:  # 仅在配置了密钥时进行验证
         is_valid, error_msg = validate_webhook_security(body, signature, secret, "notion", request_id, timestamp)
         if not is_valid:
-            logger.warning("notion_webhook_security_failed", extra={"error": error_msg, "request_id": request_id})
+            logger.warning(
+                "notion_webhook_security_failed",
+                extra={"error": error_msg, "request_id": request_id},
+            )
             raise HTTPException(status_code=403, detail=error_msg)
     try:
         NotionWebhookPayload.model_validate_json(body.decode("utf-8"))

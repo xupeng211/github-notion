@@ -213,8 +213,8 @@ class ConfigValidator:
         summary = {
             "environment": self.environment,
             "db_type": "sqlite" if "sqlite" in os.getenv("DB_URL", "") else "external",
-            "notion_enabled": "disabled" if os.getenv("DISABLE_NOTION") == "1" else "enabled",
-            "metrics_enabled": "disabled" if os.getenv("DISABLE_METRICS") == "1" else "enabled",
+            "notion_enabled": ("disabled" if os.getenv("DISABLE_NOTION") == "1" else "enabled"),
+            "metrics_enabled": ("disabled" if os.getenv("DISABLE_METRICS") == "1" else "enabled"),
             "log_level": os.getenv("LOG_LEVEL", "INFO"),
         }
 
@@ -276,4 +276,9 @@ def validate_if_main_app() -> None:
 
 
 # 导出主要函数
-__all__ = ["ConfigValidator", "ValidationResult", "validate_config_on_startup", "validate_if_main_app"]
+__all__ = [
+    "ConfigValidator",
+    "ValidationResult",
+    "validate_config_on_startup",
+    "validate_if_main_app",
+]

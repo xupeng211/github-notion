@@ -26,7 +26,7 @@ SSH_KEY_PATH="$HOME/.ssh/aws-key.pem"  # 您需要提供 SSH 密钥路径
 # GitHub 容器注册表配置
 export REGISTRY="ghcr.io"
 export REGISTRY_USERNAME="xupeng211"
-export REGISTRY_PASSWORD="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"
+export REGISTRY_PASSWORD="${GITHUB_TOKEN:-}"
 export IMAGE_NAME="xupeng211/gitee-notion"
 
 # 生成版本标签
@@ -41,17 +41,17 @@ log_info "时间戳: $TIMESTAMP"
 # 步骤 1: 本地构建和推送镜像
 deploy_local_build() {
     log_info "🏗️ 本地构建镜像..."
-    
+
     # 检查 Docker
     if ! command -v docker >/dev/null 2>&1; then
         log_error "Docker 未安装，请先安装 Docker"
         exit 1
     fi
-    
+
     # 登录 GitHub Container Registry
     log_info "🔑 登录 GitHub Container Registry..."
     echo "$REGISTRY_PASSWORD" | docker login "$REGISTRY" -u "$REGISTRY_USERNAME" --password-stdin
-    
+
     # 构建镜像
     log_info "🏗️ 构建 Docker 镜像..."
     if [[ -f "Dockerfile.optimized" ]]; then
@@ -59,7 +59,7 @@ deploy_local_build() {
     else
         DOCKERFILE="Dockerfile"
     fi
-    
+
     docker build \
         --build-arg VERSION="$VERSION" \
         --build-arg BUILD_TIME="$TIMESTAMP" \
@@ -69,28 +69,28 @@ deploy_local_build() {
         -t "${REGISTRY}/${IMAGE_NAME}:${VERSION}" \
         -t "${REGISTRY}/${IMAGE_NAME}:latest" \
         .
-    
+
     # 推送镜像
     log_info "📤 推送镜像到注册表..."
     docker push "${REGISTRY}/${IMAGE_NAME}:${VERSION}"
     docker push "${REGISTRY}/${IMAGE_NAME}:latest"
-    
+
     log_success "镜像构建和推送完成"
 }
 
 # 步骤 2: 准备服务器部署文件
 prepare_deployment_files() {
     log_info "📋 准备部署文件..."
-    
+
     # 创建临时部署目录
     DEPLOY_DIR="/tmp/gitee-notion-deploy-${TIMESTAMP}"
     mkdir -p "$DEPLOY_DIR"
-    
+
     # 复制必要文件
     cp docker-compose.production.yml "$DEPLOY_DIR/"
     cp -r monitoring "$DEPLOY_DIR/" 2>/dev/null || log_warning "监控配置目录不存在"
     cp -r reverse-proxy "$DEPLOY_DIR/" 2>/dev/null || log_warning "反向代理配置不存在"
-    
+
     # 创建环境变量文件
     cat > "$DEPLOY_DIR/.env" << EOF
 # 生产环境配置
@@ -127,7 +127,7 @@ GRAFANA_SECRET_KEY=grafana-secret-$TIMESTAMP
 # NOTION_TOKEN=secret_your-notion-token
 # NOTION_DATABASE_ID=your-database-id
 EOF
-    
+
     # 创建部署脚本
     cat > "$DEPLOY_DIR/deploy_on_server.sh" << 'EOF'
 #!/bin/bash
@@ -144,7 +144,7 @@ install_docker() {
         sudo usermod -aG docker $USER
         rm get-docker.sh
     fi
-    
+
     if ! command -v docker-compose >/dev/null 2>&1; then
         echo "📦 安装 Docker Compose..."
         sudo curl -L "https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
@@ -155,42 +155,42 @@ install_docker() {
 # 主部署流程
 main_deploy() {
     install_docker
-    
+
     # 创建应用目录
     APP_DIR="/opt/gitee-notion-sync"
     sudo mkdir -p "$APP_DIR"
     sudo chown $USER:$USER "$APP_DIR"
-    
+
     # 复制文件到应用目录
     cp -r . "$APP_DIR/"
     cd "$APP_DIR"
-    
+
     # 加载环境变量
     source .env
-    
+
     # 登录容器注册表
     echo "🔑 登录容器注册表..."
     echo "$REGISTRY_PASSWORD" | docker login "$REGISTRY" -u "$REGISTRY_USERNAME" --password-stdin
-    
+
     # 创建必要目录
     mkdir -p data logs monitoring
-    
+
     # 停止旧服务
     echo "🛑 停止旧服务..."
     docker-compose -f docker-compose.production.yml down 2>/dev/null || true
-    
+
     # 拉取最新镜像
     echo "📥 拉取镜像..."
     docker pull "${REGISTRY}/${IMAGE_NAME}:${IMAGE_TAG}"
-    
+
     # 启动服务
     echo "🚀 启动服务..."
     docker-compose -f docker-compose.production.yml up -d
-    
+
     # 等待服务启动
     echo "⏳ 等待服务启动..."
     sleep 15
-    
+
     # 健康检查
     for i in {1..30}; do
         if curl -f http://localhost:8000/health >/dev/null 2>&1; then
@@ -205,11 +205,11 @@ main_deploy() {
         echo "等待服务启动... ($i/30)"
         sleep 2
     done
-    
+
     # 显示服务状态
     echo "📊 服务状态:"
     docker-compose -f docker-compose.production.yml ps
-    
+
     echo ""
     echo "🎉 部署完成!"
     echo "📍 服务访问地址:"
@@ -220,23 +220,23 @@ main_deploy() {
 
 main_deploy
 EOF
-    
+
     chmod +x "$DEPLOY_DIR/deploy_on_server.sh"
-    
+
     log_success "部署文件准备完成: $DEPLOY_DIR"
 }
 
 # 步骤 3: 上传和部署到服务器
 deploy_to_server() {
     log_info "🌐 部署到 AWS 服务器..."
-    
+
     # 检查 SSH 密钥
     if [[ ! -f "$SSH_KEY_PATH" ]]; then
         log_warning "SSH 密钥文件不存在: $SSH_KEY_PATH"
         log_info "请确保您有 AWS EC2 的 SSH 密钥文件"
         read -p "请输入 SSH 密钥文件路径: " SSH_KEY_PATH
     fi
-    
+
     # 测试 SSH 连接
     log_info "🔗 测试 SSH 连接..."
     if ! ssh -i "$SSH_KEY_PATH" -o ConnectTimeout=10 -o StrictHostKeyChecking=no "$AWS_USER@$AWS_SERVER" "echo 'SSH 连接成功'" 2>/dev/null; then
@@ -246,17 +246,17 @@ deploy_to_server() {
         echo "  3. 安全组是否开放 SSH (端口 22)"
         exit 1
     fi
-    
+
     # 上传部署文件
     log_info "📤 上传部署文件..."
     scp -i "$SSH_KEY_PATH" -r "$DEPLOY_DIR" "$AWS_USER@$AWS_SERVER:/tmp/"
-    
+
     # 执行远程部署
     log_info "🚀 执行远程部署..."
     ssh -i "$SSH_KEY_PATH" "$AWS_USER@$AWS_SERVER" "cd /tmp/$(basename $DEPLOY_DIR) && bash deploy_on_server.sh"
-    
+
     log_success "服务器部署完成!"
-    
+
     # 显示访问信息
     echo ""
     log_info "🌟 部署成功信息:"
@@ -278,9 +278,9 @@ main() {
     echo "1. 完整自动部署 (推荐)"
     echo "2. 仅本地构建镜像"
     echo "3. 仅部署到服务器 (假设镜像已存在)"
-    
+
     read -p "请输入选择 (1-3): " choice
-    
+
     case $choice in
         1)
             deploy_local_build
@@ -316,4 +316,4 @@ if ! command -v ssh >/dev/null 2>&1; then
 fi
 
 # 执行主函数
-main 
+main

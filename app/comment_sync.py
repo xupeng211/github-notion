@@ -286,7 +286,11 @@ class CommentSyncService:
             comments = []
             for block in result.get("results", []):
                 block_type = block.get("type", "")
-                if block_type in ["paragraph", "bulleted_list_item", "numbered_list_item"]:
+                if block_type in [
+                    "paragraph",
+                    "bulleted_list_item",
+                    "numbered_list_item",
+                ]:
                     text_content = self._extract_notion_block_text(block)
                     if text_content and not text_content.startswith("<!--"):  # 排除 HTML 注释
                         comments.append(block)

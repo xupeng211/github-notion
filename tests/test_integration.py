@@ -7,7 +7,8 @@ import pytest
 
 
 pytestmark = pytest.mark.skipif(
-    os.getenv("RUN_INTEGRATION_TESTS") != "1", reason="Set RUN_INTEGRATION_TESTS=1 to enable integration tests"
+    os.getenv("RUN_INTEGRATION_TESTS") != "1",
+    reason="Set RUN_INTEGRATION_TESTS=1 to enable integration tests",
 )
 import hashlib
 import hmac
@@ -50,7 +51,11 @@ class TestGiteeNotionSync:
 
     def calculate_gitee_signature(self, payload: str) -> str:
         """计算 Gitee webhook 签名"""
-        return hmac.new(TEST_CONFIG["gitee_webhook_secret"].encode(), payload.encode(), hashlib.sha256).hexdigest()
+        return hmac.new(
+            TEST_CONFIG["gitee_webhook_secret"].encode(),
+            payload.encode(),
+            hashlib.sha256,
+        ).hexdigest()
 
     def test_health_check(self):
         """测试健康检查端点"""
@@ -71,13 +76,21 @@ class TestGiteeNotionSync:
 
     def test_gitee_webhook_without_signature(self, headers, gitee_issue_payload):
         """测试没有签名的 Gitee webhook 请求"""
-        response = requests.post(f"{TEST_CONFIG['base_url']}/gitee_webhook", headers=headers, json=gitee_issue_payload)
+        response = requests.post(
+            f"{TEST_CONFIG['base_url']}/gitee_webhook",
+            headers=headers,
+            json=gitee_issue_payload,
+        )
         assert response.status_code == 403
 
     def test_gitee_webhook_with_invalid_signature(self, headers, gitee_issue_payload):
         """测试无效签名的 Gitee webhook 请求"""
         headers["X-Gitee-Token"] = "invalid-signature"
-        response = requests.post(f"{TEST_CONFIG['base_url']}/gitee_webhook", headers=headers, json=gitee_issue_payload)
+        response = requests.post(
+            f"{TEST_CONFIG['base_url']}/gitee_webhook",
+            headers=headers,
+            json=gitee_issue_payload,
+        )
         assert response.status_code == 403
 
     def test_gitee_webhook_with_valid_signature(self, headers, gitee_issue_payload):
@@ -86,7 +99,11 @@ class TestGiteeNotionSync:
         headers["X-Gitee-Token"] = self.calculate_gitee_signature(payload_str)
         headers["X-Gitee-Event"] = "Issue Hook"
 
-        response = requests.post(f"{TEST_CONFIG['base_url']}/gitee_webhook", headers=headers, data=payload_str)
+        response = requests.post(
+            f"{TEST_CONFIG['base_url']}/gitee_webhook",
+            headers=headers,
+            data=payload_str,
+        )
         assert response.status_code == 200
 
         # 验证 Notion 数据库中是否创建了对应的页面
@@ -100,7 +117,12 @@ class TestGiteeNotionSync:
             response = requests.post(
                 "https://api.notion.com/v1/databases/{TEST_CONFIG['notion_database_id']}/query",
                 headers=notion_headers,
-                json={"filter": {"property": "Title", "title": {"equals": gitee_issue_payload["issue"]["title"]}}},
+                json={
+                    "filter": {
+                        "property": "Title",
+                        "title": {"equals": gitee_issue_payload["issue"]["title"]},
+                    }
+                },
             )
             assert response.status_code == 200
             results = response.json()["results"]
@@ -114,7 +136,11 @@ class TestGiteeNotionSync:
 
         # 发送多个请求触发速率限制
         for _ in range(10):
-            response = requests.post(f"{TEST_CONFIG['base_url']}/gitee_webhook", headers=headers, data=payload_str)
+            response = requests.post(
+                f"{TEST_CONFIG['base_url']}/gitee_webhook",
+                headers=headers,
+                data=payload_str,
+            )
             if response.status_code == 429:
                 break
         assert response.status_code == 429
@@ -122,12 +148,18 @@ class TestGiteeNotionSync:
     def test_error_handling(self, headers):
         """测试错误处理"""
         # 测试无效的 JSON
-        response = requests.post(f"{TEST_CONFIG['base_url']}/gitee_webhook", headers=headers, data="invalid json")
+        response = requests.post(
+            f"{TEST_CONFIG['base_url']}/gitee_webhook",
+            headers=headers,
+            data="invalid json",
+        )
         assert response.status_code == 400
 
         # 测试缺少必要字段
         response = requests.post(
-            f"{TEST_CONFIG['base_url']}/gitee_webhook", headers=headers, json={"action": "open"}  # 缺少 issue 字段
+            f"{TEST_CONFIG['base_url']}/gitee_webhook",
+            headers=headers,
+            json={"action": "open"},  # 缺少 issue 字段
         )
         assert response.status_code == 400
 
@@ -140,7 +172,11 @@ class TestGiteeNotionSync:
         headers["X-Gitee-Event"] = "Issue Hook"
 
         def send_request():
-            return requests.post(f"{TEST_CONFIG['base_url']}/gitee_webhook", headers=headers, data=payload_str)
+            return requests.post(
+                f"{TEST_CONFIG['base_url']}/gitee_webhook",
+                headers=headers,
+                data=payload_str,
+            )
 
         with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
             futures = [executor.submit(send_request) for _ in range(5)]
@@ -158,7 +194,11 @@ class TestGiteeNotionSync:
         headers["X-Gitee-Token"] = self.calculate_gitee_signature(payload_str)
         headers["X-Gitee-Event"] = "Issue Hook"
 
-        response = requests.post(f"{TEST_CONFIG['base_url']}/gitee_webhook", headers=headers, data=payload_str)
+        response = requests.post(
+            f"{TEST_CONFIG['base_url']}/gitee_webhook",
+            headers=headers,
+            data=payload_str,
+        )
         assert response.status_code == 200
 
         # 2. 验证 Notion 页面创建
@@ -177,7 +217,12 @@ class TestGiteeNotionSync:
             response = requests.post(
                 "https://api.notion.com/v1/databases/{TEST_CONFIG['notion_database_id']}/query",
                 headers=notion_headers,
-                json={"filter": {"property": "Title", "title": {"equals": gitee_issue_payload["issue"]["title"]}}},
+                json={
+                    "filter": {
+                        "property": "Title",
+                        "title": {"equals": gitee_issue_payload["issue"]["title"]},
+                    }
+                },
             )
             assert response.status_code == 200
             results = response.json()["results"]

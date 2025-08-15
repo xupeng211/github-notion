@@ -192,7 +192,11 @@ def create_sync_event(
 
 
 def should_skip_sync_event(
-    db: Session, event_hash: str, entity_id: str, source_platform: str, target_platform: str
+    db: Session,
+    event_hash: str,
+    entity_id: str,
+    source_platform: str,
+    target_platform: str,
 ) -> bool:
     """检查是否应跳过同步事件（防循环）"""
     # 检查最近是否有相同方向的同步事件
@@ -335,7 +339,11 @@ def get_config(db: Session, key: str) -> Optional[dict]:
 
 
 def set_config(
-    db: Session, key: str, value: dict, description: Optional[str] = None, category: str = "general"
+    db: Session,
+    key: str,
+    value: dict,
+    description: Optional[str] = None,
+    category: str = "general",
 ) -> None:
     """设置配置"""
     config = db.query(SyncConfig).filter_by(config_key=key).first()
@@ -346,6 +354,11 @@ def set_config(
             config.description = description
         config.category = category
     else:
-        config = SyncConfig(config_key=key, config_value=value, description=description, category=category)
+        config = SyncConfig(
+            config_key=key,
+            config_value=value,
+            description=description,
+            category=category,
+        )
         db.add(config)
         db.commit()

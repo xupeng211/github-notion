@@ -56,12 +56,25 @@ class TestRunner:
             print(f"  ❌ {test_name}: {message}")
             self.failed += 1
 
-        self.test_results.append({"test": test_name, "passed": passed, "message": message, "warning": warning})
+        self.test_results.append(
+            {
+                "test": test_name,
+                "passed": passed,
+                "message": message,
+                "warning": warning,
+            }
+        )
 
     def run_command(self, cmd: List[str], timeout: int = 30, capture_output: bool = True) -> Tuple[bool, str, str]:
         """运行命令并返回结果"""
         try:
-            result = subprocess.run(cmd, timeout=timeout, capture_output=capture_output, text=True, cwd=PROJECT_ROOT)
+            result = subprocess.run(
+                cmd,
+                timeout=timeout,
+                capture_output=capture_output,
+                text=True,
+                cwd=PROJECT_ROOT,
+            )
             return result.returncode == 0, result.stdout, result.stderr
         except subprocess.TimeoutExpired:
             return False, "", f"Command timed out after {timeout} seconds"
@@ -182,7 +195,11 @@ class TestRunner:
                 self.log_result("数据库初始化", True)
             else:
                 # 如果数据库初始化失败，记录但继续测试
-                self.log_result("数据库初始化", False, stderr.split("\n")[-1] if stderr else "初始化失败")
+                self.log_result(
+                    "数据库初始化",
+                    False,
+                    stderr.split("\n")[-1] if stderr else "初始化失败",
+                )
 
             # 测试基本数据库操作（仅在初始化成功时）
             if db_init_success:
@@ -198,7 +215,11 @@ class TestRunner:
 
                     with TestSessionLocal() as db:
                         # 测试创建记录
-                        mapping = Mapping(source_platform="github", source_id="test123", notion_page_id="test-page-id")
+                        mapping = Mapping(
+                            source_platform="github",
+                            source_id="test123",
+                            notion_page_id="test-page-id",
+                        )
                         db.add(mapping)
                         db.commit()
 
@@ -287,7 +308,11 @@ class TestRunner:
                         if health_data.get("status") in ["healthy", "degraded"]:
                             self.log_result("健康检查端点", True)
                         else:
-                            self.log_result("健康检查端点", False, f"健康状态异常: {health_data.get('status')}")
+                            self.log_result(
+                                "健康检查端点",
+                                False,
+                                f"健康状态异常: {health_data.get('status')}",
+                            )
                     else:
                         self.log_result("健康检查端点", False, f"HTTP {response.status_code}")
                 except Exception as e:
@@ -309,7 +334,11 @@ class TestRunner:
                         if any(indicator in metrics_text for indicator in prometheus_indicators):
                             self.log_result("Prometheus 指标端点", True)
                         else:
-                            self.log_result("Prometheus 指标端点", False, f"未找到 Prometheus 格式指标 (长度: {len(metrics_text)})")
+                            self.log_result(
+                                "Prometheus 指标端点",
+                                False,
+                                f"未找到 Prometheus 格式指标 (长度: {len(metrics_text)})",
+                            )
                     else:
                         self.log_result("Prometheus 指标端点", False, f"HTTP {response.status_code}")
                 except Exception as e:
@@ -331,14 +360,21 @@ class TestRunner:
                             headers["X-Gitee-Event"] = event_type
 
                         response = await client.post(
-                            f"{base_url}{endpoint}", json={"test": "data"}, headers=headers, timeout=10
+                            f"{base_url}{endpoint}",
+                            json={"test": "data"},
+                            headers=headers,
+                            timeout=10,
                         )
 
                         # 期望返回 400 (验证失败) 而不是 500 (服务器错误)
                         if response.status_code in [200, 400, 403, 422]:
                             self.log_result(f"{endpoint} 端点", True)
                         else:
-                            self.log_result(f"{endpoint} 端点", False, f"HTTP {response.status_code}")
+                            self.log_result(
+                                f"{endpoint} 端点",
+                                False,
+                                f"HTTP {response.status_code}",
+                            )
                     except Exception as e:
                         self.log_result(f"{endpoint} 端点", False, str(e))
 
@@ -434,7 +470,11 @@ class TestRunner:
         print("🚀 测试部署脚本...")
 
         # 测试脚本可执行性
-        scripts_to_test = ["scripts/validate_fixes.py", "scripts/init_db.py", "scripts/start_service.py"]
+        scripts_to_test = [
+            "scripts/validate_fixes.py",
+            "scripts/init_db.py",
+            "scripts/start_service.py",
+        ]
 
         for script in scripts_to_test:
             script_path = PROJECT_ROOT / script
@@ -444,7 +484,11 @@ class TestRunner:
                 self.log_result(f"{script} 可执行性", False, "脚本不可执行")
 
         # 测试配置文件
-        config_files = ["env.example", "monitoring/prometheus.yml", "monitoring/alert_rules.yml"]
+        config_files = [
+            "env.example",
+            "monitoring/prometheus.yml",
+            "monitoring/alert_rules.yml",
+        ]
 
         for config_file in config_files:
             config_path = PROJECT_ROOT / config_file

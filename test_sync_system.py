@@ -109,7 +109,11 @@ class SyncSystemTester:
                 module = __import__(module_name, fromlist=[attr_name])
                 attr = getattr(module, attr_name)
 
-                self._record_test(f"导入 {module_name}.{attr_name}", True, f"成功导入 {type(attr).__name__}")
+                self._record_test(
+                    f"导入 {module_name}.{attr_name}",
+                    True,
+                    f"成功导入 {type(attr).__name__}",
+                )
                 print(f"  ✅ {module_name}.{attr_name}")
 
             except Exception as e:
@@ -162,7 +166,11 @@ class SyncSystemTester:
             # 检查字段映射配置
             if "github_to_notion" in config:
                 mapping_count = len(config["github_to_notion"])
-                self._record_test("字段映射数量", mapping_count > 0, f"配置了 {mapping_count} 个字段映射")
+                self._record_test(
+                    "字段映射数量",
+                    mapping_count > 0,
+                    f"配置了 {mapping_count} 个字段映射",
+                )
                 print(f"  ✅ 配置了 {mapping_count} 个 GitHub → Notion 字段映射")
 
             return all_sections_present
@@ -198,7 +206,11 @@ class SyncSystemTester:
             notion_props = field_mapper.github_to_notion(github_data)
 
             if notion_props:
-                self._record_test("GitHub → Notion 映射", True, f"生成了 {len(notion_props)} 个 Notion 属性")
+                self._record_test(
+                    "GitHub → Notion 映射",
+                    True,
+                    f"生成了 {len(notion_props)} 个 Notion 属性",
+                )
                 print(f"  ✅ GitHub → Notion 映射 - 生成了 {len(notion_props)} 个属性")
 
                 # 显示映射结果示例
@@ -214,14 +226,21 @@ class SyncSystemTester:
                 "properties": {
                     "Task": {"type": "title", "title": [{"plain_text": "测试任务"}]},
                     "Status": {"type": "select", "select": {"name": "✅ Done"}},
-                    "Description": {"type": "rich_text", "rich_text": [{"plain_text": "任务描述"}]},
+                    "Description": {
+                        "type": "rich_text",
+                        "rich_text": [{"plain_text": "任务描述"}],
+                    },
                 }
             }
 
             github_updates = field_mapper.notion_to_github(notion_page)
 
             if github_updates:
-                self._record_test("Notion → GitHub 映射", True, f"生成了 {len(github_updates)} 个 GitHub 字段")
+                self._record_test(
+                    "Notion → GitHub 映射",
+                    True,
+                    f"生成了 {len(github_updates)} 个 GitHub 字段",
+                )
                 print(f"  ✅ Notion → GitHub 映射 - 生成了 {len(github_updates)} 个字段")
 
                 for key, value in github_updates.items():
@@ -272,7 +291,11 @@ class SyncSystemTester:
 
                 if response.status_code == 200:
                     user_data = response.json()
-                    self._record_test("GitHub API 连接", True, f"成功连接，用户: {user_data.get('login', 'unknown')}")
+                    self._record_test(
+                        "GitHub API 连接",
+                        True,
+                        f"成功连接，用户: {user_data.get('login', 'unknown')}",
+                    )
                     print(f"  ✅ GitHub API 连接成功 - 用户: {user_data.get('login', 'unknown')}")
                 else:
                     self._record_test("GitHub API 连接", False, f"响应状态码: {response.status_code}")
@@ -293,17 +316,28 @@ class SyncSystemTester:
                 # 简单的 API 测试（获取用户信息）
                 import httpx
 
-                headers = {"Authorization": f"Bearer {notion_token}", "Notion-Version": "2022-06-28"}
+                headers = {
+                    "Authorization": f"Bearer {notion_token}",
+                    "Notion-Version": "2022-06-28",
+                }
 
                 async with httpx.AsyncClient() as client:
                     response = await client.get("https://api.notion.com/v1/users/me", headers=headers)
 
                     if response.status_code == 200:
                         user_data = response.json()
-                        self._record_test("Notion API 连接", True, f"成功连接，用户类型: {user_data.get('type', 'unknown')}")
+                        self._record_test(
+                            "Notion API 连接",
+                            True,
+                            f"成功连接，用户类型: {user_data.get('type', 'unknown')}",
+                        )
                         print(f"  ✅ Notion API 连接成功 - 用户类型: {user_data.get('type', 'unknown')}")
                     else:
-                        self._record_test("Notion API 连接", False, f"响应状态码: {response.status_code}")
+                        self._record_test(
+                            "Notion API 连接",
+                            False,
+                            f"响应状态码: {response.status_code}",
+                        )
                         print(f"  ❌ Notion API 连接失败 - 状态码: {response.status_code}")
 
             except Exception as e:
@@ -325,7 +359,11 @@ class SyncSystemTester:
 
                     if schema:
                         properties_count = len(schema.get("properties", {}))
-                        self._record_test("Notion 数据库访问", True, f"数据库有 {properties_count} 个属性")
+                        self._record_test(
+                            "Notion 数据库访问",
+                            True,
+                            f"数据库有 {properties_count} 个属性",
+                        )
                         print(f"  ✅ Notion 数据库访问成功 - {properties_count} 个属性")
 
                         # 显示数据库属性
@@ -421,7 +459,12 @@ class SyncSystemTester:
     def _record_test(self, test_name: str, passed: bool, message: str):
         """记录测试结果"""
         self.test_results.append(
-            {"name": test_name, "passed": passed, "message": message, "timestamp": datetime.now().isoformat()}
+            {
+                "name": test_name,
+                "passed": passed,
+                "message": message,
+                "timestamp": datetime.now().isoformat(),
+            }
         )
 
     def _generate_test_report(self):

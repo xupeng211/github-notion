@@ -4,7 +4,8 @@ import pytest
 from fastapi.testclient import TestClient
 
 pytestmark = pytest.mark.skipif(
-    os.getenv("RUN_RATE_LIMIT_TESTS") != "1", reason="Set RUN_RATE_LIMIT_TESTS=1 to enable rate limit tests"
+    os.getenv("RUN_RATE_LIMIT_TESTS") != "1",
+    reason="Set RUN_RATE_LIMIT_TESTS=1 to enable rate limit tests",
 )
 
 from app.server import app
@@ -61,7 +62,9 @@ def test_pydantic_validation_valid_payload():
     }
 
     response = client.post(
-        "/gitee_webhook", json=valid_payload, headers={"X-Gitee-Token": "dummy", "X-Gitee-Event": "Issue Hook"}
+        "/gitee_webhook",
+        json=valid_payload,
+        headers={"X-Gitee-Token": "dummy", "X-Gitee-Event": "Issue Hook"},
     )
     # 应该因为签名验证失败而返回 403，而不是 400
     assert response.status_code in (400, 403)

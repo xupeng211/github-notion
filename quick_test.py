@@ -26,7 +26,12 @@ def quick_test():
 
     # 1. 测试文件存在性
     print("\n📁 检查关键文件...")
-    key_files = ["app/mapper.py", "app/enhanced_service.py", "app/comment_sync.py", "app/mapping.yml"]
+    key_files = [
+        "app/mapper.py",
+        "app/enhanced_service.py",
+        "app/comment_sync.py",
+        "app/mapping.yml",
+    ]
 
     for file_path in key_files:
         total_tests += 1

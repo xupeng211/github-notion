@@ -108,7 +108,11 @@ async def _handle_github_issue_event(payload: Dict[str, Any], body_bytes: bytes)
 
                 # 防循环：检查最近的同步事件
                 if should_skip_sync_event(
-                    db, event_hash, entity_id=issue_number, source_platform="github", target_platform="notion"
+                    db,
+                    event_hash,
+                    entity_id=issue_number,
+                    source_platform="github",
+                    target_platform="notion",
                 ):
                     EVENTS_TOTAL.labels("skip").inc()
                     return True, "loop_prevented"
@@ -143,7 +147,10 @@ async def _handle_github_issue_event(payload: Dict[str, Any], body_bytes: bytes)
 
                     # 如果启用了评论同步，同步现有评论
                     sync_config = field_mapper.get_sync_config()
-                    if sync_config.get("sync_comments", True) and action in ["opened", "reopened"]:
+                    if sync_config.get("sync_comments", True) and action in [
+                        "opened",
+                        "reopened",
+                    ]:
                         asyncio.create_task(_sync_issue_comments_to_notion(owner, repo, int(issue_number), page_id))
 
                 mark_event_processed(db, issue_number, event_hash, platform="github")
@@ -275,7 +282,11 @@ async def _handle_notion_page_event(payload: Dict[str, Any], body_bytes: bytes) 
 
             # 防循环
             if should_skip_sync_event(
-                db, event_hash, entity_id=issue_number, source_platform="notion", target_platform="github"
+                db,
+                event_hash,
+                entity_id=issue_number,
+                source_platform="notion",
+                target_platform="github",
             ):
                 EVENTS_TOTAL.labels("skip").inc()
                 return True, "loop_prevented"
@@ -406,7 +417,12 @@ async def sync_existing_issues_to_notion(owner: str, repo: str, limit: int = 50)
     try:
         # 获取仓库的 Issues
         url = f"{github_service.base_url}/repos/{owner}/{repo}/issues"
-        params = {"state": "all", "per_page": min(limit, 100), "sort": "updated", "direction": "desc"}
+        params = {
+            "state": "all",
+            "per_page": min(limit, 100),
+            "sort": "updated",
+            "direction": "desc",
+        }
 
         response = github_service.session.get(url, params=params, timeout=30)
         response.raise_for_status()

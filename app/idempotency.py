@@ -142,7 +142,10 @@ class IdempotencyManager:
             # 检查是否存在相同内容哈希的已处理事件
             existing_hash = (
                 self.db.query(ProcessedEvent)
-                .filter(ProcessedEvent.event_hash == content_hash, ProcessedEvent.created_at >= cutoff_time)
+                .filter(
+                    ProcessedEvent.event_hash == content_hash,
+                    ProcessedEvent.created_at >= cutoff_time,
+                )
                 .first()
             )
 
@@ -199,7 +202,12 @@ class IdempotencyManager:
             self.db.refresh(sync_event)
 
             logger.info(
-                "event_processing_recorded", extra={"event_id": event_id, "provider": provider, "entity_id": entity_id}
+                "event_processing_recorded",
+                extra={
+                    "event_id": event_id,
+                    "provider": provider,
+                    "entity_id": entity_id,
+                },
             )
 
             return sync_event
@@ -243,7 +251,12 @@ class IdempotencyManager:
             self.db.commit()
 
             logger.info(
-                "event_processing_completed", extra={"event_id": event_id, "success": success, "error": error_message}
+                "event_processing_completed",
+                extra={
+                    "event_id": event_id,
+                    "success": success,
+                    "error": error_message,
+                },
             )
 
             return True
@@ -280,7 +293,11 @@ class IdempotencyManager:
             total_deleted = deleted_sync + deleted_processed
             logger.info(
                 "old_events_cleaned",
-                extra={"sync_events": deleted_sync, "processed_events": deleted_processed, "total": total_deleted},
+                extra={
+                    "sync_events": deleted_sync,
+                    "processed_events": deleted_processed,
+                    "total": total_deleted,
+                },
             )
 
             return total_deleted
@@ -320,7 +337,10 @@ def with_idempotency(
                 ) or manager.is_duplicate_event_by_delivery_id(delivery_id)
 
                 if is_duplicate:
-                    logger.info("duplicate_event_skipped", extra={"event_id": event_id, "reason": "duplicate_detected"})
+                    logger.info(
+                        "duplicate_event_skipped",
+                        extra={"event_id": event_id, "reason": "duplicate_detected"},
+                    )
                     return True, "duplicate_event_skipped:duplicate_detected"
 
                 # 记录事件开始处理
@@ -332,7 +352,13 @@ def with_idempotency(
                 )
 
                 manager.record_event_processing(
-                    event_id, content_hash, provider, event_type, extracted_entity_id, action, payload
+                    event_id,
+                    content_hash,
+                    provider,
+                    event_type,
+                    extracted_entity_id,
+                    action,
+                    payload,
                 )
 
                 try:

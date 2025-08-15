@@ -37,7 +37,7 @@ def log_webhook_event(
     audit_data = {
         "event": "webhook_processed",
         "timestamp": time.time(),
-        "client_ip": getattr(request.client, "host", "unknown") if request.client else "unknown",
+        "client_ip": (getattr(request.client, "host", "unknown") if request.client else "unknown"),
         "user_agent": request.headers.get("user-agent", ""),
         "event_type": event_type,
         "issue_id": issue_id,

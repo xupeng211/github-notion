@@ -133,7 +133,7 @@ class EnhancedStressTester:
                     "status_code": response.status,
                     "success": 200 <= response.status < 300,
                     "response_size": len(response_text),
-                    "error": None if 200 <= response.status < 300 else response_text[:200],
+                    "error": (None if 200 <= response.status < 300 else response_text[:200]),
                 }
 
         except Exception as e:
@@ -233,7 +233,7 @@ class EnhancedStressTester:
                 "total": len(provider_results),
                 "success": sum(1 for r in provider_results if r["success"]),
                 "failed": sum(1 for r in provider_results if not r["success"]),
-                "avg_duration": statistics.mean(provider_durations) if provider_durations else 0,
+                "avg_duration": (statistics.mean(provider_durations) if provider_durations else 0),
                 "p95_duration": (
                     statistics.quantiles(provider_durations, n=20)[18] if len(provider_durations) > 1 else 0
                 ),
@@ -253,15 +253,15 @@ class EnhancedStressTester:
                 "total_requests": total_requests,
                 "successful_requests": successful_requests,
                 "failed_requests": failed_requests,
-                "success_rate": (successful_requests / total_requests) * 100 if total_requests > 0 else 0,
+                "success_rate": ((successful_requests / total_requests) * 100 if total_requests > 0 else 0),
             },
             "performance": {
                 "avg_duration": statistics.mean(durations) if durations else 0,
                 "min_duration": min(durations) if durations else 0,
                 "max_duration": max(durations) if durations else 0,
-                "p95_duration": statistics.quantiles(durations, n=20)[18] if len(durations) > 1 else 0,
-                "p99_duration": statistics.quantiles(durations, n=100)[98] if len(durations) > 1 else 0,
-                "avg_response_size": statistics.mean(response_sizes) if response_sizes else 0,
+                "p95_duration": (statistics.quantiles(durations, n=20)[18] if len(durations) > 1 else 0),
+                "p99_duration": (statistics.quantiles(durations, n=100)[98] if len(durations) > 1 else 0),
+                "avg_response_size": (statistics.mean(response_sizes) if response_sizes else 0),
             },
             "provider_breakdown": provider_stats,
             "status_codes": status_codes,

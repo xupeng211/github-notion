@@ -74,9 +74,21 @@ class StressTestRunner:
 
         try:
             # 运行快速幂等性测试
-            cmd = [sys.executable, "quick_idempotency_test.py", "--url", self.base_url, "--secret", self.webhook_secret]
+            cmd = [
+                sys.executable,
+                "quick_idempotency_test.py",
+                "--url",
+                self.base_url,
+                "--secret",
+                self.webhook_secret,
+            ]
 
-            result = subprocess.run(cmd, capture_output=True, text=True, timeout=self.test_config["quick_test_timeout"])
+            result = subprocess.run(
+                cmd,
+                capture_output=True,
+                text=True,
+                timeout=self.test_config["quick_test_timeout"],
+            )
 
             duration = time.time() - start_time
             success = result.returncode == 0
@@ -254,7 +266,10 @@ class StressTestRunner:
             ]
 
             result = subprocess.run(
-                cmd, capture_output=True, text=True, timeout=self.test_config["comprehensive_duration_minutes"] * 60
+                cmd,
+                capture_output=True,
+                text=True,
+                timeout=self.test_config["comprehensive_duration_minutes"] * 60,
             )
 
             duration = time.time() - start_time
@@ -460,7 +475,12 @@ class StressTestRunner:
 
             except Exception as e:
                 print(f"❌ {test_key} 执行异常: {e}")
-                self.test_results[test_key] = {"name": test_key, "success": False, "duration": 0, "error": str(e)}
+                self.test_results[test_key] = {
+                    "name": test_key,
+                    "success": False,
+                    "duration": 0,
+                    "error": str(e),
+                }
 
         # 生成总结报告
         summary_report = self.generate_summary_report()

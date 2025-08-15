@@ -52,7 +52,11 @@ def init_database():
 
     try:
         result = subprocess.run(
-            [sys.executable, "scripts/init_db.py"], cwd=PROJECT_ROOT, check=True, capture_output=True, text=True
+            [sys.executable, "scripts/init_db.py"],
+            cwd=PROJECT_ROOT,
+            check=True,
+            capture_output=True,
+            text=True,
         )
 
         print(result.stdout)
@@ -81,7 +85,7 @@ def start_uvicorn():
                 host,
                 "--port",
                 str(port),
-                "--reload" if os.getenv("ENVIRONMENT") == "development" else "--no-reload",
+                ("--reload" if os.getenv("ENVIRONMENT") == "development" else "--no-reload"),
             ],
             cwd=PROJECT_ROOT,
             check=True,

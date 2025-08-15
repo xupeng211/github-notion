@@ -22,7 +22,12 @@ delivery_id_var: ContextVar[Optional[str]] = ContextVar("delivery_id", default=N
 class StructuredFormatter(jsonlogger.JsonFormatter):
     """结构化日志格式化器"""
 
-    def add_fields(self, log_record: Dict[str, Any], record: logging.LogRecord, message_dict: Dict[str, Any]):
+    def add_fields(
+        self,
+        log_record: Dict[str, Any],
+        record: logging.LogRecord,
+        message_dict: Dict[str, Any],
+    ):
         """添加自定义字段到日志记录"""
         super().add_fields(log_record, record, message_dict)
 
@@ -86,7 +91,10 @@ def setup_structured_logging(level: str = None, format_type: str = "json", inclu
 
     # 创建格式化器
     if format_type == "json":
-        formatter = StructuredFormatter(fmt="%(timestamp)s %(level)s %(name)s %(message)s", datefmt="%Y-%m-%dT%H:%M:%S")
+        formatter = StructuredFormatter(
+            fmt="%(timestamp)s %(level)s %(name)s %(message)s",
+            datefmt="%Y-%m-%dT%H:%M:%S",
+        )
     else:
         # 文本格式，用于开发
         formatter = logging.Formatter(
@@ -144,7 +152,11 @@ def set_delivery_id(delivery_id: str) -> None:
 
 def get_current_context() -> Dict[str, Any]:
     """获取当前日志上下文"""
-    return {"trace_id": trace_id_var.get(), "request_id": request_id_var.get(), "delivery_id": delivery_id_var.get()}
+    return {
+        "trace_id": trace_id_var.get(),
+        "request_id": request_id_var.get(),
+        "delivery_id": delivery_id_var.get(),
+    }
 
 
 def log_webhook_request(
@@ -268,7 +280,10 @@ def log_business_event(
 
 
 def log_performance_metric(
-    operation: str, duration_ms: float, success: bool = True, extra_data: Optional[Dict[str, Any]] = None
+    operation: str,
+    duration_ms: float,
+    success: bool = True,
+    extra_data: Optional[Dict[str, Any]] = None,
 ) -> None:
     """
     记录性能指标日志
@@ -281,7 +296,12 @@ def log_performance_metric(
     """
     logger = logging.getLogger("performance")
 
-    log_data = {"event": "performance_metric", "operation": operation, "duration_ms": duration_ms, "success": success}
+    log_data = {
+        "event": "performance_metric",
+        "operation": operation,
+        "duration_ms": duration_ms,
+        "success": success,
+    }
 
     if extra_data:
         log_data.update(extra_data)

@@ -10,7 +10,9 @@ def test_verify_gitee_signature_valid_invalid(monkeypatch):
     body = b"{}"
 
     ok = service.verify_gitee_signature(
-        secret, body, service.hmac.new(secret.encode(), body, service.hashlib.sha256).hexdigest()
+        secret,
+        body,
+        service.hmac.new(secret.encode(), body, service.hashlib.sha256).hexdigest(),
     )
     assert ok is True
 

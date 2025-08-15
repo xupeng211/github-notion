@@ -6,7 +6,8 @@ import pytest
 
 
 pytestmark = pytest.mark.skipif(
-    os.getenv("RUN_PERF_TESTS") != "1", reason="Set RUN_PERF_TESTS=1 to enable performance tests"
+    os.getenv("RUN_PERF_TESTS") != "1",
+    reason="Set RUN_PERF_TESTS=1 to enable performance tests",
 )
 import concurrent.futures
 import hashlib
@@ -52,7 +53,11 @@ class PerformanceTest:
 
     def calculate_signature(self, payload: str) -> str:
         """计算 webhook 签名"""
-        return hmac.new(TEST_CONFIG["gitee_webhook_secret"].encode(), payload.encode(), hashlib.sha256).hexdigest()
+        return hmac.new(
+            TEST_CONFIG["gitee_webhook_secret"].encode(),
+            payload.encode(),
+            hashlib.sha256,
+        ).hexdigest()
 
     def send_request(self) -> Dict[str, Any]:
         """发送单个请求并记录结果"""
@@ -68,7 +73,10 @@ class PerformanceTest:
         start_time = time.time()
         try:
             response = requests.post(
-                f"{TEST_CONFIG['base_url']}/gitee_webhook", headers=headers, data=payload_str, timeout=30
+                f"{TEST_CONFIG['base_url']}/gitee_webhook",
+                headers=headers,
+                data=payload_str,
+                timeout=30,
             )
 
             end_time = time.time()
@@ -83,7 +91,11 @@ class PerformanceTest:
 
             if not result["success"]:
                 self.errors.append(
-                    {"timestamp": result["timestamp"], "status_code": result["status_code"], "response": response.text}
+                    {
+                        "timestamp": result["timestamp"],
+                        "status_code": result["status_code"],
+                        "response": response.text,
+                    }
                 )
 
             return result

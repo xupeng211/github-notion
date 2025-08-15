@@ -117,7 +117,12 @@ class GitHubService:
             return False, str(e)
 
     def add_comment(
-        self, owner: str, repo: str, issue_number: int, comment: str, sync_marker: Optional[str] = None
+        self,
+        owner: str,
+        repo: str,
+        issue_number: int,
+        comment: str,
+        sync_marker: Optional[str] = None,
     ) -> Tuple[bool, str]:
         """在GitHub Issue中添加评论"""
         try:

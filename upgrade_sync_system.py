@@ -124,7 +124,15 @@ class SyncSystemUpgrader:
                 print(f"⚠️ 依赖安装警告: {result.stderr}")
 
             # 检查关键依赖
-            critical_packages = ["fastapi", "uvicorn", "httpx", "pydantic", "sqlalchemy", "alembic", "pyyaml"]
+            critical_packages = [
+                "fastapi",
+                "uvicorn",
+                "httpx",
+                "pydantic",
+                "sqlalchemy",
+                "alembic",
+                "pyyaml",
+            ]
 
             for package in critical_packages:
                 try:
@@ -210,7 +218,10 @@ class SyncSystemUpgrader:
 
             # 运行 Alembic 迁移
             result = subprocess.run(
-                ["alembic", "upgrade", "head"], capture_output=True, text=True, cwd=self.project_root
+                ["alembic", "upgrade", "head"],
+                capture_output=True,
+                text=True,
+                cwd=self.project_root,
             )
 
             if result.returncode == 0:
@@ -220,7 +231,10 @@ class SyncSystemUpgrader:
                 print(f"⚠️ 数据库迁移警告: {result.stderr}")
                 # 尝试初始化数据库
                 init_result = subprocess.run(
-                    ["alembic", "stamp", "head"], capture_output=True, text=True, cwd=self.project_root
+                    ["alembic", "stamp", "head"],
+                    capture_output=True,
+                    text=True,
+                    cwd=self.project_root,
                 )
                 if init_result.returncode == 0:
                     print("✅ 数据库已初始化")
@@ -256,7 +270,10 @@ class SyncSystemUpgrader:
             if quick_test_file.exists():
                 print("🧪 运行快速测试...")
                 result = subprocess.run(
-                    [sys.executable, str(quick_test_file)], capture_output=True, text=True, cwd=self.project_root
+                    [sys.executable, str(quick_test_file)],
+                    capture_output=True,
+                    text=True,
+                    cwd=self.project_root,
                 )
 
                 if result.returncode == 0:

@@ -34,9 +34,11 @@ from app.models import (
 )
 
 # Metrics (allow disabling in tests to avoid duplicate registration)
-DISABLE_METRICS = os.getenv("DISABLE_METRICS", "").lower() in ("1", "true", "yes") or bool(
-    os.getenv("PYTEST_CURRENT_TEST")
-)
+DISABLE_METRICS = os.getenv("DISABLE_METRICS", "").lower() in (
+    "1",
+    "true",
+    "yes",
+) or bool(os.getenv("PYTEST_CURRENT_TEST"))
 
 if DISABLE_METRICS:
 
@@ -87,7 +89,9 @@ else:
 
     # 数据库操作指标
     DATABASE_OPERATIONS_TOTAL = Counter(
-        "database_operations_total", "Total database operations", ["operation", "status"]
+        "database_operations_total",
+        "Total database operations",
+        ["operation", "status"],
     )
 
     # 速率限制指标
@@ -396,7 +400,10 @@ async def async_notion_upsert_page(issue: Dict[str, Any]) -> Tuple[bool, str]:
 
     # 使用异步请求查询现有页面
     ok, data = await async_exponential_backoff_request(
-        "POST", q_url, headers, {"filter": {"property": "Task", "title": {"equals": title}}}
+        "POST",
+        q_url,
+        headers,
+        {"filter": {"property": "Task", "title": {"equals": title}}},
     )
 
     if not ok:
@@ -478,7 +485,10 @@ def notion_upsert_page(issue: Dict[str, Any]) -> Tuple[bool, str]:
     title = issue.get("title", "")
     q_url = f"https://api.notion.com/v1/databases/{NOTION_DATABASE_ID}/query"
     ok, data = exponential_backoff_request(
-        "POST", q_url, headers, {"filter": {"property": "Task", "title": {"equals": title}}}
+        "POST",
+        q_url,
+        headers,
+        {"filter": {"property": "Task", "title": {"equals": title}}},
     )
     if not ok:
         return False, json.dumps(data)
@@ -654,7 +664,11 @@ def replay_deadletters_once(secret_token: str) -> int:
         for it in items:
             payload = json.dumps(it.payload).encode()
             sig = (
-                hmac.new(os.getenv("GITEE_WEBHOOK_SECRET", "").encode(), payload, hashlib.sha256).hexdigest()
+                hmac.new(
+                    os.getenv("GITEE_WEBHOOK_SECRET", "").encode(),
+                    payload,
+                    hashlib.sha256,
+                ).hexdigest()
                 if os.getenv("GITEE_WEBHOOK_SECRET")
                 else ""
             )
@@ -771,7 +785,11 @@ async def async_process_github_event(body_bytes: bytes, event: str) -> Tuple[boo
 
                 # 防循环：最近是否有 Notion -> GitHub 的同步
                 if should_skip_sync_event(
-                    db, event_hash, entity_id=issue_number, source_platform="github", target_platform="notion"
+                    db,
+                    event_hash,
+                    entity_id=issue_number,
+                    source_platform="github",
+                    target_platform="notion",
                 ):
                     EVENTS_TOTAL.labels("skip").inc()
                     return True, "loop_prevented"
@@ -867,7 +885,11 @@ def process_github_event(body_bytes: bytes, event: str) -> Tuple[bool, str]:
 
                 # 防循环：最近是否有 Notion -> GitHub 的同步
                 if should_skip_sync_event(
-                    db, event_hash, entity_id=issue_number, source_platform="github", target_platform="notion"
+                    db,
+                    event_hash,
+                    entity_id=issue_number,
+                    source_platform="github",
+                    target_platform="notion",
                 ):
                     EVENTS_TOTAL.labels("skip").inc()
                     return True, "loop_prevented"
@@ -962,7 +984,11 @@ def process_notion_event(body_bytes: bytes) -> Tuple[bool, str]:
 
             # 防循环：最近是否有 GitHub -> Notion 的同步
             if should_skip_sync_event(
-                db, event_hash, entity_id=issue_number, source_platform="notion", target_platform="github"
+                db,
+                event_hash,
+                entity_id=issue_number,
+                source_platform="notion",
+                target_platform="github",
             ):
                 EVENTS_TOTAL.labels("skip").inc()
                 return True, "loop_prevented"
@@ -1011,11 +1037,22 @@ def process_notion_event(body_bytes: bytes) -> Tuple[bool, str]:
 
             # 更新 GitHub Issue
             ok, msg = github_service.update_issue(
-                owner, repo, int(issue_number), title=title, body=body, state=state, sync_marker=sync_marker
+                owner,
+                repo,
+                int(issue_number),
+                title=title,
+                body=body,
+                state=state,
+                sync_marker=sync_marker,
             )
             if not ok:
                 deadletter_enqueue(
-                    db, payload, reason="github_error", last_error=msg, source_platform="notion", entity_id=str(page_id)
+                    db,
+                    payload,
+                    reason="github_error",
+                    last_error=msg,
+                    source_platform="notion",
+                    entity_id=str(page_id),
                 )
                 DEADLETTER_SIZE.set(deadletter_count(db))
                 EVENTS_TOTAL.labels("fail").inc()

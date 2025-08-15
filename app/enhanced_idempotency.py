@@ -93,7 +93,10 @@ class EnhancedIdempotencyManager(IdempotencyManager):
 
             # 用户信息（关键部分）
             if "user" in issue:
-                key_fields["issue"]["user"] = {"login": issue["user"].get("login"), "type": issue["user"].get("type")}
+                key_fields["issue"]["user"] = {
+                    "login": issue["user"].get("login"),
+                    "type": issue["user"].get("type"),
+                }
 
         # Pull Request相关字段
         if "pull_request" in payload:
@@ -110,12 +113,19 @@ class EnhancedIdempotencyManager(IdempotencyManager):
         # Repository信息
         if "repository" in payload:
             repo = payload["repository"]
-            key_fields["repository"] = {"full_name": repo.get("full_name"), "name": repo.get("name")}
+            key_fields["repository"] = {
+                "full_name": repo.get("full_name"),
+                "name": repo.get("name"),
+            }
 
         return key_fields
 
     def is_duplicate_event_enhanced(
-        self, event_id: str, content_fingerprint: str, delivery_id: str, max_age_hours: int = 24
+        self,
+        event_id: str,
+        content_fingerprint: str,
+        delivery_id: str,
+        max_age_hours: int = 24,
     ) -> Tuple[bool, str]:
         """
         增强的重复事件检测
@@ -137,7 +147,10 @@ class EnhancedIdempotencyManager(IdempotencyManager):
         if cache_key in self._cache:
             cached_time, cached_reason = self._cache[cache_key]
             if current_time - cached_time < self._cache_ttl:
-                logger.debug("duplicate_detected_cache", extra={"event_id": event_id, "reason": cached_reason})
+                logger.debug(
+                    "duplicate_detected_cache",
+                    extra={"event_id": event_id, "reason": cached_reason},
+                )
                 return True, f"cache:{cached_reason}"
 
         # 2. 数据库检查
@@ -160,7 +173,11 @@ class EnhancedIdempotencyManager(IdempotencyManager):
             return False, f"check_failed:{str(e)}"
 
     def _check_database_duplicate(
-        self, event_id: str, content_fingerprint: str, delivery_id: str, max_age_hours: int
+        self,
+        event_id: str,
+        content_fingerprint: str,
+        delivery_id: str,
+        max_age_hours: int,
     ) -> Tuple[bool, str]:
         """数据库重复检查"""
         cutoff_time = datetime.utcnow() - timedelta(hours=max_age_hours)
@@ -179,7 +196,10 @@ class EnhancedIdempotencyManager(IdempotencyManager):
         # 检查内容指纹重复
         existing_hash = (
             self.db.query(ProcessedEvent)
-            .filter(ProcessedEvent.event_hash == content_fingerprint, ProcessedEvent.created_at >= cutoff_time)
+            .filter(
+                ProcessedEvent.event_hash == content_fingerprint,
+                ProcessedEvent.created_at >= cutoff_time,
+            )
             .first()
         )
 
@@ -192,7 +212,10 @@ class EnhancedIdempotencyManager(IdempotencyManager):
             # 注意：这需要在SyncEvent模型中添加delivery_id字段
             existing_delivery = (
                 self.db.query(SyncEvent)
-                .filter(SyncEvent.source_id == delivery_id, SyncEvent.created_at >= cutoff_time)  # 临时使用source_id字段
+                .filter(
+                    SyncEvent.source_id == delivery_id,
+                    SyncEvent.created_at >= cutoff_time,
+                )  # 临时使用source_id字段
                 .first()
             )
 
@@ -251,7 +274,10 @@ class EnhancedIdempotencyManager(IdempotencyManager):
 
             # 记录到ProcessedEvent表（用于内容指纹去重）
             processed_event = ProcessedEvent(
-                event_hash=content_fingerprint, provider=provider, event_type=event_type, created_at=datetime.utcnow()
+                event_hash=content_fingerprint,
+                provider=provider,
+                event_type=event_type,
+                created_at=datetime.utcnow(),
             )
 
             self.db.add(processed_event)
@@ -274,7 +300,12 @@ class EnhancedIdempotencyManager(IdempotencyManager):
             self.db.rollback()
             logger.error(
                 "event_recording_failed",
-                extra={"event_id": event_id, "error": str(e), "provider": provider, "entity_id": extracted_entity_id},
+                extra={
+                    "event_id": event_id,
+                    "error": str(e),
+                    "provider": provider,
+                    "entity_id": extracted_entity_id,
+                },
             )
             return False
 
@@ -341,7 +372,10 @@ def with_enhanced_idempotency(provider: str, event_type: str, delivery_id_key: s
                         break
 
             if not delivery_id:
-                logger.warning("no_delivery_id_found", extra={"provider": provider, "event_type": event_type})
+                logger.warning(
+                    "no_delivery_id_found",
+                    extra={"provider": provider, "event_type": event_type},
+                )
                 # 没有delivery_id时生成一个基于内容的临时ID
                 delivery_id = hashlib.md5(json.dumps(payload, sort_keys=True).encode()).hexdigest()[:16]
 
@@ -358,7 +392,11 @@ def with_enhanced_idempotency(provider: str, event_type: str, delivery_id_key: s
                 if is_duplicate:
                     logger.info(
                         "enhanced_duplicate_event_skipped",
-                        extra={"event_id": event_id, "reason": reason, "delivery_id": delivery_id},
+                        extra={
+                            "event_id": event_id,
+                            "reason": reason,
+                            "delivery_id": delivery_id,
+                        },
                     )
                     return {"status": "duplicate", "reason": reason}
 
@@ -396,7 +434,12 @@ def with_enhanced_idempotency(provider: str, event_type: str, delivery_id_key: s
 
                 logger.error(
                     "enhanced_idempotency_error",
-                    extra={"provider": provider, "event_type": event_type, "error": str(e), "delivery_id": delivery_id},
+                    extra={
+                        "provider": provider,
+                        "event_type": event_type,
+                        "error": str(e),
+                        "delivery_id": delivery_id,
+                    },
                 )
                 raise
 

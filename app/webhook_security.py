@@ -133,7 +133,10 @@ class WebhookSecurityValidator:
                 current_time = int(time.time())
 
                 if abs(current_time - ts) > MAX_TIMESTAMP_SKEW:
-                    logger.warning(f"{self.provider}_timestamp_skew_too_large", extra={"skew": abs(current_time - ts)})
+                    logger.warning(
+                        f"{self.provider}_timestamp_skew_too_large",
+                        extra={"skew": abs(current_time - ts)},
+                    )
                     return False
             except (ValueError, TypeError):
                 logger.warning(f"{self.provider}_invalid_timestamp", extra={"timestamp": timestamp})
@@ -225,7 +228,11 @@ def secure_webhook_decorator(provider: str):
             if not is_valid:
                 logger.warning(
                     "webhook_security_failed",
-                    extra={"provider": provider, "error": error_msg, "request_id": request_id},
+                    extra={
+                        "provider": provider,
+                        "error": error_msg,
+                        "request_id": request_id,
+                    },
                 )
                 raise HTTPException(status_code=403, detail=error_msg)
 

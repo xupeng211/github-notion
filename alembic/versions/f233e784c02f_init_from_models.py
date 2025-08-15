@@ -54,8 +54,18 @@ def upgrade() -> None:
         sa.Column("created_at", sa.DateTime(), nullable=False),
         sa.PrimaryKeyConstraint("id"),
     )
-    op.create_index(op.f("ix_processed_event_event_hash"), "processed_event", ["event_hash"], unique=False)
-    op.create_index(op.f("ix_processed_event_issue_id"), "processed_event", ["issue_id"], unique=False)
+    op.create_index(
+        op.f("ix_processed_event_event_hash"),
+        "processed_event",
+        ["event_hash"],
+        unique=False,
+    )
+    op.create_index(
+        op.f("ix_processed_event_issue_id"),
+        "processed_event",
+        ["issue_id"],
+        unique=False,
+    )
     op.create_unique_constraint("uq_processed_event_event_hash", "processed_event", ["event_hash"])
     # ### end Alembic commands ###
 

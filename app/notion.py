@@ -212,7 +212,10 @@ class NotionService:
             页面数据或 None
         """
         try:
-            filter_conditions = {"property": "Task", "title": {"equals": title}}  # 根据配置调整标题字段名
+            filter_conditions = {
+                "property": "Task",
+                "title": {"equals": title},
+            }  # 根据配置调整标题字段名
 
             result = await self.query_database(database_id=database_id, filter_conditions=filter_conditions)
 
@@ -235,7 +238,10 @@ class NotionService:
             页面数据或 None
         """
         try:
-            filter_conditions = {"property": "Issue ID", "rich_text": {"contains": str(issue_id)}}
+            filter_conditions = {
+                "property": "Issue ID",
+                "rich_text": {"contains": str(issue_id)},
+            }
 
             result = await self.query_database(database_id=database_id, filter_conditions=filter_conditions)
 

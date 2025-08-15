@@ -58,7 +58,12 @@ class QuickIdempotencyTester:
 
         start_time = time.time()
         try:
-            response = requests.post(f"{self.base_url}/gitee_webhook", data=payload_str, headers=headers, timeout=10)
+            response = requests.post(
+                f"{self.base_url}/gitee_webhook",
+                data=payload_str,
+                headers=headers,
+                timeout=10,
+            )
             duration = time.time() - start_time
 
             return {
@@ -132,7 +137,11 @@ class QuickIdempotencyTester:
                 metrics_text = response.text
 
                 # 检查是否包含关键指标
-                key_metrics = ["webhook_requests_total", "idempotency_checks_total", "duplicate_events_total"]
+                key_metrics = [
+                    "webhook_requests_total",
+                    "idempotency_checks_total",
+                    "duplicate_events_total",
+                ]
 
                 found_metrics = []
                 for metric in key_metrics:

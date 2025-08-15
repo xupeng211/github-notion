@@ -138,7 +138,11 @@ GITHUB_API_DURATION = (
 )
 
 GITHUB_API_RATE_LIMIT = (
-    Gauge("github_api_rate_limit_remaining", "GitHub API rate limit remaining", registry=METRICS_REGISTRY)
+    Gauge(
+        "github_api_rate_limit_remaining",
+        "GitHub API rate limit remaining",
+        registry=METRICS_REGISTRY,
+    )
     if not DISABLE_METRICS
     else _NoopMetric()
 )
@@ -167,7 +171,11 @@ NOTION_API_DURATION = (
 )
 
 NOTION_API_RATE_LIMIT = (
-    Gauge("notion_api_rate_limit_remaining", "Notion API rate limit remaining (estimated)", registry=METRICS_REGISTRY)
+    Gauge(
+        "notion_api_rate_limit_remaining",
+        "Notion API rate limit remaining (estimated)",
+        registry=METRICS_REGISTRY,
+    )
     if not DISABLE_METRICS
     else _NoopMetric()
 )
@@ -176,7 +184,11 @@ NOTION_API_RATE_LIMIT = (
 
 # 死信队列（基础指标）
 DEADLETTER_QUEUE_SIZE_BASIC = (
-    Gauge("deadletter_queue_size_basic", "Current size of dead letter queue", registry=METRICS_REGISTRY)
+    Gauge(
+        "deadletter_queue_size_basic",
+        "Current size of dead letter queue",
+        registry=METRICS_REGISTRY,
+    )
     if not DISABLE_METRICS
     else _NoopMetric()
 )
@@ -220,7 +232,11 @@ SECURITY_EVENTS_TOTAL = (
     Counter(
         "security_events_total",
         "Total number of security events",
-        ["event_type", "provider", "result"],  # event_type: signature_check/replay_check
+        [
+            "event_type",
+            "provider",
+            "result",
+        ],  # event_type: signature_check/replay_check
         registry=METRICS_REGISTRY,
     )
     if not DISABLE_METRICS
@@ -282,13 +298,24 @@ def record_webhook_request(provider: str, event_type: str, status: str, duration
     WEBHOOK_REQUEST_DURATION.labels(provider=provider, event_type=event_type).observe(duration)
 
 
-def record_sync_event(source: str, target: str, entity_type: str, action: str, status: str, duration: float):
+def record_sync_event(
+    source: str,
+    target: str,
+    entity_type: str,
+    action: str,
+    status: str,
+    duration: float,
+):
     """记录同步事件指标"""
     if DISABLE_METRICS:
         return
 
     SYNC_EVENTS_TOTAL.labels(
-        source_platform=source, target_platform=target, entity_type=entity_type, action=action, status=status
+        source_platform=source,
+        target_platform=target,
+        entity_type=entity_type,
+        action=action,
+        status=status,
     ).inc()
 
     SYNC_EVENT_DURATION.labels(source_platform=source, target_platform=target, entity_type=entity_type).observe(
@@ -376,7 +403,13 @@ def set_app_info(version: str, environment: str, python_version: str):
     if DISABLE_METRICS:
         return
 
-    APP_INFO.info({"version": version, "environment": environment, "python_version": python_version})
+    APP_INFO.info(
+        {
+            "version": version,
+            "environment": environment,
+            "python_version": python_version,
+        }
+    )
 
 
 # === 初始化函数 ===
@@ -419,13 +452,23 @@ def start_metrics_server(port: int = 9090):
 
 # 成功率和失败率指标
 WEBHOOK_SUCCESS_RATE = (
-    Gauge("webhook_success_rate_percent", "Webhook处理成功率（百分比）", ["provider"], registry=METRICS_REGISTRY)
+    Gauge(
+        "webhook_success_rate_percent",
+        "Webhook处理成功率（百分比）",
+        ["provider"],
+        registry=METRICS_REGISTRY,
+    )
     if METRICS_REGISTRY
     else None
 )
 
 WEBHOOK_FAILURE_RATE = (
-    Gauge("webhook_failure_rate_percent", "Webhook处理失败率（百分比）", ["provider"], registry=METRICS_REGISTRY)
+    Gauge(
+        "webhook_failure_rate_percent",
+        "Webhook处理失败率（百分比）",
+        ["provider"],
+        registry=METRICS_REGISTRY,
+    )
     if METRICS_REGISTRY
     else None
 )
@@ -492,7 +535,12 @@ DEADLETTER_EVENTS_TOTAL = (
 
 # 幂等性指标增强
 IDEMPOTENCY_CACHE_HITS = (
-    Counter("idempotency_cache_hits_total", "幂等性缓存命中次数", ["provider"], registry=METRICS_REGISTRY)
+    Counter(
+        "idempotency_cache_hits_total",
+        "幂等性缓存命中次数",
+        ["provider"],
+        registry=METRICS_REGISTRY,
+    )
     if METRICS_REGISTRY
     else None
 )
@@ -503,7 +551,12 @@ IDEMPOTENCY_CACHE_SIZE = (
 
 # 业务指标
 SYNC_SUCCESS_RATE = (
-    Gauge("sync_success_rate_percent", "同步成功率（百分比）", ["provider", "entity_type"], registry=METRICS_REGISTRY)
+    Gauge(
+        "sync_success_rate_percent",
+        "同步成功率（百分比）",
+        ["provider", "entity_type"],
+        registry=METRICS_REGISTRY,
+    )
     if METRICS_REGISTRY
     else None
 )
@@ -584,7 +637,10 @@ def update_success_rates():
                 # 查询最近1小时的事件
                 recent_events = (
                     db.query(SyncEvent)
-                    .filter(SyncEvent.provider == provider, SyncEvent.created_at >= one_hour_ago)
+                    .filter(
+                        SyncEvent.provider == provider,
+                        SyncEvent.created_at >= one_hour_ago,
+                    )
                     .all()
                 )
 

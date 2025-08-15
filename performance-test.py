@@ -47,13 +47,21 @@ class PerformanceTester:
         """发送单个 webhook 请求"""
         start_time = time.time()
         try:
-            headers = {"Content-Type": "application/json", "X-Gitee-Event": "Issue Hook"}
+            headers = {
+                "Content-Type": "application/json",
+                "X-Gitee-Event": "Issue Hook",
+            }
 
             if self.webhook_secret:
                 headers["X-Gitee-Token"] = self.webhook_secret
 
             payload = self.generate_test_payload()
-            response = self.session.post(f"{self.base_url}/gitee_webhook", json=payload, headers=headers, timeout=30)
+            response = self.session.post(
+                f"{self.base_url}/gitee_webhook",
+                json=payload,
+                headers=headers,
+                timeout=30,
+            )
 
             duration = time.time() - start_time
             status_code = response.status_code
@@ -67,7 +75,12 @@ class PerformanceTester:
 
         except Exception as e:
             duration = time.time() - start_time
-            return {"duration": duration, "status_code": None, "success": False, "error": str(e)}
+            return {
+                "duration": duration,
+                "status_code": None,
+                "success": False,
+                "error": str(e),
+            }
 
     def run_load_test(self, num_requests: int, concurrency: int) -> Dict[str, Any]:
         """运行负载测试"""

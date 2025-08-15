@@ -59,7 +59,14 @@ def demo_quick_test(base_url: str, webhook_secret: str):
     print("用途: 在开发过程中快速验证基本功能是否正常")
     print("时间: 通常在1-2分钟内完成")
 
-    cmd = [sys.executable, "quick_idempotency_test.py", "--url", base_url, "--secret", webhook_secret]
+    cmd = [
+        sys.executable,
+        "quick_idempotency_test.py",
+        "--url",
+        base_url,
+        "--secret",
+        webhook_secret,
+    ]
 
     result = run_command(cmd, "快速验证幂等性和监控功能")
 

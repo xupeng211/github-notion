@@ -64,7 +64,12 @@ def check_metrics_endpoint(base_url, timeout=10):
             print(f"   指标数量: ~{metrics_count//2} 个")
 
             # 检查关键指标
-            key_metrics = ["webhook_requests_total", "idempotency_checks_total", "app_health", "sync_events_total"]
+            key_metrics = [
+                "webhook_requests_total",
+                "idempotency_checks_total",
+                "app_health",
+                "sync_events_total",
+            ]
 
             found_metrics = []
             for metric in key_metrics:

@@ -86,7 +86,10 @@ class IdempotencyMonitoringStressTester:
                 "created_at": timestamp,
                 "updated_at": timestamp,
                 "user": {"login": "stress-tester", "id": 99999},
-                "labels": [{"name": "stress-test"}, {"name": "idempotency" if is_duplicate else "unique"}],
+                "labels": [
+                    {"name": "stress-test"},
+                    {"name": "idempotency" if is_duplicate else "unique"},
+                ],
             },
         }
 
@@ -137,7 +140,13 @@ class IdempotencyMonitoringStressTester:
 
         except Exception as e:
             duration = time.time() - start_time
-            return TestResult(timestamp=datetime.now(), duration=duration, status_code=0, success=False, error=str(e))
+            return TestResult(
+                timestamp=datetime.now(),
+                duration=duration,
+                status_code=0,
+                success=False,
+                error=str(e),
+            )
 
     async def fetch_metrics(self, session: aiohttp.ClientSession) -> Dict[str, Any]:
         """获取监控指标"""
@@ -364,7 +373,8 @@ class IdempotencyMonitoringStressTester:
 
         # 运行压力测试
         results = await self.run_idempotency_stress_test(
-            concurrent_requests=self.test_config["max_concurrent"], total_requests=self.test_config["total_requests"]
+            concurrent_requests=self.test_config["max_concurrent"],
+            total_requests=self.test_config["total_requests"],
         )
 
         # 生成并打印报告
@@ -450,7 +460,11 @@ def main():
 
     # 更新测试配置
     tester.test_config.update(
-        {"max_concurrent": args.concurrent, "total_requests": args.requests, "duplicate_rate": args.duplicate_rate}
+        {
+            "max_concurrent": args.concurrent,
+            "total_requests": args.requests,
+            "duplicate_rate": args.duplicate_rate,
+        }
     )
 
     # 运行测试

@@ -9,7 +9,10 @@ class GiteeClient:
     def __init__(self, token: str):
         self.token = token
         self.client = httpx.AsyncClient()
-        self.headers = {"Authorization": f"token {self.token}", "Accept": "application/json"}
+        self.headers = {
+            "Authorization": f"token {self.token}",
+            "Accept": "application/json",
+        }
 
     async def update_issue(self, owner: str, repo: str, issue_id: int, data: Dict[str, Any]):
         url = f"https://gitee.com/api/v5/repos/{owner}/{repo}/issues/{issue_id}"

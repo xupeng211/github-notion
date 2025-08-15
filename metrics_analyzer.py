@@ -45,7 +45,13 @@ class MetricsAnalyzer:
             "sync_events_total": {
                 "type": "counter",
                 "description": "同步事件总数",
-                "labels": ["source_platform", "target_platform", "entity_type", "action", "status"],
+                "labels": [
+                    "source_platform",
+                    "target_platform",
+                    "entity_type",
+                    "action",
+                    "status",
+                ],
             },
             "github_api_calls_total": {
                 "type": "counter",

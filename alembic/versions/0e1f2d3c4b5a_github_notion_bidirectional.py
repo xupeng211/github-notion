@@ -33,7 +33,14 @@ def upgrade() -> None:
         batch.add_column(sa.Column("notion_database_id", sa.String(), nullable=True))
         batch.add_column(sa.Column("created_at", sa.DateTime(), nullable=True))
         batch.add_column(sa.Column("updated_at", sa.DateTime(), nullable=True))
-        batch.add_column(sa.Column("sync_enabled", sa.Boolean(), nullable=False, server_default=sa.text("1")))
+        batch.add_column(
+            sa.Column(
+                "sync_enabled",
+                sa.Boolean(),
+                nullable=False,
+                server_default=sa.text("1"),
+            )
+        )
         batch.add_column(sa.Column("last_sync_at", sa.DateTime(), nullable=True))
         batch.add_column(sa.Column("sync_hash", sa.String(), nullable=True))
 

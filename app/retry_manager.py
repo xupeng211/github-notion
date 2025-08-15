@@ -151,7 +151,11 @@ class RetryManager:
             try:
                 logger.info(
                     "retry_attempt",
-                    extra={"attempt": attempt, "max_attempts": self.config.max_attempts, "context": context},
+                    extra={
+                        "attempt": attempt,
+                        "max_attempts": self.config.max_attempts,
+                        "context": context,
+                    },
                 )
 
                 # 执行函数
@@ -162,7 +166,10 @@ class RetryManager:
 
                 # 成功执行
                 if attempt > 1:
-                    logger.info("retry_success", extra={"attempts_used": attempt, "context": context})
+                    logger.info(
+                        "retry_success",
+                        extra={"attempts_used": attempt, "context": context},
+                    )
 
                 return result
 
@@ -171,13 +178,19 @@ class RetryManager:
 
                 logger.warning(
                     "retry_attempt_failed",
-                    extra={"attempt": attempt, "error": str(e), "error_type": type(e).__name__, "context": context},
+                    extra={
+                        "attempt": attempt,
+                        "error": str(e),
+                        "error_type": type(e).__name__,
+                        "context": context,
+                    },
                 )
 
                 # 检查是否应该重试
                 if not self.should_retry(e, attempt):
                     logger.error(
-                        "retry_abort_no_more_attempts", extra={"attempt": attempt, "error": str(e), "context": context}
+                        "retry_abort_no_more_attempts",
+                        extra={"attempt": attempt, "error": str(e), "context": context},
                     )
                     break
 
@@ -185,14 +198,23 @@ class RetryManager:
                 if attempt < self.config.max_attempts:
                     delay = self.calculate_delay(attempt)
                     logger.info(
-                        "retry_delay", extra={"delay_seconds": delay, "next_attempt": attempt + 1, "context": context}
+                        "retry_delay",
+                        extra={
+                            "delay_seconds": delay,
+                            "next_attempt": attempt + 1,
+                            "context": context,
+                        },
                     )
                     await asyncio.sleep(delay)
 
         # 所有重试都失败了
         logger.error(
             "retry_exhausted",
-            extra={"attempts_made": self.config.max_attempts, "final_error": str(last_error), "context": context},
+            extra={
+                "attempts_made": self.config.max_attempts,
+                "final_error": str(last_error),
+                "context": context,
+            },
         )
 
         # 发送到死信队列
@@ -203,7 +225,12 @@ class RetryManager:
         raise last_error
 
     async def _send_to_deadletter(
-        self, func: Callable, args: tuple, kwargs: dict, error: Exception, context: Dict[str, Any]
+        self,
+        func: Callable,
+        args: tuple,
+        kwargs: dict,
+        error: Exception,
+        context: Dict[str, Any],
     ):
         """
         将失败的任务发送到死信队列
@@ -248,13 +275,22 @@ class RetryManager:
             self.db.commit()
 
             logger.info(
-                "deadletter_created", extra={"deadletter_id": deadletter.id, "error": str(error), "context": context}
+                "deadletter_created",
+                extra={
+                    "deadletter_id": deadletter.id,
+                    "error": str(error),
+                    "context": context,
+                },
             )
 
         except Exception as deadletter_error:
             logger.error(
                 "deadletter_creation_failed",
-                extra={"error": str(deadletter_error), "original_error": str(error), "context": context},
+                extra={
+                    "error": str(deadletter_error),
+                    "original_error": str(error),
+                    "context": context,
+                },
             )
 
     def get_deadletter_stats(self) -> Dict[str, Any]:
@@ -281,7 +317,11 @@ class RetryManager:
                 count = self.db.query(DeadletterQueue).filter_by(event_type=event_type).count()
                 event_type_stats[event_type] = count
 
-            return {"total_deadletters": total_count, "by_provider": provider_stats, "by_event_type": event_type_stats}
+            return {
+                "total_deadletters": total_count,
+                "by_provider": provider_stats,
+                "by_event_type": event_type_stats,
+            }
 
         except Exception as e:
             logger.error("deadletter_stats_failed", extra={"error": str(e)})
@@ -314,13 +354,22 @@ def with_retry(config: RetryConfig = None, context: Optional[Dict[str, Any]] = N
 # 预定义的重试配置
 RETRY_CONFIGS = {
     "webhook_processing": RetryConfig(
-        max_attempts=3, base_delay=2.0, max_delay=30.0, strategy=RetryStrategy.EXPONENTIAL_BACKOFF
+        max_attempts=3,
+        base_delay=2.0,
+        max_delay=30.0,
+        strategy=RetryStrategy.EXPONENTIAL_BACKOFF,
     ),
     "api_calls": RetryConfig(
-        max_attempts=5, base_delay=1.0, max_delay=60.0, strategy=RetryStrategy.EXPONENTIAL_BACKOFF
+        max_attempts=5,
+        base_delay=1.0,
+        max_delay=60.0,
+        strategy=RetryStrategy.EXPONENTIAL_BACKOFF,
     ),
     "database_operations": RetryConfig(
-        max_attempts=2, base_delay=0.5, max_delay=5.0, strategy=RetryStrategy.EXPONENTIAL_BACKOFF
+        max_attempts=2,
+        base_delay=0.5,
+        max_delay=5.0,
+        strategy=RetryStrategy.EXPONENTIAL_BACKOFF,
     ),
 }
 

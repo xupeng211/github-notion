@@ -18,8 +18,6 @@ from sqlalchemy.orm import sessionmaker
 
 from app.idempotency import IdempotencyManager
 from app.models import Base, SyncEvent
-
-# Import the app and related modules
 from app.server import app
 
 
@@ -33,8 +31,10 @@ def temp_db():
     os.environ["DB_URL"] = f"sqlite:///{db_path}"
     os.environ["DISABLE_NOTION"] = "1"  # 禁用Notion集成
     os.environ["DISABLE_METRICS"] = "1"  # 禁用监控
-    os.environ["GITEE_WEBHOOK_SECRET"] = "test-secret-key"
-    os.environ["GITHUB_WEBHOOK_SECRET"] = "test-secret-key"
+    os.environ["GITEE_WEBHOOK_SECRET"] = "test-webhook-secret-for-testing-12345678"
+    os.environ["GITHUB_WEBHOOK_SECRET"] = "test-webhook-secret-for-testing-12345678"
+    os.environ["DEADLETTER_REPLAY_TOKEN"] = "test-deadletter-token-for-testing-12345678"
+    os.environ["ENVIRONMENT"] = "testing"
     os.environ["LOG_LEVEL"] = "WARNING"  # 减少日志输出
 
     # 创建数据库表
@@ -93,7 +93,7 @@ class TestEndToEndWorkflow:
     def test_gitee_webhook_complete_flow(self, client, temp_db):
         """测试Gitee webhook完整处理流程"""
         # 1. 准备测试数据
-        secret = "test-secret-key"
+        secret = "test-webhook-secret-for-testing-12345678"
         delivery_id = str(uuid.uuid4())
         timestamp = str(int(datetime.now(timezone.utc).timestamp()))
 
@@ -157,7 +157,7 @@ class TestEndToEndWorkflow:
     def test_github_webhook_complete_flow(self, client, temp_db):
         """测试GitHub webhook完整处理流程"""
         # 1. 准备测试数据
-        secret = "test-secret-key"
+        secret = "test-webhook-secret-for-testing-12345678"
         delivery_id = str(uuid.uuid4())
 
         # 创建有效的Issue payload
@@ -201,7 +201,7 @@ class TestEndToEndWorkflow:
     def test_idempotency_protection(self, client, temp_db):
         """测试幂等性保护机制"""
         # 1. 准备测试数据
-        secret = "test-secret-key"
+        secret = "test-webhook-secret-for-testing-12345678"
         delivery_id = str(uuid.uuid4())  # 相同的delivery ID
         timestamp = str(int(datetime.now(timezone.utc).timestamp()))
 
@@ -285,7 +285,7 @@ class TestEndToEndWorkflow:
 
     def test_invalid_payload_format(self, client):
         """测试无效payload格式的处理"""
-        secret = "test-secret-key"
+        secret = "test-webhook-secret-for-testing-12345678"
         invalid_payload = "{ invalid json"
         signature = generate_gitee_signature(secret, invalid_payload)
 
@@ -305,7 +305,7 @@ class TestEndToEndWorkflow:
         # 注意：这个测试可能需要根据实际的速率限制配置调整
         # 目前假设有基本的速率限制机制
 
-        secret = "test-secret-key"
+        secret = "test-webhook-secret-for-testing-12345678"
 
         # 发送多个快速请求
         for i in range(5):  # 适度测试，避免过度负载
@@ -358,7 +358,7 @@ class TestIdempotencyManager:
         assert isinstance(event_id, str)
 
         # 测试内容哈希生成
-        payload = {"test": "data", "id": 123}
+        payload = {"issue": {"title": "Test Issue", "body": "Test body", "state": "open"}}
         content_hash = manager.generate_content_hash(payload)
         assert content_hash
         assert isinstance(content_hash, str)
@@ -368,7 +368,7 @@ class TestIdempotencyManager:
         assert content_hash == content_hash2
 
         # 不同内容应该生成不同哈希
-        different_payload = {"test": "different", "id": 456}
+        different_payload = {"issue": {"title": "Different Issue", "body": "Different body", "state": "closed"}}
         different_hash = manager.generate_content_hash(different_payload)
         assert content_hash != different_hash
 
@@ -380,7 +380,7 @@ class TestIdempotencyManager:
         content_hash = "test-hash-456"
 
         # 首次检查，应该不是重复
-        is_duplicate = manager.is_duplicate_event(event_id, content_hash)
+        is_duplicate, _ = manager.is_duplicate_event(event_id, content_hash)
         assert not is_duplicate
 
         # 记录事件处理

@@ -33,7 +33,11 @@ def test_signature_validation():
     secret = "s"
     payload = json.dumps({"issue": {"number": 1, "title": "t"}}).encode()
     sig = sign(secret, payload)
-    r = client.post("/gitee_webhook", data=payload, headers={"X-Gitee-Token": sig, "Content-Type": "application/json"})
+    r = client.post(
+        "/gitee_webhook",
+        data=payload,
+        headers={"X-Gitee-Token": sig, "Content-Type": "application/json"},
+    )
     # service expects env GITEE_WEBHOOK_SECRET; here it's empty, so invalid
     assert r.status_code == 403
 
@@ -53,8 +57,16 @@ def test_duplicate_idempotency(monkeypatch):
 
     payload = json.dumps({"issue": {"number": 2, "title": "X"}}).encode()
     sig = sign("k", payload)
-    r1 = client.post("/gitee_webhook", data=payload, headers={"X-Gitee-Token": sig, "Content-Type": "application/json"})
-    r2 = client.post("/gitee_webhook", data=payload, headers={"X-Gitee-Token": sig, "Content-Type": "application/json"})
+    r1 = client.post(
+        "/gitee_webhook",
+        data=payload,
+        headers={"X-Gitee-Token": sig, "Content-Type": "application/json"},
+    )
+    r2 = client.post(
+        "/gitee_webhook",
+        data=payload,
+        headers={"X-Gitee-Token": sig, "Content-Type": "application/json"},
+    )
     assert r1.status_code == 200
     assert r2.status_code in (200, 201)
 
@@ -72,7 +84,11 @@ def test_retry_deadletter(monkeypatch):
     monkeypatch.setattr(service, "notion_upsert_page", fail_upsert)
     payload = json.dumps({"issue": {"number": 3, "title": "Y"}}).encode()
     sig = sign("k", payload)
-    r = client.post("/gitee_webhook", data=payload, headers={"X-Gitee-Token": sig, "Content-Type": "application/json"})
+    r = client.post(
+        "/gitee_webhook",
+        data=payload,
+        headers={"X-Gitee-Token": sig, "Content-Type": "application/json"},
+    )
     assert r.status_code == 400
 
 
@@ -96,14 +112,18 @@ def test_conflict_strategy(monkeypatch):
     payload1 = json.dumps({"issue": {"number": 4, "title": "Z"}}).encode()
     sig1 = sign("k", payload1)
     r1 = client.post(
-        "/gitee_webhook", data=payload1, headers={"X-Gitee-Token": sig1, "Content-Type": "application/json"}
+        "/gitee_webhook",
+        data=payload1,
+        headers={"X-Gitee-Token": sig1, "Content-Type": "application/json"},
     )
     assert r1.status_code == 200
 
     payload2 = json.dumps({"issue": {"number": 4, "title": "Z2"}}).encode()
     sig2 = sign("k", payload2)
     r2 = client.post(
-        "/gitee_webhook", data=payload2, headers={"X-Gitee-Token": sig2, "Content-Type": "application/json"}
+        "/gitee_webhook",
+        data=payload2,
+        headers={"X-Gitee-Token": sig2, "Content-Type": "application/json"},
     )
     assert r2.status_code == 200
 
