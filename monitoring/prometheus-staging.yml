@@ -1,0 +1,30 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+rule_files:
+  - "alert_rules.yml"
+
+scrape_configs:
+  # GitHub-Notion 同步服务监控 (staging)
+  - job_name: 'github-notion-sync-staging'
+    static_configs:
+      - targets: ['app:8000']
+    metrics_path: '/metrics'
+    scrape_interval: 30s
+    scrape_timeout: 10s
+    params:
+      format: ['prometheus']
+
+  # 健康检查监控
+  - job_name: 'github-notion-sync-health-staging'
+    static_configs:
+      - targets: ['app:8000']
+    metrics_path: '/health'
+    scrape_interval: 60s
+    scrape_timeout: 10s
+
+  # Prometheus 自身监控
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']

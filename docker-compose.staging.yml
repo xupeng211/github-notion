@@ -12,41 +12,41 @@ services:
       - APP_PORT=8000
       - LOG_LEVEL=INFO
       - ENVIRONMENT=staging
-      
+
       # 数据库配置
       - DB_URL=sqlite:///data/sync.db
-      
+
       # Gitee 配置
-      - GITEE_WEBHOOK_SECRET=${GITEE_WEBHOOK_SECRET}
-      
+      - GITEE_WEBHOOK_SECRET=${GITEE_WEBHOOK_SECRET:-staging-webhook-secret}
+
       # Notion 配置
-      - NOTION_TOKEN=${NOTION_TOKEN}
-      - NOTION_DATABASE_ID=${NOTION_DATABASE_ID}
-      
+      - NOTION_TOKEN=${NOTION_TOKEN:-}
+      - NOTION_DATABASE_ID=${NOTION_DATABASE_ID:-}
+
       # 安全和限制
       - RATE_LIMIT_PER_MINUTE=120
       - MAX_REQUEST_SIZE=2097152
-      - DEADLETTER_REPLAY_TOKEN=${DEADLETTER_REPLAY_TOKEN}
-      
+      - DEADLETTER_REPLAY_TOKEN=${DEADLETTER_REPLAY_TOKEN:-staging-token-123}
+
       # 可选配置
       - DISABLE_NOTION=false
       - DISABLE_METRICS=false
-      
+
     volumes:
       - ./data:/app/data
       - ./logs:/app/logs
-    
+
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      test: [ "CMD", "curl", "-f", "http://localhost:8000/health" ]
       interval: 30s
       timeout: 10s
       retries: 3
       start_period: 10s
-    
+
     labels:
       - "com.gitee-notion-sync.environment=staging"
       - "com.gitee-notion-sync.version=${IMAGE_TAG:-latest}"
-    
+
     networks:
       - gitee-notion-network
 
@@ -91,4 +91,4 @@ networks:
     driver: bridge
 
 volumes:
-  grafana-data: 
+  grafana-data:

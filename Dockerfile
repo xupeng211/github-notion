@@ -16,6 +16,7 @@ ENV PIP_PREFER_BINARY=1
 # 只安装必要的系统包（python:3.11已包含基础编译工具）
 RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
+    ca-certificates \
     && rm -rf /var/lib/apt/lists/* \
     && apt-get clean
 
@@ -30,6 +31,13 @@ RUN pip install --user --no-warn-script-location -r requirements.txt
 FROM python:3.11-bullseye
 
 WORKDIR /app
+
+# 安装生产环境必需的系统工具（包括curl用于健康检查）
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    curl \
+    ca-certificates \
+    && rm -rf /var/lib/apt/lists/* \
+    && apt-get clean
 
 # 创建非root用户
 RUN useradd -m -u 1000 appuser && \

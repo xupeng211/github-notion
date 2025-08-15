@@ -474,8 +474,15 @@ async def health():
 # Initialize metrics system
 initialize_metrics()
 
-# metrics via separate ASGI with custom registry
-app.mount("/metrics", make_asgi_app(registry=METRICS_REGISTRY))
+# metrics via separate ASGI with custom registry (仅在未禁用时)
+if METRICS_REGISTRY is not None:
+    app.mount("/metrics", make_asgi_app(registry=METRICS_REGISTRY))
+else:
+    # 当指标被禁用时，返回简单的消息
+    @app.get("/metrics")
+    async def metrics_disabled():
+        return Response(content="# Metrics are disabled (DISABLE_METRICS=1)\n", media_type="text/plain")
+
 
 # webhook
 
@@ -525,7 +532,7 @@ async def gitee_webhook(request: Request):
     # Validate request body with Pydantic; keep body for downstream processing
     issue_id = ""
     try:
-        payload_obj = GiteeWebhookPayload.model_validate_json(body.decode("utf-8"))
+        payload_obj = GiteeWebhookPayload.parse_raw(body)
         issue = payload_obj.issue
         issue_id = str(issue.number or issue.id or "")
     except ValidationError:
