@@ -174,9 +174,9 @@ NOTION_API_RATE_LIMIT = (
 
 # === 系统指标 ===
 
-# 死信队列
-DEADLETTER_QUEUE_SIZE = (
-    Gauge("deadletter_queue_size", "Current size of dead letter queue", registry=METRICS_REGISTRY)
+# 死信队列（基础指标）
+DEADLETTER_QUEUE_SIZE_BASIC = (
+    Gauge("deadletter_queue_size_basic", "Current size of dead letter queue", registry=METRICS_REGISTRY)
     if not DISABLE_METRICS
     else _NoopMetric()
 )
