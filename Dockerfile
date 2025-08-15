@@ -1,6 +1,19 @@
 # Multi-stage build
 FROM python:3.11-slim AS builder
 WORKDIR /app
+
+# Install build dependencies for cryptography and other packages
+RUN apt-get update && apt-get install -y \
+    gcc \
+    g++ \
+    libffi-dev \
+    libssl-dev \
+    build-essential \
+    pkg-config \
+    cargo \
+    rustc \
+    && rm -rf /var/lib/apt/lists/*
+
 COPY requirements.txt .
 RUN pip install --user --no-cache-dir -r requirements.txt
 
