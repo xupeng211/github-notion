@@ -1,88 +1,67 @@
 # GitHub-Notion 双向同步系统 Makefile
-.PHONY: help test lint build run clean local-ci fix-code deploy-check
+.PHONY: format lint fix test clean install-dev help
 
 # 默认目标
 help:
-	@echo "🚀 GitHub-Notion 双向同步系统"
-	@echo "================================"
-	@echo "可用命令:"
-	@echo "  make lint          - 代码质量检查"
-	@echo "  make fix-code      - 自动修复代码格式问题"
-	@echo "  make test          - 运行测试"
-	@echo "  make local-ci      - 完整本地CI/CD模拟"
-	@echo "  make build         - 构建Docker镜像"
-	@echo "  make run           - 运行开发服务器"
-	@echo "  make deploy-check  - 部署前检查"
-	@echo "  make clean         - 清理临时文件"
+	@echo "📋 可用的代码质量管理命令:"
 	@echo ""
-	@echo "🎯 推荐工作流程:"
-	@echo "  1. make fix-code   # 修复代码格式"
-	@echo "  2. make local-ci   # 完整测试"
-	@echo "  3. git push        # 推送代码"
+	@echo "  make install-dev    - 安装开发依赖工具"
+	@echo "  make format        - 格式化代码 (black + isort)"  
+	@echo "  make lint          - 检查代码质量 (flake8)"
+	@echo "  make fix           - 自动修复代码问题"
+	@echo "  make check         - 完整检查 (format + lint)"
+	@echo "  make clean         - 清理缓存文件"
+	@echo "  make test-prep     - 测试前准备 (fix + lint)"
+	@echo ""
+
+# 安装开发工具
+install-dev:
+	@echo "📦 安装开发依赖工具..."
+	pip install black isort flake8 autoflake pre-commit
+	@echo "✅ 开发工具安装完成"
+
+# 代码格式化
+format:
+	@echo "🎨 格式化代码..."
+	black .
+	isort .
+	@echo "✅ 代码格式化完成"
 
 # 代码质量检查
 lint:
-	@echo "🔍 运行代码质量检查..."
-	flake8 app/ --max-line-length=120 --ignore=E203,W503
-	flake8 *.py --max-line-length=120 --ignore=E203,W503 --exclude=__pycache__,*.pyc || echo "⚠️ 部分文件有格式问题"
+	@echo "🔍 检查代码质量..."
+	flake8 . --count --show-source --statistics
 	@echo "✅ 代码质量检查完成"
 
-# 自动修复代码格式
-fix-code:
-	@echo "🔧 自动修复代码格式问题..."
-	@python3 -c "import re; content=open('app/server.py').read(); open('app/server.py','w').write(content.replace('\t','    '))"
-	@echo "  ✅ 修复了缩进问题"
-	@find . -name "*.py" -exec sed -i 's/[[:space:]]*$$//' {} \;
-	@echo "  ✅ 清理了尾随空格"
-	@echo "✅ 代码格式修复完成"
+# 自动修复
+fix:
+	@echo "🔧 自动修复代码问题..."
+	autoflake --remove-all-unused-imports --remove-unused-variables --in-place --recursive .
+	black .
+	isort .
+	@echo "✅ 代码问题修复完成"
 
-# 运行测试
-test:
-	@echo "🧪 运行快速测试..."
-	python3 quick_test.py
-	@echo "🧪 运行详细测试..."
-	timeout 60 python3 test_sync_system.py || echo "⚠️ 测试完成（有警告）"
+# 完整检查
+check: format lint
+	@echo "🎯 完整代码质量检查完成"
 
-# 完整本地CI测试
-local-ci:
-	@echo "🚀 运行完整本地CI/CD测试..."
-	bash local-ci-test.sh
-
-# 构建Docker镜像
-build:
-	@echo "🐳 构建Docker镜像..."
-	docker build -t github-notion-sync:latest .
-	@echo "✅ Docker镜像构建完成"
-
-# 运行开发服务器
-run:
-	@echo "🏃 启动开发服务器..."
-	@echo "请确保已配置 .env 文件"
-	uvicorn app.server:app --reload --host 0.0.0.0 --port 8000
-
-# 部署前检查
-deploy-check:
-	@echo "🔍 部署前检查..."
-	@echo "检查部署文件..."
-	@ls -la deploy/ || echo "❌ deploy 目录不存在"
-	@echo "检查环境配置..."
-	@test -f .env && echo "✅ .env 文件存在" || echo "⚠️ .env 文件不存在"
-	@echo "检查数据目录..."
-	@mkdir -p data logs && echo "✅ 数据目录已准备"
-
-# 清理临时文件
+# 清理缓存
 clean:
-	@echo "🧹 清理临时文件..."
+	@echo "🧹 清理缓存文件..."
 	find . -type f -name "*.pyc" -delete
-	find . -type d -name "__pycache__" -exec rm -rf {} + 2>/dev/null || true
-	rm -f /tmp/*test_output.log 2>/dev/null || true
-	docker system prune -f >/dev/null 2>&1 || true
-	@echo "✅ 清理完成"
+	find . -type d -name "__pycache__" -delete  
+	find . -type d -name "*.egg-info" -exec rm -rf {} + 2>/dev/null || true
+	@echo "✅ 缓存清理完成"
 
-# 快速推送工作流
-push: fix-code local-ci
-	@echo "🚀 代码已准备就绪，可以推送："
-	@echo "  git add ."
-	@echo "  git commit -m \"你的提交信息\""
-	@echo "  git push github main"
+# 测试前准备
+test-prep: fix lint
+	@echo "🚀 测试环境准备完成"
+
+# 初始化项目代码质量
+init-quality:
+	@echo "🚀 初始化项目代码质量..."
+	make install-dev
+	make fix
+	make clean
+	@echo "✅ 项目代码质量初始化完成"
 
