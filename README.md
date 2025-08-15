@@ -1,17 +1,87 @@
-# 项目说明
+# GitHub-Notion 双向同步系统
 
-## 🚨 重要：代码质量规则（必读）
+## 🚨 强制性代码质量规则
 
-**⚠️ 所有协作者（包括AI）在提交代码前必须严格遵守代码质量规则！**
+> **所有协作者（包括AI）在提交代码前都必须严格遵守 [CODE_QUALITY_RULES.md](./CODE_QUALITY_RULES.md) 中的规定！**
+>
+> 这不是建议，这是**强制性要求**。所有代码提交都会被自动检查和验证。
 
-📋 **提交前必须执行的命令**：
+📋 **提交前必须执行**：
 ```bash
 make fix && make check  # 修复格式问题并检查质量
 ```
 
-📖 **详细规则**：请阅读 [CODE_QUALITY_RULES.md](./CODE_QUALITY_RULES.md)
+🔒 **自动执行**：Git hooks会在提交时自动验证，不合规代码将被拒绝
 
-🔒 **自动执行**：项目已配置Git hooks，不合规代码将被自动拒绝
+---
+
+## 🚀 快速上手
+
+### 本地 5 分钟上手
+
+```bash
+# 1. 克隆项目
+git clone https://github.com/your-username/github-notion.git
+cd github-notion
+
+# 2. 安装依赖
+pip install -r requirements.txt
+
+# 3. 配置环境
+cp env.local.example .env
+# 编辑 .env 文件，配置必要的 API 密钥
+
+# 4. 初始化数据库
+alembic upgrade head
+
+# 5. 启动服务
+uvicorn app.server:app --host 0.0.0.0 --port 8000
+```
+
+### 生产 15 分钟上线
+
+```bash
+# 1. 服务器准备
+git clone https://github.com/your-username/github-notion.git
+cd github-notion
+
+# 2. 配置生产环境
+cp env.prod.example .env.production
+# ⚠️ 必须修改所有 CHANGE_ME 值为安全的随机字符串
+
+# 3. Docker 部署
+docker build -t github-notion .
+docker run -d --name github-notion-prod \
+  --env-file .env.production \
+  -p 8000:8000 \
+  github-notion
+
+# 4. 验证部署
+curl http://your-server:8000/health
+```
+
+💡 **详细指南**: [部署文档索引](./docs/) | [配置说明](#配置管理) | [故障排除](#运维指南)
+
+---
+
+## 🎯 核心能力
+
+### 🔄 双向同步
+- **GitHub ↔ Notion**: Issue/PR 全生命周期同步
+- **Gitee ↔ Notion**: 完整支持中国开发者生态
+- **智能映射**: 自动字段转换和数据标准化
+
+### 🛡️ 企业级可靠性
+- **幂等性保护**: 基于 delivery_id + content 哈希的重复检测
+- **指数退避重试**: 自动处理临时故障，防止数据丢失
+- **死信队列**: 失败事件自动归档，支持手动重放
+- **安全基线**: Webhook 签名验证、防重放攻击、配置强制验证
+
+### 📊 生产级监控
+- **结构化日志**: JSON 格式、trace_id 全链路跟踪
+- **Prometheus 指标**: 成功率、时延、错误率、队列大小
+- **健康检查**: 多维度系统状态监控
+- **实时告警**: 支持 Grafana 可视化和告警集成
 
 ---
 

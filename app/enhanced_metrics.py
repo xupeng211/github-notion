@@ -344,11 +344,7 @@ def record_security_event(event_type: str, provider: str, result: str):
     SECURITY_EVENTS_TOTAL.labels(event_type=event_type, provider=provider, result=result).inc()
 
 
-def update_deadletter_queue_size(size: int):
-    """更新死信队列大小"""
-    if DISABLE_METRICS:
-        return
-    DEADLETTER_QUEUE_SIZE.set(size)
+# 已移至下方新版本，支持provider和event_type标签
 
 
 def record_deadletter_replay(status: str):
@@ -417,3 +413,200 @@ def start_metrics_server(port: int = 9090):
         logger.info("metrics_server_started", extra={"port": port})
     except Exception as e:
         logger.error("metrics_server_start_failed", extra={"error": str(e)})
+
+
+# 新增的关键指标
+
+# 成功率和失败率指标
+WEBHOOK_SUCCESS_RATE = (
+    Gauge("webhook_success_rate_percent", "Webhook处理成功率（百分比）", ["provider"], registry=METRICS_REGISTRY)
+    if METRICS_REGISTRY
+    else None
+)
+
+WEBHOOK_FAILURE_RATE = (
+    Gauge("webhook_failure_rate_percent", "Webhook处理失败率（百分比）", ["provider"], registry=METRICS_REGISTRY)
+    if METRICS_REGISTRY
+    else None
+)
+
+# 处理时延指标
+WEBHOOK_PROCESSING_DURATION = (
+    Histogram(
+        "webhook_processing_duration_seconds",
+        "Webhook处理时延分布",
+        ["provider", "event_type", "status"],
+        buckets=[0.1, 0.5, 1.0, 2.0, 5.0, 10.0, 30.0, float("inf")],
+        registry=METRICS_REGISTRY,
+    )
+    if METRICS_REGISTRY
+    else None
+)
+
+# API调用失败率
+API_CALL_FAILURES = (
+    Counter(
+        "api_call_failures_total",
+        "外部API调用失败次数",
+        ["service", "operation", "error_type"],
+        registry=METRICS_REGISTRY,
+    )
+    if METRICS_REGISTRY
+    else None
+)
+
+API_CALL_DURATION = (
+    Histogram(
+        "api_call_duration_seconds",
+        "外部API调用时延",
+        ["service", "operation"],
+        buckets=[0.1, 0.5, 1.0, 2.0, 5.0, 10.0, 30.0, float("inf")],
+        registry=METRICS_REGISTRY,
+    )
+    if METRICS_REGISTRY
+    else None
+)
+
+# 死信队列指标
+DEADLETTER_QUEUE_SIZE = (
+    Gauge("deadletter_queue_size", "死信队列当前大小", ["provider", "event_type"], registry=METRICS_REGISTRY)
+    if METRICS_REGISTRY
+    else None
+)
+
+DEADLETTER_EVENTS_TOTAL = (
+    Counter(
+        "deadletter_events_total",
+        "进入死信队列的事件总数",
+        ["provider", "event_type", "error_type"],
+        registry=METRICS_REGISTRY,
+    )
+    if METRICS_REGISTRY
+    else None
+)
+
+# 幂等性指标增强
+IDEMPOTENCY_CACHE_HITS = (
+    Counter("idempotency_cache_hits_total", "幂等性缓存命中次数", ["provider"], registry=METRICS_REGISTRY)
+    if METRICS_REGISTRY
+    else None
+)
+
+IDEMPOTENCY_CACHE_SIZE = (
+    Gauge("idempotency_cache_size", "幂等性缓存当前大小", registry=METRICS_REGISTRY) if METRICS_REGISTRY else None
+)
+
+# 业务指标
+SYNC_SUCCESS_RATE = (
+    Gauge("sync_success_rate_percent", "同步成功率（百分比）", ["provider", "entity_type"], registry=METRICS_REGISTRY)
+    if METRICS_REGISTRY
+    else None
+)
+
+ENTITY_PROCESSING_TIME = (
+    Histogram(
+        "entity_processing_time_seconds",
+        "实体处理时间分布",
+        ["entity_type", "action"],
+        buckets=[0.5, 1.0, 2.0, 5.0, 10.0, 30.0, 60.0, float("inf")],
+        registry=METRICS_REGISTRY,
+    )
+    if METRICS_REGISTRY
+    else None
+)
+
+
+def record_webhook_processing_duration(provider: str, event_type: str, status: str, duration: float):
+    """记录webhook处理时延"""
+    if WEBHOOK_PROCESSING_DURATION:
+        WEBHOOK_PROCESSING_DURATION.labels(provider=provider, event_type=event_type, status=status).observe(duration)
+
+
+def record_api_call_metrics(service: str, operation: str, duration: float, success: bool, error_type: str = None):
+    """记录API调用指标"""
+    if API_CALL_DURATION:
+        API_CALL_DURATION.labels(service=service, operation=operation).observe(duration)
+
+    if not success and API_CALL_FAILURES:
+        API_CALL_FAILURES.labels(service=service, operation=operation, error_type=error_type or "unknown").inc()
+
+
+def record_deadletter_event(provider: str, event_type: str, error_type: str):
+    """记录死信队列事件"""
+    if DEADLETTER_EVENTS_TOTAL:
+        DEADLETTER_EVENTS_TOTAL.labels(provider=provider, event_type=event_type, error_type=error_type).inc()
+
+
+def update_deadletter_queue_size(provider: str, event_type: str, size: int):
+    """更新死信队列大小"""
+    if DEADLETTER_QUEUE_SIZE:
+        DEADLETTER_QUEUE_SIZE.labels(provider=provider, event_type=event_type).set(size)
+
+
+def record_idempotency_cache_hit(provider: str):
+    """记录幂等性缓存命中"""
+    if IDEMPOTENCY_CACHE_HITS:
+        IDEMPOTENCY_CACHE_HITS.labels(provider=provider).inc()
+
+
+def update_idempotency_cache_size(size: int):
+    """更新幂等性缓存大小"""
+    if IDEMPOTENCY_CACHE_SIZE:
+        IDEMPOTENCY_CACHE_SIZE.set(size)
+
+
+def record_entity_processing_time(entity_type: str, action: str, duration: float):
+    """记录实体处理时间"""
+    if ENTITY_PROCESSING_TIME:
+        ENTITY_PROCESSING_TIME.labels(entity_type=entity_type, action=action).observe(duration)
+
+
+def update_success_rates():
+    """更新成功率指标"""
+    if not METRICS_REGISTRY:
+        return
+
+    try:
+        from datetime import datetime, timedelta
+
+        from app.models import SessionLocal, SyncEvent
+
+        # 计算最近1小时的成功率
+        one_hour_ago = datetime.utcnow() - timedelta(hours=1)
+
+        with SessionLocal() as db:
+            for provider in ["github", "gitee", "notion"]:
+                # 查询最近1小时的事件
+                recent_events = (
+                    db.query(SyncEvent)
+                    .filter(SyncEvent.provider == provider, SyncEvent.created_at >= one_hour_ago)
+                    .all()
+                )
+
+                if recent_events:
+                    total_count = len(recent_events)
+                    success_count = sum(1 for event in recent_events if event.processed and not event.error_message)
+
+                    success_rate = (success_count / total_count) * 100
+                    failure_rate = 100 - success_rate
+
+                    if WEBHOOK_SUCCESS_RATE:
+                        WEBHOOK_SUCCESS_RATE.labels(provider=provider).set(success_rate)
+                    if WEBHOOK_FAILURE_RATE:
+                        WEBHOOK_FAILURE_RATE.labels(provider=provider).set(failure_rate)
+
+    except Exception as e:
+        logger.error("Failed to update success rates", extra={"error": str(e)})
+
+
+# 新增的导出列表
+ENHANCED_METRICS_EXPORTS = [
+    "record_webhook_processing_duration",
+    "record_api_call_metrics",
+    "record_deadletter_event",
+    "update_deadletter_queue_size",
+    "record_idempotency_cache_hit",
+    "update_idempotency_cache_size",
+    "record_entity_processing_time",
+    "update_success_rates",
+]
