@@ -6,7 +6,7 @@
 import os
 import time
 import logging
-from typing import Dict, Any, Optional
+from typing import Dict, Optional
 from contextlib import contextmanager
 from prometheus_client import Counter, Histogram, Gauge, Enum, Info, CollectorRegistry, start_http_server
 
@@ -25,20 +25,24 @@ def _noop(*args, **kwargs):
     """空操作函数，用于禁用指标时的占位符"""
     pass
 
+
 class _NoopMetric:
-    """空操作指标类"""
-    def inc(self, *args, **kwargs): pass
-    def dec(self, *args, **kwargs): pass
-    def set(self, *args, **kwargs): pass
-    def observe(self, *args, **kwargs): pass
-    def labels(self, *args, **kwargs): return self
-    def time(self): return self
-    def __enter__(self): return self
-    def __exit__(self, *args): pass
+    """空操作指标类，用于禁用指标时的占位符"""
 
-# === 业务指标 ===
+    def inc(self, *args, **kwargs):
+        pass
 
-# Webhook 请求统计
+    def observe(self, *args, **kwargs):
+        pass
+
+    def labels(self, *args, **kwargs):
+        return self
+
+    def set(self, *args, **kwargs):
+        pass
+
+
+# Webhook 请求指标
 WEBHOOK_REQUESTS_TOTAL = Counter(
     'webhook_requests_total',
     'Total number of webhook requests received',
@@ -243,7 +247,7 @@ def record_sync_event(source: str, target: str, entity_type: str, action: str, s
     ).observe(duration)
 
 def record_api_call(api_type: str, method: str, endpoint: str, status_code: int, duration: float,
-                   rate_limit_remaining: Optional[int] = None):
+                    rate_limit_remaining: Optional[int] = None):
     """记录外部 API 调用指标"""
     if DISABLE_METRICS:
         return
@@ -334,14 +338,14 @@ def update_app_health(status: str):
     APP_HEALTH_STATUS.state(status)
 
 def set_app_info(version: str, environment: str, python_version: str):
-    """设置应用信息"""
+    """设置应用基本信息指标"""
     if DISABLE_METRICS:
         return
+
     APP_INFO.info({
         'version': version,
         'environment': environment,
-        'python_version': python_version,
-        'features': 'github_sync,notion_sync,gitee_sync'
+        'python_version': python_version
     })
 
 # === 初始化函数 ===

@@ -40,7 +40,8 @@ class WebhookSecurityValidator:
         self.secret = secret
         self.provider = provider.lower()
 
-    def verify_signature(self, body: bytes, signature: str, timestamp: Optional[str] = None) -> bool:
+    def verify_signature(self, body: bytes, signature: str,
+                         timestamp: Optional[str] = None) -> bool:
         """
         验证webhook签名
 
@@ -84,7 +85,8 @@ class WebhookSecurityValidator:
 
         return hmac.compare_digest(expected_sig, computed_sig)
 
-    def _verify_gitee_signature(self, body: bytes, signature: str, timestamp: Optional[str] = None) -> bool:
+    def _verify_gitee_signature(self, body: bytes, signature: str,
+                                timestamp: Optional[str] = None) -> bool:
         """Gitee签名验证"""
         # Gitee使用标准的HMAC-SHA256验证
         computed_sig = hmac.new(
@@ -92,7 +94,7 @@ class WebhookSecurityValidator:
             body,
             hashlib.sha256
         ).hexdigest()
-        
+
         return hmac.compare_digest(signature, computed_sig)
 
     def _verify_notion_signature(self, body: bytes, signature: str, timestamp: str) -> bool:
@@ -110,7 +112,8 @@ class WebhookSecurityValidator:
 
         return hmac.compare_digest(signature, f"sha256={computed_sig}")
 
-    def _verify_generic_signature(self, body: bytes, signature: str, timestamp: Optional[str] = None) -> bool:
+    def _verify_generic_signature(self, body: bytes, signature: str,
+                                  timestamp: Optional[str] = None) -> bool:
         """通用签名验证"""
         if timestamp:
             payload = f"{timestamp}.{body.decode('utf-8', errors='ignore')}"
@@ -153,7 +156,7 @@ class WebhookSecurityValidator:
 
                 if abs(current_time - ts) > MAX_TIMESTAMP_SKEW:
                     logger.warning(f"{self.provider}_timestamp_skew_too_large",
-                                 extra={"skew": abs(current_time - ts)})
+                                   extra={"skew": abs(current_time - ts)})
                     return False
             except (ValueError, TypeError):
                 logger.warning(f"{self.provider}_invalid_timestamp", extra={"timestamp": timestamp})
@@ -244,7 +247,7 @@ def secure_webhook_decorator(provider: str):
             )
 
             if not is_valid:
-                logger.warning(f"webhook_security_failed", extra={
+                logger.warning("webhook_security_failed", extra={
                     "provider": provider,
                     "error": error_msg,
                     "request_id": request_id

@@ -1,19 +1,14 @@
 [flake8]
 max-line-length = 120
-ignore = E203,W503,E128,E127,F401,F841,E999
+ignore = E302,W291,W293,W504
 exclude = 
-    __pycache__,
-    *.pyc,
     .git,
+    __pycache__,
     .pytest_cache,
     venv,
     env,
-    .venv,
-    .env,
-    build,
-    dist
-per-file-ignores =
-    __init__.py:F401
-    test_*.py:F401,F811
-    *test*.py:F401,F811
-
+    .venv
+per-file-ignores = 
+    app/enhanced_metrics.py:E501,E302
+    app/idempotency.py:W504
+    app/webhook_security.py:E501

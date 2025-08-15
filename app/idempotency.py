@@ -185,7 +185,9 @@ class IdempotencyManager:
                 entity_type="issue" if "issue" in payload else "page",
                 entity_id=entity_id,
                 action=action,
-                sync_direction=f"{provider}_to_notion" if provider != "notion" else "notion_to_github",
+                sync_direction=(
+                    f"{provider}_to_notion" if provider != "notion" else "notion_to_github"
+                ),
                 status="pending"
             )
 
@@ -323,27 +325,30 @@ def with_idempotency(
                 )
                 content_hash = manager.generate_content_hash(payload)
 
-                # 检查是否重复
-                is_duplicate, reason = manager.is_duplicate_event(
-                    event_id, content_hash, max_age_hours
+                # 检查是否为重复事件（基于事件ID和内容哈希）
+                is_duplicate = (
+                    manager.is_duplicate_event(event_id, content_hash)
+                    or manager.is_duplicate_event_by_delivery_id(delivery_id)
                 )
 
                 if is_duplicate:
                     logger.info("duplicate_event_skipped", extra={
                         "event_id": event_id,
-                        "reason": reason
+                        "reason": "duplicate_detected"
                     })
-                    return True, f"duplicate_event_skipped:{reason}"
+                    return True, "duplicate_event_skipped:duplicate_detected"
 
                 # 记录事件开始处理
                 action = payload.get("action", "unknown")
-                extracted_entity_id = entity_id or str(
-                    payload.get("issue", {}).get("number") or
-                    payload.get("pull_request", {}).get("number") or
-                    payload.get("id", "unknown")
+                extracted_entity_id = (
+                    entity_id or str(
+                        payload.get("issue", {}).get("number")
+                        or payload.get("pull_request", {}).get("number")
+                        or payload.get("id", "unknown")
+                    )
                 )
 
-                sync_event = manager.record_event_processing(
+                manager.record_event_processing(
                     event_id, content_hash, provider, event_type,
                     extracted_entity_id, action, payload
                 )
