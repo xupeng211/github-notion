@@ -264,3 +264,4 @@ server {
 - Secret：使用 `.env` 的 `GITHUB_WEBHOOK_SECRET`
 - 选择事件：`Let me select individual events` → 勾选 `Issues`
 - 保存后 GitHub 会发送 `ping`/`issues` 事件用于联通性验证
+# 代码质量优化完成 - Sat Aug 16 01:59:14 CST 2025
