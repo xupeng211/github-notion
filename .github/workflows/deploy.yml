@@ -165,10 +165,10 @@ jobs:
         DEPLOYMENT_TIME=$(date +%Y%m%d-%H%M%S)
         RATE_LIMIT_PER_MINUTE=60
         MAX_REQUEST_SIZE=1048576
-        DEADLETTER_REPLAY_TOKEN=${{ secrets.DEADLETTER_REPLAY_TOKEN || 'default-token-123' }}
-        GRAFANA_PASSWORD=${{ secrets.GRAFANA_PASSWORD || 'admin123' }}
-        GRAFANA_SECRET_KEY=${{ secrets.GRAFANA_SECRET_KEY || 'default-secret' }}
-        GITEE_WEBHOOK_SECRET=${{ secrets.GITEE_WEBHOOK_SECRET || 'default-webhook-secret' }}
+                  DEADLETTER_REPLAY_TOKEN=${{ secrets.DEADLETTER_REPLAY_TOKEN }}
+          GRAFANA_PASSWORD=${{ secrets.GRAFANA_PASSWORD }}
+                    GRAFANA_SECRET_KEY=${{ secrets.GRAFANA_SECRET_KEY }}
+            GITEE_WEBHOOK_SECRET=${{ secrets.GITEE_WEBHOOK_SECRET }}
         NOTION_TOKEN=${{ secrets.NOTION_TOKEN || '' }}
         NOTION_DATABASE_ID=${{ secrets.NOTION_DATABASE_ID || '' }}
         EOF

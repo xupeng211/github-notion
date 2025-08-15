@@ -17,7 +17,7 @@ services:
       - DB_URL=sqlite:///data/sync.db
       
       # Gitee 配置
-      - GITEE_WEBHOOK_SECRET=${GITEE_WEBHOOK_SECRET:-default-webhook-secret}
+      - GITEE_WEBHOOK_SECRET=${GITEE_WEBHOOK_SECRET}
       
       # Notion 配置 (可选)
       - NOTION_TOKEN=${NOTION_TOKEN:-}

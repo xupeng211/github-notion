@@ -11,6 +11,10 @@ from typing import Callable
 
 from fastapi import FastAPI, HTTPException, Request, Response
 from prometheus_client import make_asgi_app
+from app.enhanced_metrics import (
+    METRICS_REGISTRY, initialize_metrics, 
+    record_webhook_request, record_idempotency_check, record_security_event
+)
 from pydantic import ValidationError
 from pythonjsonlogger import jsonlogger
 from starlette.middleware.base import BaseHTTPMiddleware
@@ -18,6 +22,8 @@ from app.middleware import PrometheusMiddleware
 from app.models import SessionLocal, deadletter_count
 from app.schemas import GiteeWebhookPayload
 from app.service import RATE_LIMIT_HITS_TOTAL, process_gitee_event, replay_deadletters_once, start_deadletter_scheduler
+from app.webhook_security import validate_webhook_security
+from app.idempotency import IdempotencyManager
 
 # 新增导入
 from app.schemas import GitHubWebhookPayload, NotionWebhookPayload
@@ -433,8 +439,11 @@ async def health():
 
     return health_data
 
-# metrics via separate ASGI
-app.mount("/metrics", make_asgi_app())
+# Initialize metrics system
+initialize_metrics()
+
+# metrics via separate ASGI with custom registry
+app.mount("/metrics", make_asgi_app(registry=METRICS_REGISTRY))
 
 # webhook
 
@@ -444,17 +453,41 @@ app.mount("/metrics", make_asgi_app())
           description="处理来自 Gitee 的 webhook 事件，支持 issue 创建、更新、关闭等操作，自动同步到 Notion",
           response_description="处理结果，包含成功状态和详细信息")
 async def gitee_webhook(request: Request):
+    # 记录请求开始时间用于性能指标
+    start_time = time.time()
+    
     # optional simple rate limit
     if not rate_limiter.allow():
         RATE_LIMIT_HITS_TOTAL.inc()
         raise HTTPException(status_code=429, detail="too_many_requests")
 
-    secret = os.getenv("GITEE_WEBHOOK_SECRET", "")
-    signature = request.headers.get("X-Gitee-Token")
+    # 获取安全验证所需的头部信息
+    signature = request.headers.get("X-Gitee-Token", "")
     event_type = request.headers.get("X-Gitee-Event", "")
+    request_id = request.headers.get("X-Gitee-Delivery")
+    timestamp = request.headers.get("X-Gitee-Timestamp")
+    secret = os.getenv("GITEE_WEBHOOK_SECRET", "")
+
+    # 获取请求体并进行安全验证
+    body = await request.body()
+
+    # Webhook安全验证（签名+重放保护）
+    is_valid, error_msg = validate_webhook_security(
+        body, signature, secret, "gitee", request_id, timestamp
+    )
+    if not is_valid:
+        logger.warning("gitee_webhook_security_failed", extra={"error": error_msg, "request_id": request_id})
+        # 记录安全失败的指标
+        duration = time.time() - start_time
+        record_webhook_request("gitee", event_type, "failed", duration)
+        if "replay_attack_detected" in error_msg:
+            record_security_event("replay_attack", "gitee", "detected")
+            record_idempotency_check("gitee", "duplicate")
+        elif "invalid_signature" in error_msg:
+            record_security_event("invalid_signature", "gitee", "failed")
+        raise HTTPException(status_code=403, detail=error_msg)
 
     # Validate request body with Pydantic; keep body for downstream processing
-    body = await request.body()
     issue_id = ""
     try:
         payload_obj = GiteeWebhookPayload.model_validate_json(body.decode("utf-8"))
@@ -481,6 +514,9 @@ async def gitee_webhook(request: Request):
                 "status": status_code,
             },
         )
+        # 记录处理失败的指标
+        duration = time.time() - start_time
+        record_webhook_request("gitee", event_type, "error", duration)
         raise HTTPException(status_code=status_code, detail=message)
     logger.info(
         "process_success",
@@ -491,6 +527,9 @@ async def gitee_webhook(request: Request):
             "status": 200,
         },
     )
+    # 记录成功处理的指标
+    duration = time.time() - start_time
+    record_webhook_request("gitee", event_type, "success", duration)
     return {"message": message}
 
 
@@ -504,26 +543,76 @@ async def github_webhook(request: Request):
         RATE_LIMIT_HITS_TOTAL.inc()
         raise HTTPException(status_code=429, detail="too_many_requests")
 
+    # 获取安全验证所需的头部信息
     signature = request.headers.get("X-Hub-Signature-256", "")
     event = request.headers.get("X-GitHub-Event", "")
+    request_id = request.headers.get("X-GitHub-Delivery")
+    secret = os.getenv("GITHUB_WEBHOOK_SECRET", "")
 
     body = await request.body()
-    # 验证签名
-    if not github_service.verify_webhook_signature(body, signature):
-        raise HTTPException(status_code=403, detail="invalid_signature")
+
+    # Webhook安全验证（签名+重放保护）
+    is_valid, error_msg = validate_webhook_security(
+        body, signature, secret, "github", request_id
+    )
+    if not is_valid:
+        logger.warning("github_webhook_security_failed", extra={"error": error_msg, "request_id": request_id})
+        raise HTTPException(status_code=403, detail=error_msg)
 
     # Pydantic 校验（尽量宽松，仅用于基础字段）
     try:
-        _ = GitHubWebhookPayload.model_validate_json(body.decode("utf-8"))
+        payload_dict = json.loads(body.decode("utf-8"))
+        _ = GitHubWebhookPayload.model_validate(payload_dict)
     except ValidationError:
         raise HTTPException(status_code=400, detail="invalid_payload")
+    except json.JSONDecodeError:
+        raise HTTPException(status_code=400, detail="invalid_json")
 
-    # 直接调用异步函数，无需 asyncio.to_thread
-    ok, message = await async_process_github_event(body, event)
-    if not ok:
-        logger.warning("github_webhook_failed", extra={"event": event, "msg": message})
-        raise HTTPException(status_code=400, detail=message)
-    return {"message": message}
+    # 幂等性检查和事件处理
+    with IdempotencyManager() as idempotency:
+        # 生成事件ID
+        event_id = idempotency.generate_event_id(
+            provider="github",
+            event_type=event,
+            delivery_id=request_id,
+            entity_id=str(payload_dict.get("issue", {}).get("number", ""))
+        )
+        content_hash = idempotency.generate_content_hash(payload_dict)
+
+        # 检查重复
+        is_duplicate, reason = idempotency.is_duplicate_event(event_id, content_hash)
+        if is_duplicate:
+            logger.info("github_duplicate_event_skipped", extra={
+                "event_id": event_id,
+                "reason": reason,
+                "request_id": request_id
+            })
+            return {"message": f"duplicate_event_skipped:{reason}"}
+
+        # 记录事件开始处理
+        entity_id = str(payload_dict.get("issue", {}).get("number", "unknown"))
+        action = payload_dict.get("action", "unknown")
+
+        sync_event = idempotency.record_event_processing(
+            event_id, content_hash, "github", event, entity_id, action, payload_dict
+        )
+
+        try:
+            # 处理事件
+            ok, message = await async_process_github_event(body, event)
+
+            # 标记处理结果
+            idempotency.mark_event_processed(event_id, ok, message if not ok else None)
+
+            if not ok:
+                logger.warning("github_webhook_failed", extra={"event": event, "msg": message})
+                raise HTTPException(status_code=400, detail=message)
+
+            return {"message": message}
+
+        except Exception as e:
+            idempotency.mark_event_processed(event_id, False, str(e))
+            raise
 
 
 # 新增：Notion Webhook 处理
@@ -536,14 +625,22 @@ async def notion_webhook(request: Request):
         RATE_LIMIT_HITS_TOTAL.inc()
         raise HTTPException(status_code=429, detail="too_many_requests")
 
-    # Notion webhook 验证（基于官方规范：首次验证challenge）
+    # 获取安全验证所需的头部信息
+    signature = request.headers.get("Notion-Signature", "")
+    request_id = request.headers.get("Notion-Request-Id")
+    timestamp = request.headers.get("Notion-Timestamp")
+    secret = os.getenv("NOTION_WEBHOOK_SECRET", "")
+
     body = await request.body()
-    # 可选：X-Notion-Signature 验证（自定义集成时使用）
-    notion_secret = os.getenv("NOTION_WEBHOOK_SECRET", "")
-    notion_sig = request.headers.get("X-Notion-Signature", "")
-    if notion_secret:
-        if not verify_notion_signature(notion_secret, body, notion_sig):
-            raise HTTPException(status_code=403, detail="invalid_signature")
+
+    # Webhook安全验证（签名+重放保护）
+    if secret:  # 仅在配置了密钥时进行验证
+        is_valid, error_msg = validate_webhook_security(
+            body, signature, secret, "notion", request_id, timestamp
+        )
+        if not is_valid:
+            logger.warning("notion_webhook_security_failed", extra={"error": error_msg, "request_id": request_id})
+            raise HTTPException(status_code=403, detail=error_msg)
     try:
         NotionWebhookPayload.model_validate_json(body.decode("utf-8"))
     except ValidationError:

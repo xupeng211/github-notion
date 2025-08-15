@@ -121,7 +121,7 @@ GRAFANA_PASSWORD=admin123secure
 GRAFANA_SECRET_KEY=grafana-secret-$TIMESTAMP
 
 # Gitee 配置 (需要您设置)
-GITEE_WEBHOOK_SECRET=your-webhook-secret-here
+    GITEE_WEBHOOK_SECRET=${GITEE_WEBHOOK_SECRET:-$(openssl rand -hex 32)}
 
 # Notion 配置 (需要您设置)
 # NOTION_TOKEN=secret_your-notion-token
