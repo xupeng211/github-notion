@@ -468,8 +468,13 @@ API_CALL_DURATION = (
 )
 
 # 死信队列指标
-DEADLETTER_QUEUE_SIZE = (
-    Gauge("deadletter_queue_size", "死信队列当前大小", ["provider", "event_type"], registry=METRICS_REGISTRY)
+DEADLETTER_QUEUE_SIZE_BY_PROVIDER = (
+    Gauge(
+        "deadletter_queue_size_by_provider",
+        "死信队列当前大小按提供者分组",
+        ["provider", "event_type"],
+        registry=METRICS_REGISTRY,
+    )
     if METRICS_REGISTRY
     else None
 )
@@ -539,8 +544,8 @@ def record_deadletter_event(provider: str, event_type: str, error_type: str):
 
 def update_deadletter_queue_size(provider: str, event_type: str, size: int):
     """更新死信队列大小"""
-    if DEADLETTER_QUEUE_SIZE:
-        DEADLETTER_QUEUE_SIZE.labels(provider=provider, event_type=event_type).set(size)
+    if DEADLETTER_QUEUE_SIZE_BY_PROVIDER:
+        DEADLETTER_QUEUE_SIZE_BY_PROVIDER.labels(provider=provider, event_type=event_type).set(size)
 
 
 def record_idempotency_cache_hit(provider: str):
