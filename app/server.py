@@ -12,7 +12,7 @@ from typing import Callable
 from fastapi import FastAPI, HTTPException, Request, Response
 from prometheus_client import make_asgi_app
 from app.enhanced_metrics import (
-    METRICS_REGISTRY, initialize_metrics, 
+    METRICS_REGISTRY, initialize_metrics,
     record_webhook_request, record_idempotency_check, record_security_event
 )
 from pydantic import ValidationError
@@ -27,10 +27,8 @@ from app.idempotency import IdempotencyManager
 
 # 新增导入
 from app.schemas import GitHubWebhookPayload, NotionWebhookPayload
-from app.github import github_service
 from app.service import process_notion_event, async_process_github_event
 import json
-from app.service import verify_notion_signature
 
 
 # Simple in-memory rate limiter (token bucket-like) per process
@@ -455,7 +453,7 @@ app.mount("/metrics", make_asgi_app(registry=METRICS_REGISTRY))
 async def gitee_webhook(request: Request):
     # 记录请求开始时间用于性能指标
     start_time = time.time()
-    
+
     # optional simple rate limit
     if not rate_limiter.allow():
         RATE_LIMIT_HITS_TOTAL.inc()
@@ -593,7 +591,7 @@ async def github_webhook(request: Request):
         entity_id = str(payload_dict.get("issue", {}).get("number", "unknown"))
         action = payload_dict.get("action", "unknown")
 
-        sync_event = idempotency.record_event_processing(
+        idempotency.record_event_processing(
             event_id, content_hash, "github", event, entity_id, action, payload_dict
         )
 
