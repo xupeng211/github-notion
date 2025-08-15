@@ -16,6 +16,7 @@ from pydantic import ValidationError
 from pythonjsonlogger import jsonlogger
 from starlette.middleware.base import BaseHTTPMiddleware
 
+from app.config_validator import validate_config_on_startup
 from app.enhanced_metrics import (
     METRICS_REGISTRY,
     initialize_metrics,
@@ -66,18 +67,30 @@ rate_limiter = SimpleRateLimiter(max_per_minute=int(os.getenv("RATE_LIMIT_PER_MI
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
     # startup
-    # 注意：数据库初始化现在通过 alembic 管理，不再使用 init_db()
+
+    # 1. 强制验证环境变量配置
+    logger.info("开始启动配置验证...")
+    validate_config_on_startup()
+
+    # 2. 数据库初始化现在通过 alembic 管理，不再使用 init_db()
     # 部署时请运行: alembic upgrade head
+    logger.info("启动死信队列调度器...")
     scheduler = start_deadletter_scheduler()
+
+    logger.info("✅ 应用启动完成，所有系统就绪")
+
     try:
         yield
     finally:
         # shutdown
+        logger.info("开始关闭应用...")
         try:
             if scheduler:
+                logger.info("关闭死信队列调度器...")
                 scheduler.shutdown(wait=False)
-        except Exception:
-            pass
+        except Exception as e:
+            logger.error(f"关闭调度器时发生错误: {e}")
+        logger.info("应用已安全关闭")
 
 
 app = FastAPI(

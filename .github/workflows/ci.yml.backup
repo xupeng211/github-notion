@@ -1,0 +1,280 @@
+name: "CI/CD Pipeline"
+
+permissions:
+  contents: read
+  packages: write
+  security-events: write  # For security scanning
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+# 全局环境变量
+env:
+  PYTHON_VERSION: "3.11"
+  IMAGE_LOCAL: "github-notion:ci"
+
+jobs:
+  # 代码质量检查
+  code-quality:
+    name: "Code Quality Checks"
+    runs-on: ubuntu-latest
+    steps:
+      - name: "Checkout Code"
+        uses: actions/checkout@v4
+
+      - name: "Setup Python"
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: 'pip'
+
+      - name: "Install Dependencies"
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          # 安装额外的代码质量工具
+          pip install ruff safety pip-audit bandit
+
+      - name: "Code Formatting Check (Black)"
+        run: |
+          black --check --diff app/ tests/ scripts/
+
+      - name: "Import Sorting Check (isort)"
+        run: |
+          isort --check-only --diff app/ tests/ scripts/
+
+      - name: "Linting (Ruff - Modern Python Linter)"
+        run: |
+          ruff check app/ tests/ scripts/ --output-format=github
+
+      - name: "Traditional Linting (Flake8)"
+        run: |
+          flake8 app/ tests/ scripts/ --max-line-length=120 \
+            --ignore=E203,W503,E127,E128,C901 \
+            --exclude=__pycache__,*.pyc \
+            --format=github
+
+      - name: "Type Checking (MyPy)"
+        run: |
+          mypy app/ --ignore-missing-imports --no-strict-optional
+        continue-on-error: true  # MyPy可能需要额外配置
+
+  # 安全扫描
+  security-scan:
+    name: "Security Scanning"
+    runs-on: ubuntu-latest
+    steps:
+      - name: "Checkout Code"
+        uses: actions/checkout@v4
+
+      - name: "Setup Python"
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: 'pip'
+
+      - name: "Install Dependencies"
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install safety pip-audit bandit
+
+      - name: "Python Security Audit (pip-audit)"
+        run: |
+          pip-audit --desc --format=json --output=pip-audit-report.json
+        continue-on-error: true
+
+      - name: "Python Security Check (Safety)"
+        run: |
+          safety check --json --output=safety-report.json
+        continue-on-error: true
+
+      - name: "Source Code Security (Bandit)"
+        run: |
+          bandit -r app/ -f json -o bandit-report.json
+        continue-on-error: true
+
+      - name: "Secrets Scanning (Gitleaks)"
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  # 单元测试和冒烟测试
+  testing:
+    name: "Testing Suite"
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        # 多Python版本测试
+        python-version: ["3.11", "3.12"]
+    steps:
+      - name: "Checkout Code"
+        uses: actions/checkout@v4
+
+      - name: "Setup Python ${{ matrix.python-version }}"
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: 'pip'
+
+      - name: "Install Dependencies"
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pytest pytest-cov pytest-asyncio pytest-xdist
+
+      - name: "Create Test Database Directory"
+        run: |
+          mkdir -p data
+
+      - name: "Run Unit Tests with Coverage"
+        env:
+          PYTHONPATH: ${{ github.workspace }}
+          DISABLE_METRICS: "1"
+          DISABLE_NOTION: "1"
+          GITEE_WEBHOOK_SECRET: "ci-test-secret"
+          GITHUB_WEBHOOK_SECRET: "ci-test-secret"
+          DB_URL: "sqlite:///data/test.db"
+          LOG_LEVEL: "WARNING"
+        run: |
+          pytest tests/ -v \
+            --cov=app \
+            --cov-report=xml \
+            --cov-report=html \
+            --cov-report=term-missing \
+            --cov-fail-under=70 \
+            -n auto
+
+      - name: "Upload Coverage Reports"
+        uses: codecov/codecov-action@v4
+        if: matrix.python-version == '3.11'
+        with:
+          file: ./coverage.xml
+          fail_ci_if_error: false
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+
+  # Docker构建和验证
+  docker-build:
+    name: "Docker Build & Test"
+    runs-on: ubuntu-latest
+    needs: [code-quality, testing]
+    steps:
+      - name: "Checkout Code"
+        uses: actions/checkout@v4
+
+      - name: "Set up Docker Buildx"
+        uses: docker/setup-buildx-action@v3
+
+      - name: "Build Docker Image"
+        run: |
+          docker build \
+            --build-arg PYTHON_VERSION=${{ env.PYTHON_VERSION }} \
+            -f Dockerfile \
+            -t ${{ env.IMAGE_LOCAL }} .
+
+      - name: "Test Docker Image Security (Trivy)"
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          image-ref: ${{ env.IMAGE_LOCAL }}
+          format: sarif
+          output: trivy-results.sarif
+
+      - name: "Upload Trivy Results to GitHub Security"
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: trivy-results.sarif
+
+      - name: "Container Smoke Test"
+        run: |
+          # 启动容器
+          docker run -d --name ci-test-app \
+            -p 8000:8000 \
+            -e APP_PORT=8000 \
+            -e LOG_LEVEL=INFO \
+            -e GITEE_WEBHOOK_SECRET=ci-secret \
+            -e GITHUB_WEBHOOK_SECRET=ci-secret \
+            -e DISABLE_NOTION=1 \
+            -e DISABLE_METRICS="" \
+            -e DB_URL=sqlite:///data/sync.db \
+            ${{ env.IMAGE_LOCAL }}
+
+          # 等待服务启动
+          echo "等待应用启动..."
+          for i in {1..30}; do
+            if curl -f http://127.0.0.1:8000/health >/dev/null 2>&1; then
+              echo "应用启动成功"
+              break
+            fi
+            echo "等待中... ($i/30)"
+            sleep 2
+          done
+
+          # 基础功能测试
+          echo "=== 健康检查 ==="
+          curl -f http://127.0.0.1:8000/health || exit 1
+
+          echo "=== 指标端点测试 ==="
+          curl -f http://127.0.0.1:8000/metrics || exit 1
+
+          echo "=== 检查容器日志 ==="
+          docker logs --tail 20 ci-test-app
+
+          # 清理
+          docker rm -f ci-test-app
+
+  # 最小镜像构建验证
+  minimal-build:
+    name: "Minimal Docker Build"
+    runs-on: ubuntu-latest
+    steps:
+      - name: "Checkout Code"
+        uses: actions/checkout@v4
+
+      - name: "Build Minimal Image"
+        run: |
+          docker build -f Dockerfile.minimal -t github-notion:minimal .
+
+      - name: "Test Minimal Image"
+        run: |
+          docker run --rm github-notion:minimal python -c "import app.server; print('Minimal build successful')"
+
+  # 部署准备 (仅在main分支)
+  deploy-prep:
+    name: "Deployment Preparation"
+    runs-on: ubuntu-latest
+    needs: [code-quality, security-scan, testing, docker-build]
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    steps:
+      - name: "Checkout Code"
+        uses: actions/checkout@v4
+
+      - name: "Docker Registry Login"
+        if: env.REGISTRY != '' && env.REGISTRY_USERNAME != '' && env.REGISTRY_PASSWORD != ''
+        env:
+          REGISTRY: ${{ secrets.REGISTRY }}
+          REGISTRY_USERNAME: ${{ secrets.REGISTRY_USERNAME }}
+          REGISTRY_PASSWORD: ${{ secrets.REGISTRY_PASSWORD }}
+        run: |
+          echo "$REGISTRY_PASSWORD" | docker login "$REGISTRY" -u "$REGISTRY_USERNAME" --password-stdin
+
+      - name: "Build and Push Production Image"
+        if: env.REGISTRY != '' && env.IMAGE_NAME != ''
+        env:
+          REGISTRY: ${{ secrets.REGISTRY }}
+          IMAGE_NAME: ${{ secrets.IMAGE_NAME }}
+        run: |
+          docker build -f Dockerfile -t ${{ env.IMAGE_LOCAL }} .
+
+          IMAGE_FULL="$REGISTRY/$IMAGE_NAME"
+          docker tag ${{ env.IMAGE_LOCAL }} "${IMAGE_FULL}:${GITHUB_SHA}"
+          docker tag ${{ env.IMAGE_LOCAL }} "${IMAGE_FULL}:latest"
+
+          docker push "${IMAGE_FULL}:${GITHUB_SHA}"
+          docker push "${IMAGE_FULL}:latest"
+
+          echo "✅ Production image pushed: ${IMAGE_FULL}:${GITHUB_SHA}"

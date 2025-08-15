@@ -1,0 +1,176 @@
+name: "Security Scanning"
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+  schedule:
+    # 每天凌晨2点运行安全扫描
+    - cron: '0 2 * * *'
+
+permissions:
+  contents: read
+  security-events: write
+
+jobs:
+  secrets-scan:
+    name: "Secrets Detection"
+    runs-on: ubuntu-latest
+    steps:
+      - name: "Checkout Code"
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # 获取完整历史用于secrets扫描
+
+      - name: "Run Gitleaks Secrets Scan"
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITLEAKS_LICENSE: ${{ secrets.GITLEAKS_LICENSE }} # 可选，企业版许可证
+
+      - name: "Upload Gitleaks Results"
+        if: always()
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: results.sarif
+        continue-on-error: true
+
+  dependency-scan:
+    name: "Dependency Vulnerability Scan"
+    runs-on: ubuntu-latest
+    steps:
+      - name: "Checkout Code"
+        uses: actions/checkout@v4
+
+      - name: "Setup Python"
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: 'pip'
+
+      - name: "Install Dependencies"
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install safety pip-audit bandit
+
+      - name: "Python Security Audit (pip-audit)"
+        run: |
+          pip-audit --desc --format=json --output=pip-audit-report.json
+        continue-on-error: true
+
+      - name: "Upload pip-audit Results"
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pip-audit-report
+          path: pip-audit-report.json
+
+      - name: "Python Security Check (Safety)"
+        run: |
+          safety check --json --output=safety-report.json
+        continue-on-error: true
+
+      - name: "Upload Safety Results"
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: safety-report
+          path: safety-report.json
+
+      - name: "Source Code Security Analysis (Bandit)"
+        run: |
+          bandit -r app/ -f json -o bandit-report.json
+        continue-on-error: true
+
+      - name: "Upload Bandit Results"
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: bandit-report
+          path: bandit-report.json
+
+  container-scan:
+    name: "Container Security Scan"
+    runs-on: ubuntu-latest
+    steps:
+      - name: "Checkout Code"
+        uses: actions/checkout@v4
+
+      - name: "Build Docker Image"
+        run: |
+          docker build -f Dockerfile -t github-notion:security-scan .
+
+      - name: "Run Trivy Container Scan"
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          image-ref: github-notion:security-scan
+          format: sarif
+          output: trivy-container-results.sarif
+
+      - name: "Upload Trivy Container Results"
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: trivy-container-results.sarif
+
+      - name: "Run Trivy Filesystem Scan"
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          scan-type: fs
+          scan-ref: .
+          format: sarif
+          output: trivy-fs-results.sarif
+
+      - name: "Upload Trivy Filesystem Results"
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: trivy-fs-results.sarif
+
+  security-summary:
+    name: "Security Scan Summary"
+    runs-on: ubuntu-latest
+    needs: [secrets-scan, dependency-scan, container-scan]
+    if: always()
+    steps:
+      - name: "Download All Artifacts"
+        uses: actions/download-artifact@v4
+
+      - name: "Create Security Summary"
+        run: |
+          echo "# 🔒 安全扫描报告" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "## 扫描结果" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          echo "### Secrets扫描" >> $GITHUB_STEP_SUMMARY
+          if [ "${{ needs.secrets-scan.result }}" == "success" ]; then
+            echo "✅ 未发现敏感信息泄露" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "❌ 发现潜在敏感信息，请查看详细报告" >> $GITHUB_STEP_SUMMARY
+          fi
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          echo "### 依赖扫描" >> $GITHUB_STEP_SUMMARY
+          if [ "${{ needs.dependency-scan.result }}" == "success" ]; then
+            echo "✅ 依赖库安全检查通过" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "❌ 发现依赖库安全问题，请查看详细报告" >> $GITHUB_STEP_SUMMARY
+          fi
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          echo "### 容器扫描" >> $GITHUB_STEP_SUMMARY
+          if [ "${{ needs.container-scan.result }}" == "success" ]; then
+            echo "✅ 容器安全检查通过" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "❌ 发现容器安全问题，请查看详细报告" >> $GITHUB_STEP_SUMMARY
+          fi
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          echo "## 建议" >> $GITHUB_STEP_SUMMARY
+          echo "1. 定期更新依赖库到最新版本" >> $GITHUB_STEP_SUMMARY
+          echo "2. 使用强随机密码，避免硬编码敏感信息" >> $GITHUB_STEP_SUMMARY
+          echo "3. 定期检查容器基础镜像的安全更新" >> $GITHUB_STEP_SUMMARY
+          echo "4. 在生产环境部署前进行完整的安全审查" >> $GITHUB_STEP_SUMMARY

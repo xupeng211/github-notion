@@ -36,3 +36,4 @@ per-file-ignores =
     idempotency_monitoring_stress_test.py:W503
     quick_idempotency_test.py:W503
     metrics_analyzer.py:E203
+    app/config_validator.py:W503

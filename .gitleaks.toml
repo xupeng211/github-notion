@@ -1,0 +1,126 @@
+# Gitleaks配置文件 - 检测代码中的敏感信息
+# 文档: https://github.com/gitleaks/gitleaks
+
+title = "GitHub-Notion项目敏感信息检测规则"
+
+# 全局配置
+[extend]
+# 使用内置规则作为基础
+useDefault = true
+
+# 自定义规则
+[[rules]]
+id = "webhook-secret-placeholder"
+description = "检测Webhook密钥占位符"
+regex = '''(?i)(webhook_secret|gitee_webhook_secret|github_webhook_secret)\s*[=:]\s*["']?(your_webhook_secret|changeme|test-secret|CHANGE_ME_[A-Z_]+)["']?'''
+tags = ["webhook", "secret", "placeholder"]
+
+[[rules]]
+id = "admin-token-placeholder"
+description = "检测管理员令牌占位符"
+regex = '''(?i)(admin_token|replay_token|deadletter_replay_token)\s*[=:]\s*["']?(your_admin_token|changeme|CHANGE_ME_[A-Z_]+)["']?'''
+tags = ["admin", "token", "placeholder"]
+
+[[rules]]
+id = "api-token-placeholder"
+description = "检测API令牌占位符"
+regex = '''(?i)(github_token|notion_token)\s*[=:]\s*["']?(ghp_[X]+|secret_[X]+|your_[a-z_]+_token)["']?'''
+tags = ["api", "token", "placeholder"]
+
+[[rules]]
+id = "database-credentials-placeholder"
+description = "检测数据库凭证占位符"
+regex = '''(?i)(database_url|db_url)\s*[=:]\s*["']?[^"']*CHANGE_ME[^"']*["']?'''
+tags = ["database", "credentials", "placeholder"]
+
+[[rules]]
+id = "aws-account-placeholder"
+description = "检测AWS账号ID占位符"
+regex = '''YOUR_ACCOUNT_ID'''
+tags = ["aws", "account", "placeholder"]
+
+[[rules]]
+id = "real-github-token"
+description = "检测真实的GitHub Token"
+regex = '''ghp_[a-zA-Z0-9]{36}'''
+tags = ["github", "token", "sensitive"]
+
+[[rules]]
+id = "real-notion-token"
+description = "检测真实的Notion Token"
+regex = '''secret_[a-zA-Z0-9]{43}'''
+tags = ["notion", "token", "sensitive"]
+
+[[rules]]
+id = "generic-secret-pattern"
+description = "检测通用密钥模式"
+regex = '''(?i)(secret|password|key|token)\s*[=:]\s*["'][a-zA-Z0-9]{20,}["']'''
+tags = ["generic", "secret", "sensitive"]
+
+# 白名单 - 排除的文件和路径
+[allowlist]
+description = "允许的文件和路径"
+files = [
+    # 配置文件模板 (包含占位符是正常的)
+    '''env\..*\.example$''',
+    '''\.gitleaks\.toml$''',
+
+    # 测试文件 (可以包含测试用的固定值)
+    '''tests/.*\.py$''',
+    '''test.*\.py$''',
+
+    # 文档文件
+    '''.*\.md$''',
+    '''.*\.txt$''',
+
+    # CI/CD配置 (使用非敏感的测试值)
+    '''\.github/workflows/.*\.yml$''',
+
+    # 配置验证器本身 (需要知道不安全的默认值)
+    '''app/config_validator\.py$''',
+]
+
+# 排除特定路径
+paths = [
+    '''docs/''',
+    '''examples/''',
+    '''archive/''',
+    '''backup_.*''',
+]
+
+# 排除特定提交
+commits = []
+
+# 正则表达式白名单
+regexes = [
+    # 允许测试用的固定密钥
+    '''test-secret(-key)?''',
+    '''ci-test-secret''',
+
+    # 允许文档中的示例
+    '''your_[a-z_]+_here''',
+    '''CHANGE_ME_[A-Z_]+''',
+    '''XXXXXXXX+''',
+
+    # 允许GitHub Actions中的占位符
+    '''\$\{\{\s*secrets\.[A-Z_]+\s*\}\}''',
+]
+
+# 全局白名单规则
+[[rules]]
+id = "allowlisted-test-secrets"
+description = "允许测试环境使用的固定密钥"
+regex = '''(test-secret|ci-test-secret|test-secret-key)'''
+allowlist.regexes = ['''.*''']  # 在所有文件中都允许
+
+# 扫描配置
+[extend]
+# 启用详细输出
+verbose = true
+
+# 扫描深度（历史提交数）
+# 设置为0表示只扫描当前状态，不扫描历史
+depth = 0
+
+# 并发级别
+concurrency = 4

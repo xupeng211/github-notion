@@ -51,7 +51,7 @@ curl -sS -X POST -H "Authorization: Bearer $DEADLETTER_REPLAY_TOKEN" https://$DO
 ## 死信重放与管理接口
 
 - 环境变量：
-  - DEADLETTER_REPLAY_TOKEN（默认 changeme-secure-token，本地可直接使用）
+  - DEADLETTER_REPLAY_TOKEN（必须配置为安全的随机字符串，生产环境至少32字符）
   - DEADLETTER_REPLAY_INTERVAL_MINUTES（默认 10 分钟）
 - 管理接口（需鉴权）：
 
