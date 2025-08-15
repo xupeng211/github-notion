@@ -475,7 +475,7 @@ class SyncSystemTester:
             json.dump(report, f, indent=2, ensure_ascii=False)
 
         logger.info(f"测试报告已生成: {report_file}")
-        print(f"\n📋 详细测试报告已生成: test_report.json")
+        print("\n📋 详细测试报告已生成: test_report.json")
 
 
 async def main():

@@ -145,7 +145,7 @@ class GitHubService:
             "updated_at": data.get("updated_at", "")
         }
         content = json.dumps(key_fields, sort_keys=True)
-        return hashlib.md5(content.encode()).hexdigest()
+        return hashlib.sha256(content.encode()).hexdigest()
 
     def extract_repo_info(self, github_url: str) -> Optional[Tuple[str, str]]:
         """从GitHub URL中提取owner和repo信息"""

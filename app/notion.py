@@ -351,9 +351,9 @@ class NotionService:
                 "page_id": data.get("id", "")
             }
             content = json.dumps(key_fields, sort_keys=True)
-            return hashlib.md5(content.encode()).hexdigest()
+            return hashlib.sha256(content.encode()).hexdigest()
         except Exception:
-            return hashlib.md5(str(data).encode()).hexdigest()
+            return hashlib.sha256(str(data).encode()).hexdigest()
 
     async def add_comment_to_page(self, page_id: str, comment: str) -> Tuple[bool, str]:
         """向页面添加评论（通过块API）

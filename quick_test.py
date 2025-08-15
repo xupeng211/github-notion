@@ -9,10 +9,12 @@ import sys
 import traceback
 from pathlib import Path
 
+
 def print_status(message, status="info"):
     """打印带状态的消息"""
     icons = {"info": "ℹ️", "success": "✅", "warning": "⚠️", "error": "❌"}
     print(f"{icons.get(status, 'ℹ️')} {message}")
+
 
 def quick_test():
     """执行快速测试"""
@@ -119,6 +121,7 @@ def quick_test():
         print("  2. 解决导入错误")
         print("  3. 运行完整测试获取详细信息")
         return False
+
 
 if __name__ == "__main__":
     try:

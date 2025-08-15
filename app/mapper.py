@@ -87,7 +87,7 @@ class FieldMapper:
         Returns:
             GitHub Issue 更新数据字典
         """
-        github_data = {}
+        github_data: Dict[str, Any] = {}
         mappings = self.config.get('notion_to_github', {})
         status_mapping = self.config.get('status_mapping', {}).get('notion_to_github', {})
 

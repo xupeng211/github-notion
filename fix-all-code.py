@@ -15,19 +15,19 @@ def fix_file(file_path: Path) -> bool:
     try:
         with open(file_path, 'r', encoding='utf-8') as f:
             original_content = f.read()
-        
+
         content = original_content
-        
+
         # 1. 修复缩进问题 - 替换 tab 为 4 个空格
         content = content.replace('\t', '    ')
-        
+
         # 2. 移除行尾空格
         content = re.sub(r'[ \t]+$', '', content, flags=re.MULTILINE)
-        
+
         # 3. 确保文件以换行符结尾
         if not content.endswith('\n'):
             content += '\n'
-        
+
         # 4. 修复缩进对齐问题 (E128)
         lines = content.split('\n')
         fixed_lines = []
@@ -41,9 +41,9 @@ def fix_file(file_path: Path) -> bool:
                     new_indent = ((indent_level // 4) + 1) * 4
                     line = ' ' * new_indent + line.lstrip()
             fixed_lines.append(line)
-        
+
         content = '\n'.join(fixed_lines)
-        
+
         # 5. 处理过长的行 - 简单截断或在逗号处换行
         lines = content.split('\n')
         fixed_lines = []
@@ -55,14 +55,14 @@ def fix_file(file_path: Path) -> bool:
                     last_comma = line.rfind(',', 0, 120)
                     if last_comma > 80:
                         indent = ' ' * 12  # 简单的缩进
-                        line = line[:last_comma+1] + '\n' + indent + line[last_comma+1:].lstrip()
+                        line = line[:last_comma + 1] + '\n' + indent + line[last_comma + 1:].lstrip()
                 # 如果是字符串太长，简单截断
                 elif len(line) > 120 and '"' in line:
                     line = line[:117] + '...'
             fixed_lines.append(line)
-        
+
         content = '\n'.join(fixed_lines)
-        
+
         # 6. 移除明显未使用的导入
         unused_imports = [
             'from typing import Optional',
@@ -75,10 +75,10 @@ def fix_file(file_path: Path) -> bool:
             'from app.models import get_mapping_by_source',
             'from app.service import get_mapping_by_source',
         ]
-        
+
         lines = content.split('\n')
         filtered_lines = []
-        
+
         for line in lines:
             # 检查是否是未使用的导入
             should_skip = False
@@ -89,23 +89,23 @@ def fix_file(file_path: Path) -> bool:
                     if import_name not in content.replace(line, ''):
                         should_skip = True
                         break
-            
+
             if not should_skip:
                 filtered_lines.append(line)
-        
+
         content = '\n'.join(filtered_lines)
-        
+
         # 7. 修复未使用变量问题
         if 'payload' in content and 'payload =' in content and content.count('payload') == 1:
             content = re.sub(r'(\s+)payload = (.+)\n', r'\1# payload = \2  # noqa: F841\n', content)
-        
+
         # 只有当内容真正改变时才写入文件
         if content != original_content:
             with open(file_path, 'w', encoding='utf-8') as f:
                 f.write(content)
             return True
         return False
-        
+
     except Exception as e:
         print(f"  ❌ 修复 {file_path} 失败: {e}")
         return False
@@ -114,7 +114,7 @@ def fix_file(file_path: Path) -> bool:
 def main():
     """主函数"""
     print("🔧 开始批量修复代码质量问题...")
-    
+
     # 要修复的文件
     files_to_fix = [
         'app/comment_sync.py',
@@ -129,9 +129,9 @@ def main():
         'test_sync_system.py',
         'upgrade_sync_system.py',
     ]
-    
+
     fixed_count = 0
-    
+
     for file_name in files_to_fix:
         file_path = Path(file_name)
         if file_path.exists():
@@ -143,10 +143,10 @@ def main():
                 print(f"  ℹ️ {file_name} 无需修复")
         else:
             print(f"  ⚠️ {file_name} 不存在，跳过")
-    
+
     print(f"\n✅ 批量修复完成！共修复了 {fixed_count} 个文件")
     print("\n建议运行 'make lint' 检查修复效果")
 
 
 if __name__ == "__main__":
-    main() 
+    main()
