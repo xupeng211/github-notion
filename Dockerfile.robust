@@ -1,0 +1,133 @@
+# 🚀 ROBUST DOCKERFILE FOR GITHUB ACTIONS
+# 针对GitHub Actions环境优化的超稳定Docker镜像构建
+# 确保在资源受限的CI环境中能够稳定构建成功
+
+# =====================================
+# Stage 1: 构建阶段 - 使用稳定的基础镜像
+# =====================================
+FROM python:3.11-slim-bullseye as builder
+
+# 设置构建参数
+ARG VERSION=unknown
+ARG BUILD_TIME=unknown
+
+# 设置环境变量，优化构建过程
+ENV DEBIAN_FRONTEND=noninteractive \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PIP_NO_CACHE_DIR=1 \
+    PIP_PREFER_BINARY=1 \
+    PIP_DISABLE_PIP_VERSION_CHECK=1 \
+    PIP_DEFAULT_TIMEOUT=100
+
+# 设置工作目录
+WORKDIR /build
+
+# 安装系统依赖 - 只安装构建必需的最小依赖
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+    build-essential \
+    curl \
+    ca-certificates \
+    git \
+    && rm -rf /var/lib/apt/lists/* \
+    && apt-get clean \
+    && apt-get autoremove -y
+
+# 升级pip并安装构建工具
+RUN python -m pip install --no-cache-dir --upgrade \
+    pip==23.3.1 \
+    setuptools==69.0.0 \
+    wheel==0.42.0
+
+# 复制requirements文件并安装Python依赖
+COPY requirements.txt .
+RUN pip install --no-cache-dir --user -r requirements.txt
+
+# =====================================
+# Stage 2: 运行阶段 - 超精简的运行环境
+# =====================================
+FROM python:3.11-slim-bullseye as runtime
+
+# 设置构建信息
+ARG VERSION=unknown
+ARG BUILD_TIME=unknown
+
+# 添加构建信息标签
+LABEL maintainer="xupeng211" \
+    version="${VERSION}" \
+    build-time="${BUILD_TIME}" \
+    description="GitHub-Notion Sync Service - Robust Build" \
+    org.opencontainers.image.source="https://github.com/xupeng211/github-notion" \
+    org.opencontainers.image.title="GitHub-Notion Sync" \
+    org.opencontainers.image.version="${VERSION}"
+
+# 设置运行时环境变量
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PYTHONPATH=/app \
+    PATH="/home/appuser/.local/bin:$PATH" \
+    DEBIAN_FRONTEND=noninteractive
+
+# 安装运行时必需的系统工具
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+    curl \
+    ca-certificates \
+    dumb-init \
+    procps \
+    && rm -rf /var/lib/apt/lists/* \
+    && apt-get clean \
+    && apt-get autoremove -y
+
+# 创建非root用户和目录
+RUN groupadd --gid 1000 appuser && \
+    useradd --uid 1000 --gid 1000 --create-home --shell /bin/bash appuser && \
+    mkdir -p /app/data /app/logs && \
+    chown -R appuser:appuser /app
+
+# 切换到应用目录
+WORKDIR /app
+
+# 复制Python依赖（从构建阶段）
+COPY --from=builder --chown=appuser:appuser /root/.local /home/appuser/.local
+
+# 复制应用代码
+COPY --chown=appuser:appuser . .
+
+# 确保关键目录存在并设置正确权限
+RUN mkdir -p /app/data /app/logs /app/alembic/versions && \
+    chown -R appuser:appuser /app && \
+    chmod +x /app/alembic/env.py 2>/dev/null || true
+
+# 切换到非root用户
+USER appuser
+
+# 验证Python环境
+RUN python --version && \
+    pip --version && \
+    python -c "import fastapi; print('FastAPI installed successfully')" && \
+    python -c "import uvicorn; print('Uvicorn installed successfully')"
+
+# 健康检查配置
+HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
+    CMD curl -f http://localhost:${APP_PORT:-8000}/health || exit 1
+
+# 暴露端口
+EXPOSE 8000
+
+# 设置构建信息环境变量
+ENV BUILD_VERSION="${VERSION}" \
+    BUILD_TIME="${BUILD_TIME}"
+
+# 使用dumb-init作为init进程，防止僵尸进程
+ENTRYPOINT ["dumb-init", "--"]
+
+# 启动命令 - 使用高性能配置
+CMD ["python", "-m", "uvicorn", "app.server:app", \
+    "--host", "0.0.0.0", \
+    "--port", "8000", \
+    "--workers", "1", \
+    "--loop", "asyncio", \
+    "--access-log", \
+    "--log-level", "info"]
