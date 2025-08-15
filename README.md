@@ -247,8 +247,11 @@ server {
 
 ## 生产 CI/CD 与部署
 
-- 选择平台并配置 Secrets（见 docs/DEPLOY.md）
-- 推送到 main 后：CI 构建镜像 → 推送 → SSH 到 EC2 执行部署脚本，完成滚动更新
+- 主线工作流：
+  - CI: .github/workflows/ci.yml（质量检查 + 单测 + 构建 + 容器冒烟）
+  - CD: .github/workflows/cd.yml（main 分支自动 构建+推送 到 GHCR → SSH 部署 → 健康检查 → 失败自动回滚到 :stable）
+- 配置 GitHub Secrets（见 docs/CD_README.md）
+- 推送到 main 后即自动发布并自检；如失败将回滚，保障稳定性
 
 ### 配置 Gitee Webhook（兼容）
 - 仓库 → 管理 → Webhook → 新增

@@ -34,4 +34,4 @@ COPY . .
 EXPOSE 8787
 
 # 使用gunicorn启动应用
-CMD ["gunicorn", "--bind", "0.0.0.0:8787", "gitee-notion-sync.app:app"] 
+CMD ["gunicorn", "--bind", "0.0.0.0:8787", "gitee-notion-sync.app:app"]

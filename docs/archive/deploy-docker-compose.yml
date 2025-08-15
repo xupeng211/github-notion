@@ -2,7 +2,7 @@ version: '3.8'
 
 services:
   github-notion-sync:
-    build: 
+    build:
       context: ..
       dockerfile: Dockerfile
     container_name: github-notion-sync
@@ -51,7 +51,7 @@ networks:
 # docker-compose -f deploy/docker-compose.yml up -d
 # docker-compose -f deploy/docker-compose.yml ps
 # docker-compose -f deploy/docker-compose.yml logs -f github-notion-sync
-# 
+#
 # 验证命令：
 # docker-compose -f deploy/docker-compose.yml exec github-notion-sync curl http://localhost:8000/health
-# curl -i http://localhost/health 
+# curl -i http://localhost/health

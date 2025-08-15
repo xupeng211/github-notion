@@ -3,10 +3,6 @@ name: 🚀 Robust CI/CD Pipeline
 # 优化的CI/CD流水线，确保在GitHub Actions环境中稳定构建Docker镜像
 
 on:
-  push:
-    branches: [ main, develop ]
-  pull_request:
-    branches: [ main ]
   workflow_dispatch:
     inputs:
       force_deploy:
@@ -203,12 +199,14 @@ jobs:
 
         echo "Testing image: $IMAGE_TAG"
 
-        # 运行容器进行冒烟测试
+        # 运行容器进行冒烟测试（确保必需的安全变量已设置）
         docker run -d --name test-container \
           -p 8000:8000 \
           -e ENVIRONMENT=testing \
           -e LOG_LEVEL=INFO \
           -e GITEE_WEBHOOK_SECRET=test-secret-for-ci-testing \
+          -e GITHUB_WEBHOOK_SECRET=test-secret-for-ci-testing \
+          -e DEADLETTER_REPLAY_TOKEN=test-deadletter-token-for-ci \
           -e DB_URL=sqlite:///data/sync.db \
           -e DISABLE_NOTION=1 \
           -e DISABLE_METRICS=0 \

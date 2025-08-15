@@ -15,4 +15,3 @@ services:
     volumes:
       - /opt/gitee-notion-sync/data:/app/data
     restart: unless-stopped
-

@@ -4,8 +4,6 @@ name: Simple Docker Build
 # 超级简化的Docker构建，专注于成功构建镜像
 
 on:
-  push:
-    branches: [ main ]
   workflow_dispatch:
 
 env:
@@ -50,15 +48,17 @@ jobs:
       run: |
         # 简单测试构建的镜像
         echo "Testing built image..."
-        docker run --rm \
+        # 以 30s 超时运行容器内的快速校验脚本
+        timeout 30s docker run --rm \
           -e GITEE_WEBHOOK_SECRET=test \
+          -e GITHUB_WEBHOOK_SECRET=test \
+          -e DEADLETTER_REPLAY_TOKEN=test-deadletter \
           -e DB_URL=sqlite:///data/test.db \
           -e LOG_LEVEL=INFO \
           -e ENVIRONMENT=testing \
           -e DISABLE_NOTION=1 \
-          --timeout 30 \
           ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest \
-          python -c "import sys; sys.path.append('/app'); from app import server; print('✅ App import and validation successful')"
+          python -c "import sys; sys.path.append('/app'); import os; os.environ.setdefault('DISABLE_METRICS','1'); import app.server; print('✅ App import and validation successful')"
         echo "✅ Image test completed successfully!"
 
     - name: Summary
