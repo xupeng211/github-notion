@@ -1,0 +1,44 @@
+name: Policy
+on:
+  pull_request:
+  push:
+    branches: [ main ]
+
+jobs:
+  policy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check forbidden files (.env & keys)
+        run: |
+          set -euo pipefail
+          if git ls-files | grep -E '(^|/)(\.env(\..*)?)$' ; then
+            echo "Forbidden .env file detected" >&2; exit 1; fi
+          if git ls-files | grep -E '\.(pem|key)$|(^|/)id_rsa$|(^|/)id_dsa$' ; then
+            echo "Forbidden key material detected" >&2; exit 1; fi
+
+      - name: Validate .project_rules.yml
+        run: |
+          set -euo pipefail
+          test -f .project_rules.yml || { echo 'missing .project_rules.yml' >&2; exit 1; }
+          grep -q 'runlog_required: true' .project_rules.yml || { echo 'runlog_required not true' >&2; exit 1; }
+          grep -q 'fail_under: 70' .project_rules.yml || { echo 'coverage fail_under not 70' >&2; exit 1; }
+
+      - name: Detect secrets (detect-secrets)
+        run: |
+          pip install detect-secrets
+          detect-secrets scan --all-files > artifacts.detect-secrets.json || true
+          # Fail if high-confidence secrets found
+          if grep -q 'High' artifacts.detect-secrets.json; then echo 'High confidence secrets found' >&2; exit 1; fi
+
+      - name: Build dev image for trivy scan
+        run: |
+          docker build -f infra/docker/Dockerfile.dev -t local/dev-api:scan .
+
+      - name: Trivy image scan (non-blocking)
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          image-ref: local/dev-api:scan
+          format: table
+          exit-code: 0

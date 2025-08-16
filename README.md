@@ -1,5 +1,7 @@
 # GitHub-Notion 双向同步系统
 
+[文档入口](./docs/README.md) · ![CI](https://github.com/${GITHUB_REPOSITORY}/actions/workflows/ci.yml/badge.svg) · ![CD](https://github.com/${GITHUB_REPOSITORY}/actions/workflows/cd.yml/badge.svg)
+
 ## 🚨 强制性代码质量规则
 
 > **所有协作者（包括AI）在提交代码前都必须严格遵守 [CODE_QUALITY_RULES.md](./CODE_QUALITY_RULES.md) 中的规定！**

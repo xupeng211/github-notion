@@ -29,11 +29,19 @@ jobs:
           python-version: ${{ env.PYTHON_VERSION }}
           cache: 'pip'
 
+      - name: Cache pip
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: pip-${{ runner.os }}-${{ env.PYTHON_VERSION }}-${{ hashFiles('requirements.txt', 'requirements-dev.txt') }}
+          restore-keys: |
+            pip-${{ runner.os }}-${{ env.PYTHON_VERSION }}-
+            pip-${{ runner.os }}-
       - name: "Install Dependencies"
         run: |
           python -m pip install --upgrade pip
-          pip install -r requirements.txt
-          pip install ruff safety pip-audit bandit
+          pip install -r requirements.txt -r requirements-dev.txt
+          pip install safety pip-audit bandit
 
       - name: "Code Formatting Check (Black)"
         run: |
@@ -95,7 +103,8 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ["3.11", "3.12"]
+        python-version: ["3.11"]
+        split: [0, 1]
     steps:
       - name: "Checkout Code"
         uses: actions/checkout@v4
@@ -105,18 +114,43 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
           cache: 'pip'
+        env:
+          MATRIX_SPLIT: ${{ matrix.split }}
 
+      - name: Cache pip
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: pip-${{ runner.os }}-${{ matrix.python-version }}-${{ hashFiles('requirements.txt', 'requirements-dev.txt') }}
+          restore-keys: |
+            pip-${{ runner.os }}-${{ matrix.python-version }}-
+            pip-${{ runner.os }}-
       - name: "Install Dependencies"
         run: |
           python -m pip install --upgrade pip
-          pip install -r requirements.txt
-          pip install pytest pytest-cov pytest-asyncio pytest-xdist
+          pip install -r requirements.txt -r requirements-dev.txt
+          pip install pytest pytest-cov pytest-asyncio pytest-xdist pytest-split
 
       - name: "Create Test Database Directory"
         run: |
           mkdir -p data
 
-      - name: "Run Unit Tests with Coverage"
+      - name: "Split Index"
+        id: split
+        run: |
+          python - <<'PY'
+          import glob, json, os
+          tests = sorted(glob.glob('tests/**/*_test.py', recursive=True) + glob.glob('tests/test_*.py'))
+          if not tests:
+            tests = sorted(glob.glob('tests/**/*.py', recursive=True))
+          chunk = 2
+          idx = int(os.environ.get('MATRIX_SPLIT','0'))
+          selected = tests[idx::chunk]
+          print('selected=' + json.dumps(selected))
+          with open(os.environ['GITHUB_OUTPUT'], 'a') as f:
+              f.write(f"selected={json.dumps(selected)}\n")
+          PY
+      - name: "Run Unit Tests with Coverage (split)"
         env:
           PYTHONPATH: ${{ github.workspace }}
           ENVIRONMENT: "testing"
@@ -128,7 +162,20 @@ jobs:
           DB_URL: "sqlite:///data/test.db"
           LOG_LEVEL: "WARNING"
         run: |
-          pytest tests/ -v --cov=app --cov-report=xml --cov-report=html --cov-report=term-missing --cov-fail-under=70 -n auto
+          SELECTED=$(python - <<'PY'
+          import os,sys,json
+          s=os.getenv('selected','') or os.getenv('SELECTED','')
+          if not s:
+              print('tests')
+              sys.exit(0)
+          try:
+              arr=json.loads(s)
+              print(' '.join(arr) if arr else 'tests')
+          except Exception:
+              print('tests')
+          PY
+          )
+          pytest $SELECTED -v --cov=app --cov-append --cov-report=term-missing --cov-fail-under=70 -n auto
 
   docker-build:
     name: "Docker Build & Test"

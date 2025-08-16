@@ -1,0 +1,48 @@
+version: "3.9"
+
+services:
+  api:
+    build:
+      context: .
+      dockerfile: infra/docker/Dockerfile.dev
+    image: local/dev-api:latest
+    env_file:
+      - .env
+    environment:
+      ENVIRONMENT: development
+      LOG_LEVEL: INFO
+      APP_PORT: 8000
+      DB_URL: postgresql+psycopg2://postgres:postgres@db:5432/app
+      GITEE_WEBHOOK_SECRET: ${GITEE_WEBHOOK_SECRET:-dev-secret}
+      GITHUB_WEBHOOK_SECRET: ${GITHUB_WEBHOOK_SECRET:-dev-secret}
+      DEADLETTER_REPLAY_TOKEN: ${DEADLETTER_REPLAY_TOKEN:-dev-secret}
+    command: uvicorn app.server:app --host 0.0.0.0 --port 8000 --reload
+    volumes:
+      - ./:/app
+    ports:
+      - "8000:8000"
+    depends_on:
+      - db
+      - prefect
+
+  db:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: app
+    ports:
+      - "5432:5432"
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+
+  prefect:
+    image: prefecthq/prefect:2-latest
+    environment:
+      PREFECT_API_DATABASE_CONNECTION_URL: sqlite+aiosqlite:///root/.prefect/prefect.db
+    command: ["prefect", "orion", "start", "--host", "0.0.0.0"]
+    ports:
+      - "4200:4200"
+
+volumes:
+  pg_data:

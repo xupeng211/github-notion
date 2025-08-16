@@ -1,0 +1,20 @@
+required_commands:
+  - make prepush
+  - make ci
+forbidden_files:
+  - .env
+  - .env.*
+  - "**/*.pem"
+  - "**/*.key"
+  - "**/id_rsa"
+  - "**/id_dsa"
+branch_policy:
+  protected:
+    - main
+  require_reviews: 1
+  ci_required: true
+  runlog_required: true
+quality:
+  max_line_length: 100
+coverage:
+  fail_under: 70
