@@ -221,6 +221,11 @@ jobs:
     steps:
       - name: "Checkout Code"
         uses: actions/checkout@v4
+      - name: "Docker compose config validation"
+        run: |
+          docker compose -f infra/docker-compose.dev.yml config -q
+      - name: "Checkout Code"
+        uses: actions/checkout@v4
 
       - name: "Start dev compose (api, db, redis, minio, prefect)"
         run: |

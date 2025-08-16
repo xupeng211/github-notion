@@ -57,13 +57,8 @@ services:
       retries: 20
     ports:
       - "6379:6379"
-
-    depends_on:
-      - minio
-    entrypoint: [ "/bin/sh", "-c" ]
-    command: [ "bash scripts/init_minio.sh && tail -f /dev/null" ]
     volumes:
-      - ./:/app
+      - redis_data:/data
 
   minio:
     image: minio/minio:latest
@@ -96,6 +91,22 @@ services:
     ports:
       - "4200:4200"
 
+  minio-init:
+    image: python:3.11-slim
+    depends_on:
+      - minio
+    working_dir: /app
+    entrypoint: [ "/bin/bash", "-lc" ]
+    environment:
+      MINIO_ENDPOINT: http://minio:9000
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin}
+      MINIO_BUCKET: ${MINIO_BUCKET:-dev-bucket}
+    command: [ "bash", "scripts/init_minio.sh" ]
+    volumes:
+      - ./:/app
+
 volumes:
   pg_data:
   minio_data:
+  redis_data:
