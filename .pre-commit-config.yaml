@@ -73,7 +73,7 @@ repos:
       - id: bandit
         description: "Python代码安全扫描"
         args: ['-r', 'app/', '-ll']
-        exclude: ^tests/
+        exclude: ^(tests/|.*_test\.py$)
 
 # 全局配置
 default_language_version:
