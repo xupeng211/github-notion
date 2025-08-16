@@ -26,3 +26,9 @@ IMAGE_TAG=ghcr.io/<org>/<repo>:sha-<commit> docker compose -f docker-compose.pro
 ```
 
 更多细节见 docs/CD_README.md。
+
+
+## 常见问题与回滚
+
+- 见本目录：FAQ.md
+- 更多 CI/CD 说明参见：../docs/CD_README.md

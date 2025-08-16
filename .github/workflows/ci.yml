@@ -212,3 +212,35 @@ jobs:
           curl -f http://127.0.0.1:8000/metrics || exit 1
           docker logs --tail 20 ci-test-app
           docker rm -f ci-test-app
+
+
+  dev-compose-smoke:
+    name: "Dev Compose Smoke"
+    runs-on: ubuntu-latest
+    needs: [code-quality, testing]
+    steps:
+      - name: "Checkout Code"
+        uses: actions/checkout@v4
+
+      - name: "Start dev compose (api, db, redis, minio, prefect)"
+        run: |
+          set -euo pipefail
+          docker compose -f infra/docker-compose.dev.yml up -d --build db redis minio prefect api
+
+      - name: "Wait for API health"
+        run: |
+          set -euo pipefail
+          for i in $(seq 1 60); do
+            if curl -fsS http://127.0.0.1:8000/health >/dev/null; then
+              echo "✅ API healthy"; exit 0; fi
+            sleep 2
+          done
+          echo "❌ API health timeout" >&2
+          docker compose -f infra/docker-compose.dev.yml ps
+          docker compose -f infra/docker-compose.dev.yml logs --no-color api | tail -n 200 || true
+          exit 1
+
+      - name: "Shutdown dev compose"
+        if: always()
+        run: |
+          docker compose -f infra/docker-compose.dev.yml down -v || true
