@@ -186,11 +186,21 @@ class TestEndToEndWorkflow:
                 "updated_at": "2024-01-15T10:00:00Z",
                 "user": {"login": "github-user", "name": "GitHub User"},
                 "labels": [],
+                "html_url": "https://github.com/github-user/test-repo/issues/2",
             },
             "repository": {
+                "id": 12345,
                 "name": "test-repo",
                 "full_name": "github-user/test-repo",
                 "html_url": "https://github.com/github-user/test-repo",
+                "owner": {
+                    "login": "github-user",
+                    "name": "GitHub User",
+                },
+            },
+            "sender": {
+                "login": "github-user",
+                "name": "GitHub User",
             },
         }
         payload_str = json.dumps(payload)
@@ -207,6 +217,9 @@ class TestEndToEndWorkflow:
         response = client.post("/github_webhook", data=payload_str, headers=headers)
 
         # 3. 验证响应
+        if response.status_code != 200:
+            print(f"Response status: {response.status_code}")
+            print(f"Response content: {response.text}")
         assert response.status_code == 200
         response_data = response.json()
         assert "message" in response_data
@@ -408,7 +421,7 @@ class TestIdempotencyManager:
             content_hash=content_hash,
             provider="gitee",
             event_type="issue",
-            extracted_entity_id="123",
+            entity_id="123",
             action="create",
             payload={"test": "data"},
         )

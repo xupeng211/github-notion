@@ -649,7 +649,7 @@ async def github_webhook(request: Request):
             idempotency.mark_event_processed(event_id, ok, message if not ok else None)
 
             if not ok:
-                logger.warning("github_webhook_failed", extra={"event": event, "msg": message})
+                logger.warning("github_webhook_failed", extra={"event": event, "error_message": message})
                 raise HTTPException(status_code=400, detail=message)
 
             return {"message": message}
