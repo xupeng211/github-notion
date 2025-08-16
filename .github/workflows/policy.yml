@@ -31,12 +31,15 @@ jobs:
           pip install detect-secrets
           # Create baseline to exclude known false positives
           detect-secrets scan --all-files \
+            --exclude-files '\.git/.*' \
             --exclude-files '.mypy_cache/.*' \
             --exclude-files '.venv/.*' \
             --exclude-files '.*\.meta\.json$' \
             --exclude-files 'alembic/versions/.*\.py$' \
             --exclude-files 'tests/.*\.py$' \
             --exclude-files '\.env$' \
+            --exclude-files 'htmlcov/.*' \
+            --exclude-files '\.coverage$' \
             > artifacts.detect-secrets.json || true
           # Only fail if high-confidence secrets found in actual source code
           if grep -q 'High' artifacts.detect-secrets.json; then

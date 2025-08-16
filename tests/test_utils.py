@@ -99,7 +99,7 @@ class TestUtils:
             "action": "opened",
             "issue": {
                 "id": 123,
-                "title": "Incomplete Issue"
+                "title": "Incomplete Issue",
                 # 缺少其他字段
             },
         }
