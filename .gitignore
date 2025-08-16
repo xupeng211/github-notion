@@ -1,8 +1,11 @@
 # Project specific ignores
 .env
-*.env
+.env.*
 __pycache__/
 *.pyc
+*.pyo
+*.pyd
+.ruff_cache/
 logs/
 .data/
 /data/
@@ -10,6 +13,14 @@ data/
 backups/
 node_modules/
 /.pytest_cache/
+
+# Databases & reports
+*.db
+artifacts/
+coverage.xml
+.sarif
+*.sarif
+reports/
 
 # Virtual environments
 .venv/
