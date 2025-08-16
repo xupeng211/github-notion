@@ -13,10 +13,16 @@ ENV PYTHONUNBUFFERED=1
 ENV PIP_NO_CACHE_DIR=1
 ENV PIP_PREFER_BINARY=1
 
-# 只安装必要的系统包（python:3.11已包含基础编译工具）
+# 安装构建依赖，确保如 cryptography/httptools/uvloop 等可编译
 RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
     ca-certificates \
+    build-essential \
+    gcc g++ make \
+    libffi-dev \
+    libssl-dev \
+    rustc cargo \
+    git \
     && rm -rf /var/lib/apt/lists/* \
     && apt-get clean
 

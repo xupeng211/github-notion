@@ -42,6 +42,7 @@ ENV/
 *.log
 
 # Docker
-Dockerfile
+# Keep Dockerfile in build context
+# Dockerfile
 docker-compose.yml
-.docker/ 
+.docker/
