@@ -50,7 +50,7 @@ def check_db_url() -> bool:
         return False
     if not DB_URL_REGEX.match(val):
         fail(f"DB_URL format invalid: {val}")
-        print("Hint: e.g. sqlite:///data/sync.db or postgresql://user:pass@host:5432/dbname")
+        print("Hint: e.g. sqlite:///data/sync.db or postgresql://username:password@hostname:5432/database")
         return False
     return True
 

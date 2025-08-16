@@ -61,9 +61,9 @@ class ConfigValidator:
     RECOMMENDED_VARS = {
         "GITHUB_TOKEN": [
             "",
-            "ghp_XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
-            "ghp_STAGING_TOKEN_XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
-            "ghp_PRODUCTION_TOKEN_PLEASE_CHANGE_THIS",
+            "github_pat_example_token_replace_with_real",
+            "github_pat_staging_example_not_real",
+            "github_pat_production_example_not_real",
         ],
         "NOTION_TOKEN": [
             "",

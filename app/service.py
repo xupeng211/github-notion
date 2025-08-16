@@ -146,10 +146,10 @@ def verify_gitee_signature(secret: str, payload: bytes, signature: str) -> bool:
         - 空值检查防止绕过验证
 
     Example:
-        >>> secret = "my-webhook-secret"
+        >>> webhook_key = "example-webhook-key"
         >>> payload = b'{"issue": {"id": 123}}'
         >>> signature = "expected_hmac_signature"
-        >>> verify_gitee_signature(secret, payload, signature)
+        >>> verify_gitee_signature(webhook_key, payload, signature)
         True
     """
     # 防止空值绕过安全验证

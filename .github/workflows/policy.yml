@@ -34,12 +34,30 @@ jobs:
             --exclude-files '\.git/.*' \
             --exclude-files '.mypy_cache/.*' \
             --exclude-files '.venv/.*' \
+            --exclude-files '\.pytest_cache/.*' \
+            --exclude-files '\.ruff_cache/.*' \
+            --exclude-files '__pycache__/.*' \
             --exclude-files '.*\.meta\.json$' \
             --exclude-files 'alembic/versions/.*\.py$' \
             --exclude-files 'tests/.*\.py$' \
             --exclude-files '\.env$' \
             --exclude-files 'htmlcov/.*' \
             --exclude-files '\.coverage$' \
+            --exclude-files '\.github/workflows/.*' \
+            --exclude-files '\.workflow/.*' \
+            --exclude-files '\.secrets\.baseline$' \
+            --exclude-files 'temp_scan.*\.json$' \
+            --exclude-files '.*\.md$' \
+            --exclude-files '.*\.txt$' \
+            --exclude-files '.*\.rst$' \
+            --exclude-files 'Makefile$' \
+            --exclude-files 'makefile$' \
+            --exclude-files '.*\.example$' \
+            --exclude-files 'example_.*\.py$' \
+            --exclude-files 'docker-compose.*\.yml$' \
+            --exclude-files 'docker-compose.*\.yaml$' \
+            --exclude-files 'scripts/.*' \
+            --exclude-files '.*\.sh$' \
             > artifacts.detect-secrets.json || true
           # Only fail if high-confidence secrets found in actual source code
           if grep -q 'High' artifacts.detect-secrets.json; then

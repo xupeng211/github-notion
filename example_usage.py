@@ -179,7 +179,7 @@ def main():
 
     # 配置参数 (可以根据实际情况修改)
     BASE_URL = "http://localhost:8000"  # 修改为你的服务地址
-    WEBHOOK_SECRET = "test-secret"  # 修改为你的webhook密钥
+    WEBHOOK_SECRET = "example-webhook-key"  # 修改为你的webhook密钥
 
     print(f"🎯 测试目标: {BASE_URL}")
     print(f"🔑 Webhook密钥: {WEBHOOK_SECRET}")
