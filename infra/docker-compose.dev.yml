@@ -20,7 +20,8 @@ services:
       MINIO_ENDPOINT: http://minio:9000
       MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
       MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin}
-    command: uvicorn app.server:app --host 0.0.0.0 --port 8000 --reload
+      MINIO_BUCKET: ${MINIO_BUCKET:-dev-bucket}
+    command: bash -lc "python scripts/init_db.py || true; uvicorn app.server:app --host 0.0.0.0 --port 8000 --reload"
     volumes:
       - ./:/app
     ports:
@@ -37,6 +38,11 @@ services:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
       POSTGRES_DB: app
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U postgres" ]
+      interval: 5s
+      timeout: 3s
+      retries: 20
     ports:
       - "5432:5432"
     volumes:
@@ -44,8 +50,20 @@ services:
 
   redis:
     image: redis:7-alpine
+    healthcheck:
+      test: [ "CMD", "redis-cli", "ping" ]
+      interval: 5s
+      timeout: 3s
+      retries: 20
     ports:
       - "6379:6379"
+
+    depends_on:
+      - minio
+    entrypoint: [ "/bin/sh", "-c" ]
+    command: [ "bash scripts/init_minio.sh && tail -f /dev/null" ]
+    volumes:
+      - ./:/app
 
   minio:
     image: minio/minio:latest
