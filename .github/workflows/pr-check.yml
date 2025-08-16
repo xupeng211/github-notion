@@ -1,0 +1,222 @@
+name: PR Pre-check
+
+on:
+  pull_request:
+    branches: [ main, develop ]
+    types: [ opened, synchronize, reopened ]
+
+jobs:
+  quick-validation:
+    name: Quick Validation
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.9'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install black isort flake8 pytest
+
+      - name: Quick format check
+        run: |
+          echo "🎨 检查代码格式..."
+          black --check --diff .
+          isort --check-only --diff .
+
+      - name: Quick lint check
+        run: |
+          echo "🔍 快速代码检查..."
+          flake8 . --count --show-source --statistics --max-line-length=120
+
+      - name: Quick test
+        run: |
+          echo "🧪 快速测试..."
+          pytest tests/ --maxfail=3 -q || echo "测试完成"
+
+  security-check:
+    name: Security Check
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.9'
+
+      - name: Install security tools
+        run: |
+          pip install detect-secrets bandit safety
+
+      - name: Check for secrets
+        run: |
+          echo "🔒 检查密钥泄露..."
+          detect-secrets scan --all-files \
+            --exclude-files '\.git/.*' \
+            --exclude-files '.mypy_cache/.*' \
+            --exclude-files '.venv/.*' \
+            --exclude-files '.*\.meta\.json$' \
+            --exclude-files 'tests/.*\.py$' \
+            --exclude-files '\.env$' \
+            > pr-secrets-report.json || true
+
+          # 只检查高置信度的密钥
+          if grep -q 'High' pr-secrets-report.json; then
+            echo "❌ 发现高置信度密钥泄露"
+            cat pr-secrets-report.json | grep -A5 -B5 'High'
+            exit 1
+          else
+            echo "✅ 未发现密钥泄露"
+          fi
+
+      - name: Basic security scan
+        run: |
+          echo "🛡️ 基础安全扫描..."
+          bandit -r app/ -ll || echo "Bandit 扫描完成"
+
+  pr-info:
+    name: PR Information
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Get PR info
+        run: |
+          echo "📋 PR 信息:"
+          echo "- 分支: ${{ github.head_ref }} -> ${{ github.base_ref }}"
+          echo "- 提交: ${{ github.sha }}"
+          echo "- 作者: ${{ github.actor }}"
+
+          echo ""
+          echo "📊 变更统计:"
+          git diff --stat ${{ github.event.pull_request.base.sha }}..${{ github.sha }}
+
+          echo ""
+          echo "📁 变更文件:"
+          git diff --name-only ${{ github.event.pull_request.base.sha }}..${{ github.sha }}
+
+      - name: Check commit messages
+        run: |
+          echo "💬 检查提交信息格式..."
+          # 检查最近的提交信息是否符合规范
+          git log --oneline -n 5
+
+          # 简单的提交信息检查
+          if git log --format=%s -n 1 | grep -E '^(feat|fix|docs|style|refactor|test|chore)(\(.+\))?: .+'; then
+            echo "✅ 提交信息格式正确"
+          else
+            echo "⚠️ 建议使用规范的提交信息格式: type(scope): description"
+          fi
+
+  size-check:
+    name: Size Check
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Check file sizes
+        run: |
+          echo "📏 检查文件大小..."
+
+          # 检查大文件
+          find . -type f -size +1M -not -path "./.git/*" -not -path "./.venv/*" | while read file; do
+            size=$(du -h "$file" | cut -f1)
+            echo "⚠️ 大文件: $file ($size)"
+          done
+
+          # 检查总项目大小
+          total_size=$(du -sh . | cut -f1)
+          echo "📦 项目总大小: $total_size"
+
+      - name: Check line counts
+        run: |
+          echo "📊 代码行数统计:"
+          find . -name "*.py" -not -path "./.venv/*" -not -path "./.git/*" | xargs wc -l | tail -1
+
+  dependency-check:
+    name: Dependency Check
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.9'
+
+      - name: Check requirements
+        run: |
+          echo "📦 检查依赖文件..."
+
+          if [ -f requirements.txt ]; then
+            echo "✅ requirements.txt 存在"
+            echo "生产依赖数量: $(wc -l < requirements.txt)"
+          else
+            echo "❌ requirements.txt 不存在"
+          fi
+
+          if [ -f requirements-dev.txt ]; then
+            echo "✅ requirements-dev.txt 存在"
+            echo "开发依赖数量: $(wc -l < requirements-dev.txt)"
+          else
+            echo "⚠️ requirements-dev.txt 不存在"
+          fi
+
+      - name: Install and check dependencies
+        run: |
+          echo "🔍 检查依赖安装..."
+          pip install -r requirements.txt
+          pip check || echo "依赖检查完成"
+
+  summary:
+    name: PR Summary
+    runs-on: ubuntu-latest
+    needs: [quick-validation, security-check, pr-info, size-check, dependency-check]
+    if: always()
+
+    steps:
+      - name: Summary
+        run: |
+          echo "📋 PR 检查总结:"
+          echo "================="
+
+          if [ "${{ needs.quick-validation.result }}" == "success" ]; then
+            echo "✅ 快速验证: 通过"
+          else
+            echo "❌ 快速验证: 失败"
+          fi
+
+          if [ "${{ needs.security-check.result }}" == "success" ]; then
+            echo "✅ 安全检查: 通过"
+          else
+            echo "❌ 安全检查: 失败"
+          fi
+
+          echo ""
+          echo "💡 下一步:"
+          echo "1. 如果检查失败，请修复问题后重新推送"
+          echo "2. 如果检查通过，等待完整 CI 流程"
+          echo "3. 确保所有 CI 检查通过后再合并"

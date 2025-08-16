@@ -1,0 +1,122 @@
+version: '3.8'
+
+services:
+  # 主应用服务（开发模式）
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: development  # 如果 Dockerfile 有多阶段构建
+    container_name: github-notion-dev
+    ports:
+      - "8000:8000"
+    volumes:
+      # 挂载源代码以支持热重载
+      - .:/app
+      - /app/.venv  # 排除虚拟环境目录
+    environment:
+      - ENVIRONMENT=development
+      - DEBUG=true
+      - PYTHONPATH=/app
+      - PYTHONUNBUFFERED=1
+    env_file:
+      - .env.example  # 使用示例环境文件
+    command: >
+      sh -c "
+        pip install -r requirements-dev.txt &&
+        uvicorn app.server:app --reload --host 0.0.0.0 --port 8000
+      "
+    depends_on:
+      - redis
+      - postgres
+    networks:
+      - github-notion-dev
+
+  # Redis 服务（用于缓存和队列）
+  redis:
+    image: redis:7-alpine
+    container_name: github-notion-redis-dev
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes
+    networks:
+      - github-notion-dev
+
+  # PostgreSQL 数据库（如果使用）
+  postgres:
+    image: postgres:15-alpine
+    container_name: github-notion-postgres-dev
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_DB=github_notion_dev
+      - POSTGRES_USER=dev_user
+      - POSTGRES_PASSWORD=dev_password
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./scripts/init-db.sql:/docker-entrypoint-initdb.d/init-db.sql
+    networks:
+      - github-notion-dev
+
+  # 测试数据库
+  postgres-test:
+    image: postgres:15-alpine
+    container_name: github-notion-postgres-test
+    ports:
+      - "5433:5432"
+    environment:
+      - POSTGRES_DB=github_notion_test
+      - POSTGRES_USER=test_user
+      - POSTGRES_PASSWORD=test_password
+    volumes:
+      - postgres_test_data:/var/lib/postgresql/data
+    networks:
+      - github-notion-dev
+
+  # 代码质量检查服务
+  quality-check:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: github-notion-quality
+    volumes:
+      - .:/app
+    working_dir: /app
+    command: >
+      sh -c "
+        pip install -r requirements-dev.txt &&
+        echo '🔍 运行代码质量检查...' &&
+        make ci-local
+      "
+    networks:
+      - github-notion-dev
+    profiles:
+      - quality  # 使用 profile 控制是否启动
+
+  # 文档服务
+  docs:
+    image: squidfunk/mkdocs-material:latest
+    container_name: github-notion-docs
+    ports:
+      - "8001:8000"
+    volumes:
+      - .:/docs
+    command: serve --dev-addr=0.0.0.0:8000
+    networks:
+      - github-notion-dev
+    profiles:
+      - docs  # 使用 profile 控制是否启动
+
+volumes:
+  redis_data:
+    driver: local
+  postgres_data:
+    driver: local
+  postgres_test_data:
+    driver: local
+
+networks:
+  github-notion-dev:
+    driver: bridge
