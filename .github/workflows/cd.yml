@@ -71,7 +71,7 @@ jobs:
       - name: Trivy Scan (non-blocking)
         uses: aquasecurity/trivy-action@0.28.0
         with:
-          image-ref: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
+          image-ref: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:sha-${{ github.sha }}
           format: table
           exit-code: 0
 
@@ -102,10 +102,6 @@ jobs:
           curl -fsS http://127.0.0.1:18000/health
           docker rm -f "$cid"
 
-        with:
-          image-ref: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
-          format: table
-          exit-code: 0
 
   deploy:
     name: Deploy to Production
