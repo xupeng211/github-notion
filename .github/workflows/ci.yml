@@ -175,7 +175,7 @@ jobs:
               print('tests')
           PY
           )
-          pytest $SELECTED -v --cov=app --cov-append --cov-report=term-missing --cov-fail-under=20 -n auto
+          pytest $SELECTED -v --cov=app --cov-append --cov-report=term-missing --cov-fail-under=50 -n auto
 
   docker-build:
     name: "Docker Build & Test"

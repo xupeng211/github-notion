@@ -34,6 +34,7 @@ jobs:
         uses: github/codeql-action/upload-sarif@v3
         with:
           sarif_file: results.sarif
+          category: gitleaks-secrets
         continue-on-error: true
 
   dependency-scan:
@@ -114,6 +115,7 @@ jobs:
         if: always()
         with:
           sarif_file: trivy-container-results.sarif
+          category: trivy-container
 
       - name: "Run Trivy Filesystem Scan"
         uses: aquasecurity/trivy-action@0.28.0
@@ -128,6 +130,7 @@ jobs:
         if: always()
         with:
           sarif_file: trivy-fs-results.sarif
+          category: trivy-filesystem
 
   security-summary:
     name: "Security Scan Summary"

@@ -21,6 +21,8 @@ from app.models import Base, SyncEvent
 from app.server import app
 
 
+@pytest.mark.smoke
+@pytest.mark.e2e
 @pytest.fixture
 def temp_db():
     """创建临时数据库用于测试"""

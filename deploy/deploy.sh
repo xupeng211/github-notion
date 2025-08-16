@@ -8,6 +8,26 @@ set -e  # 遇到错误立即退出
 echo "🚀 开始部署 GitHub-Notion 双向同步系统..."
 echo "======================================================="
 
+# 0. 清理磁盘空间
+echo "🧹 清理磁盘空间..."
+echo "清理前磁盘使用情况:"
+df -h /
+
+# 清理 Docker 资源
+echo "清理 Docker 资源..."
+docker system prune -af --volumes || true
+docker image prune -af || true
+
+# 清理系统缓存
+echo "清理系统缓存..."
+sudo apt-get clean || true
+sudo rm -rf /var/lib/apt/lists/* || true
+sudo rm -rf /tmp/* || true
+
+echo "清理后磁盘使用情况:"
+df -h /
+echo "✅ 磁盘清理完成"
+
 # 1. 确保在项目根目录
 echo "📁 检查项目目录..."
 if [ ! -f "app/server.py" ]; then
@@ -80,4 +100,4 @@ echo "📋 后续步骤:"
 echo "  1. 确保 FastAPI 应用在 8000 端口运行"
 echo "  2. 运行验证脚本: bash deploy/verify.sh"
 echo "  3. 在 GitHub 中测试 Webhook"
-echo "" 
+echo ""

@@ -72,7 +72,7 @@ jobs:
     outputs:
       image-digest: ${{ steps.build.outputs.digest }}
       image-tag: ${{ steps.meta.outputs.tags }}
-    
+
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
@@ -126,10 +126,10 @@ jobs:
     needs: build-and-push
     runs-on: ubuntu-latest
     if: |
-      github.ref == 'refs/heads/main' && 
+      github.ref == 'refs/heads/main' &&
       (github.event_name == 'push' || github.event.inputs.deploy_to_aws == 'true')
     environment: production
-    
+
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
@@ -146,11 +146,11 @@ jobs:
     - name: Prepare deployment files
       run: |
         mkdir -p deploy
-        
+
         # Copy config files
         cp docker-compose.production.yml deploy/ || cp docker-compose.yml deploy/docker-compose.production.yml
         cp -r monitoring deploy/ 2>/dev/null || echo "No monitoring config found"
-        
+
         # Create environment file
         cat > deploy/.env << EOF
         LOG_LEVEL=INFO
@@ -172,17 +172,17 @@ jobs:
         NOTION_TOKEN=${{ secrets.NOTION_TOKEN || '' }}
         NOTION_DATABASE_ID=${{ secrets.NOTION_DATABASE_ID || '' }}
         EOF
-        
+
         # Create deployment script
         cat > deploy/deploy.sh << 'SCRIPT_EOF'
         #!/bin/bash
         set -e
-        
+
         echo "Starting AWS server deployment..."
-        
+
         # Clean up any existing deployment files first
         rm -rf /tmp/gitee-notion-deploy-* 2>/dev/null || true
-        
+
         # Check and install Docker
         if ! command -v docker >/dev/null 2>&1; then
             echo "Installing Docker..."
@@ -192,49 +192,49 @@ jobs:
             rm get-docker.sh
             newgrp docker
         fi
-        
+
         # Check and install Docker Compose
         if ! command -v docker-compose >/dev/null 2>&1; then
             echo "Installing Docker Compose..."
             sudo curl -L "https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
             sudo chmod +x /usr/local/bin/docker-compose
         fi
-        
+
         # Create app directory
         APP_DIR="/opt/gitee-notion-sync"
         sudo mkdir -p "$APP_DIR"
         sudo chown $USER:$USER "$APP_DIR"
-        
+
         # Copy files to app directory
         cp -r . "$APP_DIR/"
         cd "$APP_DIR"
-        
+
         # Load environment variables
         source .env
-        
+
         # Login to GitHub Container Registry
         echo "Logging into container registry..."
         echo "$GITHUB_TOKEN" | docker login ghcr.io -u xupeng211 --password-stdin
-        
+
         # Create necessary directories
         mkdir -p data logs
-        
+
         # Stop old services
         echo "Stopping old services..."
         docker-compose -f docker-compose.production.yml down 2>/dev/null || echo "No existing service found"
-        
+
         # Pull latest image
         echo "Pulling latest image..."
         docker pull "${REGISTRY}/${IMAGE_NAME}:latest"
-        
+
         # Start services
         echo "Starting services..."
         docker-compose -f docker-compose.production.yml up -d
-        
+
         # Wait for services to start
         echo "Waiting for services to start..."
         sleep 20
-        
+
         # Health check
         for i in {1..30}; do
             if curl -f http://localhost:8000/health >/dev/null 2>&1; then
@@ -248,11 +248,11 @@ jobs:
             echo "Waiting for service to start... ($i/30)"
             sleep 2
         done
-        
+
         # Show service status
         echo "Service status:"
         docker-compose ps || docker ps
-        
+
         echo ""
         echo "Deployment completed!"
         echo "Service access addresses:"
@@ -261,7 +261,7 @@ jobs:
         echo "  API docs: http://$PUBLIC_IP:8000/docs"
         echo "  Metrics: http://$PUBLIC_IP:8000/metrics"
         SCRIPT_EOF
-        
+
         chmod +x deploy/deploy.sh
 
     - name: Setup SSH
@@ -274,6 +274,20 @@ jobs:
     - name: Upload to AWS server
       run: |
         scp -i ~/.ssh/aws-key.pem -o StrictHostKeyChecking=no -r deploy ubuntu@3.35.106.116:/tmp/gitee-notion-deploy
+
+    - name: Clean disk space on AWS server
+      run: |
+        ssh -i ~/.ssh/aws-key.pem -o StrictHostKeyChecking=no ubuntu@3.35.106.116 "
+          echo 'Cleaning disk space before deployment...' &&
+          df -h / &&
+          docker system prune -af --volumes || true &&
+          docker image prune -af || true &&
+          sudo apt-get clean || true &&
+          sudo rm -rf /var/lib/apt/lists/* || true &&
+          sudo rm -rf /tmp/* || true &&
+          echo 'Disk space after cleanup:' &&
+          df -h /
+        "
 
     - name: Deploy on AWS server
       run: |
@@ -294,7 +308,7 @@ jobs:
     needs: [build-and-push, deploy-aws]
     runs-on: ubuntu-latest
     if: always()
-    
+
     steps:
     - name: Deployment notification
       run: |
@@ -324,4 +338,4 @@ jobs:
           fi
         else
           echo "Build failed, please check logs"
-        fi 
+        fi
