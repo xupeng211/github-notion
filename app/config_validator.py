@@ -249,6 +249,22 @@ def validate_config_on_startup() -> None:
         for error in result.errors:
             logger.error(f"  {error}")
 
+        # 额外提示缺失或占位值的具体变量
+        missing = []
+        placeholders = []
+        for var_name, unsafe_values in ConfigValidator.REQUIRED_SECURE_VARS.items():
+            val = os.getenv(var_name, "")
+            if not val:
+                missing.append(var_name)
+            elif val in unsafe_values or "CHANGE_ME" in val.upper():
+                placeholders.append(var_name)
+        if missing or placeholders:
+            logger.error("关键信息: 以下变量缺失或使用占位值")
+            if missing:
+                logger.error(f"  缺失: {', '.join(missing)}")
+            if placeholders:
+                logger.error(f"  占位: {', '.join(placeholders)}")
+
         logger.error("\n" + "=" * 60)
         logger.error("❌ 应用启动失败：配置验证不通过")
         logger.error("请检查并修正上述配置错误后重新启动")
