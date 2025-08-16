@@ -7,6 +7,12 @@ title = "GitHub-Notion项目敏感信息检测规则"
 [extend]
 # 使用内置规则作为基础
 useDefault = true
+# 启用详细输出
+verbose = true
+# 扫描深度（历史提交数）- 设置为0表示只扫描当前状态，不扫描历史
+depth = 0
+# 并发级别
+concurrency = 4
 
 # 自定义规则
 [[rules]]
@@ -113,14 +119,4 @@ description = "允许测试环境使用的固定密钥"
 regex = '''(test-secret|ci-test-secret|test-secret-key)'''
 allowlist.regexes = ['''.*''']  # 在所有文件中都允许
 
-# 扫描配置
-[extend]
-# 启用详细输出
-verbose = true
-
-# 扫描深度（历史提交数）
-# 设置为0表示只扫描当前状态，不扫描历史
-depth = 0
-
-# 并发级别
-concurrency = 4
+# 扫描配置 (merged into main [extend] section above)
