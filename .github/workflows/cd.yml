@@ -142,7 +142,7 @@ jobs:
           IMAGE_NAME: ${{ env.IMAGE_NAME }}
           APP_PORT: 8000
         run: |
-          ssh -i ~/.ssh/prod_key.pem -o StrictHostKeyChecking=no "${{ secrets.PROD_USER }}@${{ secrets.PROD_HOST }}" bash -s <<'EOF'
+          ssh -i ~/.ssh/prod_key.pem -o StrictHostKeyChecking=no "${{ secrets.PROD_USER }}@${{ secrets.PROD_HOST }}" bash -s <<EOF
           set -euo pipefail
           APP_DIR="/opt/gitee-notion-sync"
           IMAGE="${REGISTRY}/${IMAGE_NAME}:sha-${GITHUB_SHA}"
@@ -171,7 +171,7 @@ jobs:
           mv /tmp/docker-compose.production.yml "${APP_DIR}/docker-compose.production.yml"
 
           # Write .env
-          cat > "${APP_DIR}/.env" <<ENV_EOF
+          cat > "${APP_DIR}/.env" <<'ENV_EOF'
           LOG_LEVEL=INFO
           ENVIRONMENT=production
           APP_PORT=${APP_PORT}
