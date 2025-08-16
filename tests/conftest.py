@@ -48,7 +48,9 @@ def isolated_db():
     # 检查 processed_event 表是否有 source_platform 字段
     processed_event_columns = [col["name"] for col in inspector.get_columns("processed_event")]
     if "source_platform" not in processed_event_columns:
-        raise RuntimeError(f"测试数据库表结构错误: processed_event 表缺少 source_platform 字段. 当前字段: {processed_event_columns}")
+        raise RuntimeError(
+            f"测试数据库表结构错误: processed_event 表缺少 source_platform 字段. 当前字段: {processed_event_columns}"
+        )
 
     # 创建会话
     SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)

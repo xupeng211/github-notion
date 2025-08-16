@@ -425,12 +425,18 @@ class IdempotencyMonitoringStressTester:
 
         # 检查响应时间
         if perf["avg_response_time"] <= criteria["avg_response_time"]:
-            passed_checks.append(f"✅ 平均响应时间: {perf['avg_response_time']:.3f}s <= {criteria['avg_response_time']}s")
+            passed_checks.append(
+                f"✅ 平均响应时间: {perf['avg_response_time']:.3f}s <= {criteria['avg_response_time']}s"
+            )
         else:
-            failed_checks.append(f"❌ 平均响应时间: {perf['avg_response_time']:.3f}s > {criteria['avg_response_time']}s")
+            failed_checks.append(
+                f"❌ 平均响应时间: {perf['avg_response_time']:.3f}s > {criteria['avg_response_time']}s"
+            )
 
         if perf["p99_response_time"] <= criteria["p99_response_time"]:
-            passed_checks.append(f"✅ 99%响应时间: {perf['p99_response_time']:.3f}s <= {criteria['p99_response_time']}s")
+            passed_checks.append(
+                f"✅ 99%响应时间: {perf['p99_response_time']:.3f}s <= {criteria['p99_response_time']}s"
+            )
         else:
             failed_checks.append(f"❌ 99%响应时间: {perf['p99_response_time']:.3f}s > {criteria['p99_response_time']}s")
 
