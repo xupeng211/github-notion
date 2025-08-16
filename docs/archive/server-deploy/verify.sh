@@ -94,7 +94,7 @@ echo ""
 echo "🔐 检查环境配置..."
 if [ -f ".env" ]; then
     check_pass ".env 文件存在"
-    
+
     if grep -q "GITHUB_TOKEN=" .env && grep -q "NOTION_TOKEN=" .env; then
         check_pass "关键环境变量已配置"
     else
@@ -211,4 +211,4 @@ else
     echo ""
     echo -e "⚠️  ${YELLOW}发现 $FAIL_COUNT 个问题，需要修复后再测试${NC}"
     exit 1
-fi 
+fi
