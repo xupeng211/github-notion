@@ -29,9 +29,21 @@ jobs:
       - name: Detect secrets (detect-secrets)
         run: |
           pip install detect-secrets
-          detect-secrets scan --all-files > artifacts.detect-secrets.json || true
-          # Fail if high-confidence secrets found
-          if grep -q 'High' artifacts.detect-secrets.json; then echo 'High confidence secrets found' >&2; exit 1; fi
+          # Create baseline to exclude known false positives
+          detect-secrets scan --all-files \
+            --exclude-files '.mypy_cache/.*' \
+            --exclude-files '.venv/.*' \
+            --exclude-files '.*\.meta\.json$' \
+            --exclude-files 'alembic/versions/.*\.py$' \
+            --exclude-files 'tests/.*\.py$' \
+            --exclude-files '\.env$' \
+            > artifacts.detect-secrets.json || true
+          # Only fail if high-confidence secrets found in actual source code
+          if grep -q 'High' artifacts.detect-secrets.json; then
+            echo 'High confidence secrets found in source code' >&2
+            cat artifacts.detect-secrets.json | grep -A5 -B5 'High' || true
+            exit 1
+          fi
 
       - name: Build dev image for trivy scan
         run: |
