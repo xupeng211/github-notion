@@ -149,7 +149,7 @@ jobs:
           ssh -i ~/.ssh/prod_key.pem -o StrictHostKeyChecking=no "${{ secrets.PROD_USER }}@${{ secrets.PROD_HOST }}" bash -s <<'EOF'
           set -euo pipefail
           APP_DIR="/opt/gitee-notion-sync"
-          IMAGE="${REGISTRY}/${IMAGE_NAME}:latest"
+          IMAGE="${REGISTRY}/${IMAGE_NAME}:sha-${GITHUB_SHA}"
 
           # Ensure Docker installed
           if ! command -v docker >/dev/null 2>&1; then
