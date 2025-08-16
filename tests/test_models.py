@@ -16,9 +16,13 @@ class TestModels:
 
         event = SyncEvent(
             event_id="test-event-123",
+            event_hash="hash123",
             source_platform="github",
-            event_type="issues",
-            payload={"action": "opened", "issue": {"id": 123}},
+            target_platform="notion",
+            entity_type="issue",
+            entity_id="123",
+            action="opened",
+            sync_direction="source_to_target",
             status="pending",
         )
 
@@ -29,7 +33,7 @@ class TestModels:
         retrieved = session.query(SyncEvent).filter_by(event_id="test-event-123").first()
         assert retrieved is not None
         assert retrieved.source_platform == "github"
-        assert retrieved.event_type == "issues"
+        assert retrieved.entity_type == "issue"
         assert retrieved.status == "pending"
         assert retrieved.created_at is not None
 
@@ -62,9 +66,13 @@ class TestModels:
 
         event = SyncEvent(
             event_id="test-event-456",
+            event_hash="hash456",
             source_platform="gitee",
-            event_type="pull_request",
-            payload={"action": "opened"},
+            target_platform="github",
+            entity_type="issue",
+            entity_id="456",
+            action="opened",
+            sync_direction="source_to_target",
             status="pending",
         )
 
@@ -125,14 +133,26 @@ class TestModels:
         # 创建多个相关记录
         event1 = SyncEvent(
             event_id="event-1",
+            event_hash="hash1",
             source_platform="github",
-            event_type="issues",
-            payload={"issue_id": 1},
+            target_platform="notion",
+            entity_type="issue",
+            entity_id="1",
+            action="created",
+            sync_direction="source_to_target",
             status="completed",
         )
 
         event2 = SyncEvent(
-            event_id="event-2", source_platform="github", event_type="issues", payload={"issue_id": 1}, status="pending"
+            event_id="event-2",
+            event_hash="hash2",
+            source_platform="notion",
+            target_platform="github",
+            entity_type="page",
+            entity_id="2",
+            action="updated",
+            sync_direction="source_to_target",
+            status="pending",
         )
 
         mapping = Mapping(source_platform="github", source_id="1", notion_page_id="page-1", sync_enabled=True)
@@ -142,7 +162,7 @@ class TestModels:
 
         # 验证查询
         github_events = session.query(SyncEvent).filter_by(source_platform="github").all()
-        assert len(github_events) == 2
+        assert len(github_events) == 1  # 只有 event1 是从 github 来的
 
         completed_events = session.query(SyncEvent).filter_by(status="completed").all()
         assert len(completed_events) == 1
