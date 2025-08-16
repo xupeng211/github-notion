@@ -1,6 +1,6 @@
 # GitHub-Notion 双向同步系统
 
-[文档入口](./docs/README.md) · ![CI](https://github.com/${GITHUB_REPOSITORY}/actions/workflows/ci.yml/badge.svg) · ![CD](https://github.com/${GITHUB_REPOSITORY}/actions/workflows/cd.yml/badge.svg)
+[文档入口](./docs/README.md) · [开发环境（dev compose）](#开发环境dev-compose) · ![CI](https://github.com/${GITHUB_REPOSITORY}/actions/workflows/ci.yml/badge.svg) · ![CD](https://github.com/${GITHUB_REPOSITORY}/actions/workflows/cd.yml/badge.svg)
 
 ## 🚨 强制性代码质量规则
 
@@ -98,6 +98,18 @@ make env && make check-env
 - 本地启动（单机）：
 
 ```bash
+
+## 开发环境（dev compose）
+
+- 本地一键起开发环境（API + Postgres + Prefect 热重载）
+
+```bash
+docker compose -f infra/docker-compose.dev.yml up
+# 浏览器打开 http://127.0.0.1:8000/health 与 http://127.0.0.1:4200
+```
+
+更多说明见 docs/quick-start/local-development.md。
+
 docker compose up -d
 curl -sS http://localhost:8000/health
 ```
