@@ -1,5 +1,5 @@
 # GitHub-Notion 双向同步系统 Makefile
-.PHONY: format lint fix test clean install-dev help
+.PHONY: format lint fix test clean install-dev help cov ci
 
 # 默认目标
 help:
@@ -46,6 +46,20 @@ lint:
 	@echo "🔍 检查代码质量..."
 	flake8 . --count --show-source --statistics
 	@echo "✅ 代码质量检查完成"
+
+# 覆盖率（带阈值）
+cov:
+	@echo "📊 运行单测并统计覆盖率..."
+	mkdir -p artifacts
+	coverage run -m pytest -q
+	coverage report -m --fail-under=70 | tee artifacts/coverage.txt
+	@echo "✅ 覆盖率统计完成"
+
+# CI 汇总（质量+覆盖率+runlog）
+ci: lint cov
+	@echo "🧪 生成 AI 运行日志"
+	mkdir -p artifacts
+	@echo "# AI Run Log\n\n- $$(date -u) CI completed." > artifacts/ai-runlog.md
 
 # 自动修复
 fix:
