@@ -35,7 +35,20 @@ def isolated_db():
 
     # 创建独立的数据库引擎
     engine = create_engine(db_url, echo=False)
+
+    # 强制重新创建所有表，确保表结构正确
+    Base.metadata.drop_all(bind=engine)
     Base.metadata.create_all(bind=engine)
+
+    # 验证关键表结构
+    from sqlalchemy import inspect
+
+    inspector = inspect(engine)
+
+    # 检查 processed_event 表是否有 source_platform 字段
+    processed_event_columns = [col["name"] for col in inspector.get_columns("processed_event")]
+    if "source_platform" not in processed_event_columns:
+        raise RuntimeError(f"测试数据库表结构错误: processed_event 表缺少 source_platform 字段. 当前字段: {processed_event_columns}")
 
     # 创建会话
     SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)

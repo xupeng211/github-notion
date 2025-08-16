@@ -161,7 +161,7 @@ jobs:
           PY
       - name: "Run Unit Tests with Coverage (split)"
         env:
-          PYTHONPATH: ${{ github.workspace }}
+          PYTHONPATH: ${{ github.workspace }}:${{ github.workspace }}/app
           ENVIRONMENT: "testing"
           DISABLE_METRICS: "1"
           DISABLE_NOTION: "1"

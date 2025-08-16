@@ -133,6 +133,18 @@ def event_hash_from_bytes(b: bytes) -> str:
     return hashlib.sha256(b).hexdigest()
 
 
+def _has_source_platform_column(db: Session) -> bool:
+    """检查 processed_event 表是否有 source_platform 字段"""
+    try:
+        from sqlalchemy import inspect
+
+        inspector = inspect(db.bind)
+        columns = [col["name"] for col in inspector.get_columns("processed_event")]
+        return "source_platform" in columns
+    except Exception:
+        return False
+
+
 def should_skip_event(db: Session, issue_id: str, event_hash: str, platform: str = "gitee") -> bool:
     """检查是否应跳过事件处理"""
     # 检查是否已处理过相同事件
@@ -146,12 +158,20 @@ def should_skip_event(db: Session, issue_id: str, event_hash: str, platform: str
         return True
 
     # 防抖动：检查同一实体的最近事件
-    latest = (
-        db.query(ProcessedEvent)
-        .filter_by(issue_id=issue_id, source_platform=platform)
-        .order_by(ProcessedEvent.created_at.desc())
-        .first()
-    )
+    # 根据表结构决定是否使用 source_platform 字段
+    if _has_source_platform_column(db):
+        latest = (
+            db.query(ProcessedEvent)
+            .filter_by(issue_id=issue_id, source_platform=platform)
+            .order_by(ProcessedEvent.created_at.desc())
+            .first()
+        )
+    else:
+        # 回退到只检查 issue_id
+        latest = (
+            db.query(ProcessedEvent).filter_by(issue_id=issue_id).order_by(ProcessedEvent.created_at.desc()).first()
+        )
+
     if latest and (datetime.utcnow() - latest.created_at) < autodebounce_window:
         return False
     return False
@@ -159,7 +179,13 @@ def should_skip_event(db: Session, issue_id: str, event_hash: str, platform: str
 
 def mark_event_processed(db: Session, issue_id: str, event_hash: str, platform: str = "gitee") -> None:
     """标记事件为已处理"""
-    rec = ProcessedEvent(event_hash=event_hash, issue_id=issue_id, source_platform=platform)
+    if _has_source_platform_column(db):
+        # 创建包含 source_platform 的记录
+        rec = ProcessedEvent(event_hash=event_hash, issue_id=issue_id, source_platform=platform)
+    else:
+        # 回退到基本字段
+        rec = ProcessedEvent(event_hash=event_hash, issue_id=issue_id)
+
     db.add(rec)
     db.commit()
 

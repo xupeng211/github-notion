@@ -1,5 +1,5 @@
 # GitHub-Notion 双向同步系统 Makefile
-.PHONY: format lint fix test clean install-dev help cov ci setup-dev security docker-build docker-test ci-local quick-check release-check
+.PHONY: format lint fix test clean install-dev help cov ci setup-dev security docker-build docker-test ci-local ci-exact quick-check release-check
 
 # 默认目标
 help:
@@ -23,6 +23,7 @@ help:
 	@echo "  🔒 make security    - 安全扫描 (detect-secrets + bandit)"
 	@echo "  🐳 make docker-build - 构建 Docker 镜像"
 	@echo "  🤖 make ci-local    - 完整本地 CI 模拟"
+	@echo "  🐳 make ci-exact    - 精确 CI 环境模拟 (Docker)"
 	@echo "  ⚡ make quick-check - 快速检查 (commit 前)"
 	@echo ""
 	@echo "🔄 标准工作流程:"
@@ -179,6 +180,41 @@ quick-check:
 	flake8 . --count --show-source --statistics
 	pytest tests/ --maxfail=3 -q || echo "快速测试完成"
 	@echo "✅ 快速检查完成！"
+
+# 精确 CI 环境模拟（使用 Docker）
+ci-exact:
+	@echo "🐳 使用 Docker 精确模拟 CI 环境..."
+	@echo "⚠️  这将创建一个与 GitHub Actions 完全相同的环境"
+	@docker run --rm -v $(PWD):/workspace -w /workspace \
+		-e ENVIRONMENT=testing \
+		-e DISABLE_METRICS=1 \
+		-e DISABLE_NOTION=1 \
+		-e GITEE_WEBHOOK_SECRET="secure-ci-test-webhook-secret-minimum-16-chars" \
+		-e GITHUB_WEBHOOK_SECRET="secure-ci-test-webhook-secret-minimum-16-chars" \
+		-e DEADLETTER_REPLAY_TOKEN="secure-ci-test-deadletter-replay-token-minimum-16-chars" \
+		-e DB_URL="sqlite:///data/test.db" \
+		-e LOG_LEVEL="WARNING" \
+		-e PYTHONDONTWRITEBYTECODE="1" \
+		-e PYTHONPATH="/workspace:/workspace/app" \
+		ubuntu:22.04 bash -c '\
+			echo "🔧 设置 CI 环境..." && \
+			apt-get update -qq && apt-get install -y -qq python3.11 python3.11-venv python3-pip git && \
+			python3.11 -m venv /tmp/ci-venv && \
+			. /tmp/ci-venv/bin/activate && \
+			echo "📦 安装依赖..." && \
+			python -m pip install --upgrade pip setuptools wheel && \
+			pip install -r requirements.txt && \
+			pip install -r requirements-dev.txt && \
+			pip install pytest pytest-cov pytest-asyncio pytest-xdist pytest-split && \
+			echo "🔍 验证关键依赖..." && \
+			python -c "import sqlalchemy; print(\"SQLAlchemy version:\", sqlalchemy.__version__)" && \
+			python -c "import pytest; print(\"Pytest version:\", pytest.__version__)" && \
+			echo "🔍 验证模块路径..." && \
+			python -c "import sys; print(\"Python path:\", sys.path)" && \
+			python -c "import app.models; print(\"✅ App models 导入成功\")" && \
+			echo "🧪 运行测试..." && \
+			mkdir -p data && \
+			pytest tests/ -v --cov=app --cov-append --cov-report=term-missing --cov-fail-under=5 -n auto'
 
 # 发布前检查
 release-check:
