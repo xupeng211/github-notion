@@ -117,7 +117,13 @@ class SyncConfig(Base):
 
 def init_db() -> None:
     os.makedirs("data", exist_ok=True)
-    Base.metadata.create_all(bind=engine, checkfirst=True)
+    try:
+        Base.metadata.create_all(bind=engine, checkfirst=True)
+    except Exception as e:
+        # 在并行测试中，可能会有多个进程同时尝试创建表
+        # 如果表已存在，忽略错误
+        if "already exists" not in str(e):
+            raise
 
 
 autodebounce_window = timedelta(minutes=5)
