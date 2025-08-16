@@ -2,7 +2,7 @@
 # GitHub Actions资源限制下的最佳实践
 
 # 使用标准Python镜像（非slim），包含必要的编译工具
-FROM python:3.11-bullseye as builder
+FROM python:3.11-bullseye AS builder
 
 # 设置工作目录
 WORKDIR /app
@@ -21,17 +21,25 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     gcc g++ make \
     libffi-dev \
     libssl-dev \
+    libpq-dev \
+    pkg-config \
     rustc cargo \
     git \
     && rm -rf /var/lib/apt/lists/* \
     && apt-get clean
 
-# 升级pip到最新版本
-RUN pip install --upgrade pip setuptools wheel
+# 升级pip到最新版本，并设置构建优化
+RUN pip install --upgrade pip setuptools wheel && \
+    pip config set global.cache-dir /tmp/pip-cache && \
+    pip config set global.prefer-binary true
 
-# 复制并安装Python依赖
+# 复制并安装Python依赖（优先二进制轮子，减少编译时间）
 COPY requirements.txt .
-RUN pip install --user --no-warn-script-location -r requirements.txt
+RUN --mount=type=cache,target=/tmp/pip-cache \
+    pip install --user --no-warn-script-location \
+    --cache-dir=/tmp/pip-cache \
+    --prefer-binary \
+    -r requirements.txt
 
 # 生产阶段：使用相同基础镜像保持兼容性
 FROM python:3.11-bullseye
