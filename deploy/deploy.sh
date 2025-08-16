@@ -22,7 +22,13 @@ docker image prune -af || true
 echo "清理系统缓存..."
 sudo apt-get clean || true
 sudo rm -rf /var/lib/apt/lists/* || true
-sudo rm -rf /tmp/* || true
+echo "清理 /tmp 但保留当前部署目录..."
+current_dir=$(pwd)
+if [[ "$current_dir" == /tmp/* ]]; then
+    echo "当前在 /tmp 目录中，跳过 /tmp 清理以避免删除部署文件"
+else
+    sudo rm -rf /tmp/* || true
+fi
 
 echo "清理后磁盘使用情况:"
 df -h /

@@ -13,7 +13,8 @@ jobs:
       - name: Check forbidden files (.env & keys)
         run: |
           set -euo pipefail
-          if git ls-files | grep -E '(^|/)(\.env(\..*)?)$' ; then
+          # Check for .env files but exclude .env.example, .env.template, .env.sample
+          if git ls-files | grep -E '(^|/)\.env$|(^|/)\.env\.[^.]*$' | grep -v -E '\.(example|template|sample)$' ; then
             echo "Forbidden .env file detected" >&2; exit 1; fi
           if git ls-files | grep -E '\.(pem|key)$|(^|/)id_rsa$|(^|/)id_dsa$' ; then
             echo "Forbidden key material detected" >&2; exit 1; fi

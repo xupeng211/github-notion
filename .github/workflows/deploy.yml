@@ -284,7 +284,9 @@ jobs:
           docker image prune -af || true &&
           sudo apt-get clean || true &&
           sudo rm -rf /var/lib/apt/lists/* || true &&
-          sudo rm -rf /tmp/* || true &&
+          echo 'Cleaning /tmp but preserving deployment files...' &&
+          find /tmp -maxdepth 1 -type f -delete || true &&
+          find /tmp -maxdepth 1 -type d ! -name 'gitee-notion-deploy' ! -name 'tmp' -exec rm -rf {} + || true &&
           echo 'Disk space after cleanup:' &&
           df -h /
         "
