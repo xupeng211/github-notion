@@ -1,15 +1,26 @@
+# Code quality and linting
 ruff>=0.5.7
 mypy>=1.10.0
+black>=24.0.0
+isort>=5.13.0
+flake8>=7.0.0
+autoflake>=2.3.0
+
+# Testing
 pytest>=7.4.0
-coverage[toml]>=7.5.0
 pytest-cov>=4.1.0
+pytest-asyncio>=0.23.0
+pytest-xdist>=3.5.0
+coverage[toml]>=7.5.0
+httpx>=0.27.0
+
+# Security scanning
+bandit>=1.7.0
+safety>=3.0.0
+pip-audit>=2.7.0
+
+# Development tools
 pre-commit>=3.7.0
 detect-secrets>=1.4.0
 yamllint>=1.35.1
 shellcheck-py>=0.10.0.1
-httpx>=0.27.0
-black>=24.0.0
-isort>=5.13.0
-flake8>=7.0.0
-bandit>=1.7.0
-safety>=3.0.0

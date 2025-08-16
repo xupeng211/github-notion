@@ -2,24 +2,24 @@ requests==2.31.0
 python-dotenv==1.0.1
 prometheus-client==0.20.0
 
-# 测试工具
-pytest==8.0.2
-pytest-cov==4.0.0
-pytest-asyncio==0.23.0
-pytest-xdist==3.5.0
+# 测试工具 (moved to requirements-dev.txt)
+# pytest==8.0.2
+# pytest-cov==4.0.0
+# pytest-asyncio==0.23.0
+# pytest-xdist==3.5.0
 
-# 代码质量工具
-black==24.2.0
-flake8==7.0.0
-isort==5.13.0
-ruff==0.3.0
-mypy==1.8.0
-autoflake==2.3.0
+# 代码质量工具 (moved to requirements-dev.txt)
+# black==24.2.0
+# flake8==7.0.0
+# isort==5.13.0
+# ruff>=0.5.7
+# mypy==1.8.0
+# autoflake==2.3.0
 
-# 安全扫描工具
-safety==3.0.1
-pip-audit==2.7.0
-bandit==1.7.5
+# 安全扫描工具 (moved to requirements-dev.txt)
+# safety==3.0.1
+# pip-audit==2.7.0
+# bandit==1.7.5
 
 # 日志工具
 python-json-logger==2.0.7
