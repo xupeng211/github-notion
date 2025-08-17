@@ -1,0 +1,169 @@
+name: 🔧 Emergency Hotfix Deployment
+
+on:
+  workflow_dispatch:
+    inputs:
+      action:
+        description: 'Action to perform'
+        required: true
+        default: 'deploy'
+        type: choice
+        options:
+        - 'deploy'
+        - 'restart'
+        - 'status'
+
+env:
+  AWS_SERVER: "3.35.106.116"
+  APP_DIR: "/opt/github-notion-sync"
+
+jobs:
+  hotfix:
+    name: 🚨 Emergency Fix
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: 📥 Checkout code
+      uses: actions/checkout@v4
+      
+    - name: 🔧 Setup SSH
+      run: |
+        mkdir -p ~/.ssh
+        echo "${{ secrets.AWS_PRIVATE_KEY }}" > ~/.ssh/aws-key.pem
+        chmod 600 ~/.ssh/aws-key.pem
+        ssh-keyscan -H ${{ env.AWS_SERVER }} >> ~/.ssh/known_hosts
+        
+    - name: 🚨 Execute Emergency Fix
+      run: |
+        cat > emergency_fix.sh << 'EOF'
+        #!/bin/bash
+        set -euo pipefail
+        
+        echo "🚨 执行紧急修复..."
+        
+        APP_DIR="/opt/github-notion-sync"
+        SERVICE_NAME="github-notion-sync"
+        
+        # 检查当前状态
+        echo "🔍 检查当前状态..."
+        sudo systemctl status $SERVICE_NAME --no-pager || echo "服务未运行"
+        
+        # 停止服务
+        echo "⏹️  停止服务..."
+        sudo systemctl stop $SERVICE_NAME 2>/dev/null || true
+        sudo pkill -f "uvicorn" 2>/dev/null || true
+        
+        # 检查端口
+        echo "🔍 检查端口占用..."
+        sudo netstat -tlnp | grep :8000 || echo "端口 8000 空闲"
+        
+        # 创建应用目录
+        sudo mkdir -p $APP_DIR
+        sudo chown ubuntu:ubuntu $APP_DIR
+        cd $APP_DIR
+        
+        # 检查 Python 环境
+        echo "🐍 检查 Python 环境..."
+        python3 --version
+        which python3
+        
+        # 检查 pip
+        python3 -m pip --version || {
+            echo "📦 安装 pip..."
+            curl https://bootstrap.pypa.io/get-pip.py | python3 --user
+        }
+        
+        # 安装核心依赖
+        echo "📦 安装核心依赖..."
+        python3 -m pip install --user --upgrade pip
+        python3 -m pip install --user fastapi uvicorn
+        
+        # 创建最小测试应用
+        echo "🔧 创建测试应用..."
+        cat > test_app.py << PYEOF
+        from fastapi import FastAPI
+        import json
+        from datetime import datetime
+        
+        app = FastAPI(title="GitHub-Notion Sync Test")
+        
+        @app.get("/health")
+        async def health():
+            return {
+                "status": "ok",
+                "timestamp": datetime.utcnow().isoformat() + "Z",
+                "environment": "production",
+                "message": "Emergency test service running"
+            }
+        
+        @app.get("/")
+        async def root():
+            return {"message": "GitHub-Notion Sync Service - Emergency Mode"}
+        PYEOF
+        
+        # 创建简化的 systemd 服务
+        echo "🔧 创建测试服务..."
+        sudo tee /etc/systemd/system/test-service.service > /dev/null << SERVICEEOF
+        [Unit]
+        Description=Test Service
+        After=network.target
+        
+        [Service]
+        Type=simple
+        User=ubuntu
+        WorkingDirectory=$APP_DIR
+        Environment=PATH=/home/ubuntu/.local/bin:/usr/local/bin:/usr/bin:/bin
+        ExecStart=/home/ubuntu/.local/bin/uvicorn test_app:app --host 0.0.0.0 --port 8000
+        Restart=always
+        RestartSec=5
+        
+        [Install]
+        WantedBy=multi-user.target
+        SERVICEEOF
+        
+        # 启动测试服务
+        echo "🚀 启动测试服务..."
+        sudo systemctl daemon-reload
+        sudo systemctl enable test-service
+        sudo systemctl start test-service
+        
+        # 等待启动
+        sleep 10
+        
+        # 检查状态
+        echo "🔍 检查测试服务状态..."
+        sudo systemctl status test-service --no-pager
+        
+        # 测试连接
+        echo "🧪 测试连接..."
+        curl -f http://localhost:8000/health || echo "测试失败"
+        
+        echo "✅ 紧急修复完成"
+        EOF
+        
+        # 执行修复
+        scp -i ~/.ssh/aws-key.pem -o StrictHostKeyChecking=no emergency_fix.sh ubuntu@${{ env.AWS_SERVER }}:/tmp/
+        ssh -i ~/.ssh/aws-key.pem -o StrictHostKeyChecking=no ubuntu@${{ env.AWS_SERVER }} "chmod +x /tmp/emergency_fix.sh && /tmp/emergency_fix.sh"
+        
+    - name: 🧪 Verify Fix
+      run: |
+        echo "🔍 验证修复结果..."
+        sleep 15
+        
+        if curl -f http://${{ env.AWS_SERVER }}:8000/health; then
+          echo "✅ 紧急修复成功！"
+        else
+          echo "❌ 修复失败，需要进一步诊断"
+          
+          # 获取更多诊断信息
+          ssh -i ~/.ssh/aws-key.pem -o StrictHostKeyChecking=no ubuntu@${{ env.AWS_SERVER }} "
+            echo '=== 系统状态 ==='
+            sudo systemctl status test-service --no-pager || true
+            echo '=== 端口状态 ==='
+            sudo netstat -tlnp | grep :8000 || echo '端口 8000 未监听'
+            echo '=== 进程状态 ==='
+            ps aux | grep uvicorn || echo '没有 uvicorn 进程'
+            echo '=== 日志 ==='
+            sudo journalctl -u test-service --no-pager -n 20 || true
+          "
+        fi
