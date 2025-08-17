@@ -1,4 +1,4 @@
-# GitHub-Notion 双向同步系统
+# 🔄 GitHub-Notion 双向同步系统
 
 [文档入口](./docs/README.md) · [开发环境（dev compose）](#开发环境dev-compose) · ![CI](https://github.com/${GITHUB_REPOSITORY}/actions/workflows/ci.yml/badge.svg) · ![CD](https://github.com/${GITHUB_REPOSITORY}/actions/workflows/cd.yml/badge.svg)
 

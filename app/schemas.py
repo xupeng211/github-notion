@@ -29,9 +29,7 @@ class Issue(BaseModel):
     updated_at: Optional[str] = None
 
 
-class GiteeWebhookPayload(BaseModel):
-    action: Optional[str] = None
-    issue: Issue
+# Gitee models removed - focusing on GitHub ↔ Notion sync only
 
 
 # GitHub Webhook Models

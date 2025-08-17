@@ -60,8 +60,6 @@ class WebhookSecurityValidator:
         try:
             if self.provider == "github":
                 return self._verify_github_signature(body, signature)
-            elif self.provider == "gitee":
-                return self._verify_gitee_signature(body, signature, timestamp)
             elif self.provider == "notion":
                 return self._verify_notion_signature(body, signature, timestamp)
             else:
@@ -81,12 +79,7 @@ class WebhookSecurityValidator:
 
         return hmac.compare_digest(expected_sig, computed_sig)
 
-    def _verify_gitee_signature(self, body: bytes, signature: str, timestamp: Optional[str] = None) -> bool:
-        """Gitee签名验证"""
-        # Gitee使用标准的HMAC-SHA256验证
-        computed_sig = hmac.new(self.secret.encode(), body, hashlib.sha256).hexdigest()
-
-        return hmac.compare_digest(signature, computed_sig)
+# _verify_gitee_signature method removed - focusing on GitHub ↔ Notion sync only
 
     def _verify_notion_signature(self, body: bytes, signature: str, timestamp: str) -> bool:
         """Notion签名验证"""
@@ -209,11 +202,6 @@ def secure_webhook_decorator(provider: str):
                 secret = os.getenv("GITHUB_WEBHOOK_SECRET", "")
                 request_id = request.headers.get("X-GitHub-Delivery")
                 timestamp = None
-            elif provider == "gitee":
-                signature = request.headers.get("X-Gitee-Token", "")
-                secret = os.getenv("GITEE_WEBHOOK_SECRET", "")
-                request_id = request.headers.get("X-Gitee-Delivery")
-                timestamp = request.headers.get("X-Gitee-Timestamp")
             elif provider == "notion":
                 signature = request.headers.get("Notion-Signature", "")
                 secret = os.getenv("NOTION_WEBHOOK_SECRET", "")

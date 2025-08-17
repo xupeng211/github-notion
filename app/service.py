@@ -125,42 +125,7 @@ def session_scope():
         s.close()
 
 
-def verify_gitee_signature(secret: str, payload: bytes, signature: str) -> bool:
-    """
-    验证Gitee webhook请求的HMAC-SHA256签名
-
-    使用时间安全的比较算法验证webhook请求的完整性和真实性，
-    防止伪造的webhook请求和时序攻击。
-
-    Args:
-        secret: Gitee webhook配置的密钥字符串
-        payload: HTTP请求体的原始字节数据
-        signature: 从X-Gitee-Token头部获取的签名
-
-    Returns:
-        bool: 签名验证成功返回True，失败返回False
-
-    Security:
-        - 使用hmac.compare_digest()防止时序攻击
-        - 采用SHA256哈希算法确保安全性
-        - 空值检查防止绕过验证
-
-    Example:
-        >>> webhook_key = "example-webhook-key"
-        >>> payload = b'{"issue": {"id": 123}}'
-        >>> signature = "expected_hmac_signature"
-        >>> verify_gitee_signature(webhook_key, payload, signature)
-        True
-    """
-    # 防止空值绕过安全验证
-    if not secret or not signature:
-        return False
-
-    # 使用HMAC-SHA256计算期望的签名
-    expected = hmac.new(secret.encode(), payload, hashlib.sha256).hexdigest()
-
-    # 使用时间安全的比较函数防止时序攻击
-    return hmac.compare_digest(expected, signature)
+# verify_gitee_signature function removed - focusing on GitHub ↔ Notion sync only
 
 
 def verify_notion_signature(secret: str, payload: bytes, signature: str) -> bool:
@@ -515,103 +480,7 @@ def notion_upsert_page(issue: Dict[str, Any]) -> Tuple[bool, str]:
     return False, json.dumps(res)
 
 
-def process_gitee_event(body_bytes: bytes, secret: str, signature: str, event_type: str) -> Tuple[bool, str]:
-    """
-    处理Gitee webhook事件的核心业务逻辑
-
-    这是系统的主要处理函数，负责验证、解析、去重和同步Gitee事件到Notion。
-    采用分布式锁确保并发安全，使用死信队列处理失败情况。
-
-    Args:
-        body_bytes: HTTP请求体的原始字节数据
-        secret: webhook签名验证密钥
-        signature: 请求头中的HMAC签名
-        event_type: Gitee事件类型 (如 "Issue Hook")
-
-    Returns:
-        Tuple[bool, str]: (处理成功标志, 状态消息)
-        - (True, "ok"): 处理成功
-        - (True, "duplicate"): 重复事件，已跳过
-        - (False, "invalid_signature"): 签名验证失败
-        - (False, "missing_issue_id"): 缺少必要的issue ID
-        - (False, "notion_error"): Notion API调用失败
-
-    Business Logic:
-        1. 安全验证：HMAC签名校验防止伪造请求
-        2. 幂等性检查：基于事件哈希避免重复处理
-        3. 分布式锁：按issue_id加锁确保并发安全
-        4. 故障恢复：失败事件进入死信队列等待重试
-        5. 监控指标：记录处理时间和成功失败统计
-
-    Raises:
-        无直接异常，所有错误都通过返回值处理
-    """
-    # 记录处理开始时间，用于性能监控
-    start = time.time()
-    try:
-        # 第一步：安全验证 - 防止伪造的webhook请求
-        if not verify_gitee_signature(secret, body_bytes, signature):
-            EVENTS_TOTAL.labels("fail").inc()
-            return False, "invalid_signature"
-
-        # 第二步：解析payload并提取关键信息
-        payload = json.loads(body_bytes.decode("utf-8"))
-        issue = payload.get("issue") or {}
-        issue_id = str(issue.get("number") or issue.get("id") or "")
-
-        # 第三步：生成事件哈希用于幂等性检查
-        event_hash = event_hash_from_bytes(body_bytes)
-
-        # 验证必要的业务数据
-        if not issue_id:
-            EVENTS_TOTAL.labels("fail").inc()
-            return False, "missing_issue_id"
-
-        # 第四步：获取分布式锁，确保同一issue的并发安全
-        lock = _get_issue_lock(issue_id)
-        with lock:
-            with session_scope() as db:
-                # 第五步：幂等性检查 - 避免重复处理相同事件
-                if should_skip_event(db, issue_id, event_hash, platform="gitee"):
-                    EVENTS_TOTAL.labels("skip").inc()
-                    return True, "duplicate"
-
-                # 第六步：调用Notion API进行页面创建或更新
-                ok, page_or_err = notion_upsert_page(issue)
-                if not ok:
-                    # 第七步：失败处理 - 将事件放入死信队列以便后续重试
-                    deadletter_enqueue(
-                        db,
-                        payload,
-                        reason="notion_error",
-                        last_error=str(page_or_err),
-                        source_platform="gitee",
-                        entity_id=issue_id,
-                    )
-                    DEADLETTER_SIZE.set(deadletter_count(db))
-                    EVENTS_TOTAL.labels("fail").inc()
-                    return False, "notion_error"
-
-                # 第八步：成功处理 - 更新映射关系和处理状态
-                page_id = page_or_err
-                upsert_mapping(db, "gitee", issue_id, page_id)
-                mark_event_processed(db, issue_id, event_hash, platform="gitee")
-
-        # 记录成功指标
-        EVENTS_TOTAL.labels("success").inc()
-        return True, "ok"
-
-    finally:
-        # 无论成功失败都记录处理时间用于性能分析
-        dur = time.time() - start
-        PROCESS_LATENCY.observe(dur)
-        # update p95 gauge using sliding window
-        _durations.append(dur * 1000.0)
-        arr = sorted(_durations)
-        if arr:
-            k = max(0, int(math.ceil(0.95 * len(arr)) - 1))
-
-            PROCESS_P95_MS.set(arr[k])
+# process_gitee_event function removed - focusing on GitHub ↔ Notion sync only
 
 
 # Deadletter replay logic

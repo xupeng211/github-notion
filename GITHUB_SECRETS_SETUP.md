@@ -11,7 +11,6 @@
 | Secret 名称 | 值来源 | 描述 | 示例 |
 |------------|--------|------|------|
 | `AWS_PRIVATE_KEY` | EC2 密钥对的 .pem 文件内容 | AWS EC2 SSH 私钥 | `-----BEGIN RSA PRIVATE KEY-----\n...` |
-| `GITEE_WEBHOOK_SECRET` | Gitee Webhook 配置页面 | Gitee webhook 签名密钥 | `your_gitee_webhook_secret` |
 | `GITHUB_WEBHOOK_SECRET` | GitHub Webhook 配置页面 | GitHub webhook 签名密钥 | `your_github_webhook_secret` |
 | `NOTION_TOKEN` | Notion Integration 页面 | Notion API 访问令牌 | `secret_xxxxxxxxxxxxxxxxx` |
 | `NOTION_DATABASE_ID` | Notion 数据库 URL | 目标 Notion 数据库 ID | `xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx` |
@@ -44,13 +43,7 @@ MIIEpAIBAAKCAQEA...
 -----END RSA PRIVATE KEY-----
 ```
 
-#### **GITEE_WEBHOOK_SECRET**
-```bash
-# 1. 登录 Gitee，进入你的仓库
-# 2. 设置 → Webhooks → 添加 Webhook
-# 3. URL: https://your-domain.com/webhook/gitee
-# 4. 设置密钥，复制这个密钥到 GitHub Secrets
-```
+# Gitee webhook removed - focusing on GitHub ↔ Notion sync only
 
 #### **GITHUB_WEBHOOK_SECRET**
 ```bash
