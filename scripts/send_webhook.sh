@@ -2,11 +2,12 @@
 set -euo pipefail
 
 # Usage:
-#   scripts/send_webhook.sh [--env-file .env] [--url http://127.0.0.1:8000/gitee_webhook] [--body-json '{"issue":{...}}']
+#   scripts/send_webhook.sh [--env-file .env] [--url http://127.0.0.1:8000/github_webhook] [--body-json '{"issue":{...}}']
 # If --body-json not provided, a sample payload is used.
+# Note: Gitee support has been removed, focusing on GitHub ↔ Notion sync only
 
 ENV_FILE=".env"
-URL="http://127.0.0.1:8000/gitee_webhook"
+URL="http://127.0.0.1:8000/github_webhook"
 BODY_JSON=""
 
 while [[ $# -gt 0 ]]; do
@@ -27,8 +28,8 @@ if [[ -f "$ENV_FILE" ]]; then
   set -a; . "$ENV_FILE"; set +a
 fi
 
-if [[ -z "${GITEE_WEBHOOK_SECRET:-}" ]]; then
-  echo "GITEE_WEBHOOK_SECRET is required (set in $ENV_FILE)" >&2
+if [[ -z "${GITHUB_WEBHOOK_SECRET:-}" ]]; then
+  echo "GITHUB_WEBHOOK_SECRET is required (set in $ENV_FILE)" >&2
   exit 2
 fi
 
@@ -53,5 +54,3 @@ curl -sS \
   -d "$BODY_JSON" \
   "$URL"
 echo
-
-

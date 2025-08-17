@@ -527,25 +527,37 @@ def replay_deadletters_once(secret_token: str) -> int:
         return 0  # 权限验证失败，拒绝执行
     from app.models import SessionLocal, deadletter_list, deadletter_mark_replayed
 
+    # Dead letter replay now focuses on GitHub events only
     cnt = 0
     with SessionLocal() as s:
         items = deadletter_list(s)
         for it in items:
+            # Skip non-GitHub events since Gitee support is removed
+            if it.source_platform != "github":
+                continue
+
             payload = json.dumps(it.payload).encode()
+            # Use GitHub webhook secret for signature generation
             sig = (
                 hmac.new(
-                    os.getenv("GITEE_WEBHOOK_SECRET", "").encode(),
+                    os.getenv("GITHUB_WEBHOOK_SECRET", "").encode(),
                     payload,
                     hashlib.sha256,
                 ).hexdigest()
-                if os.getenv("GITEE_WEBHOOK_SECRET")
+                if os.getenv("GITHUB_WEBHOOK_SECRET")
                 else ""
             )
-            ok, _ = process_gitee_event(payload, os.getenv("GITEE_WEBHOOK_SECRET", ""), sig, "replay")
-            if ok:
-                deadletter_mark_replayed(s, it.id)
-                DEADLETTER_REPLAY_TOTAL.inc()
-                cnt += 1
+
+            # Process as GitHub event
+            import asyncio
+            try:
+                ok, _ = asyncio.run(async_process_github_event(payload, os.getenv("GITHUB_WEBHOOK_SECRET", ""), sig, "replay"))
+                if ok:
+                    deadletter_mark_replayed(s, it.id)
+                    DEADLETTER_REPLAY_TOTAL.inc()
+                    cnt += 1
+            except Exception as e:
+                logger.warning(f"Failed to replay deadletter item {it.id}: {e}")
     return cnt
 
 

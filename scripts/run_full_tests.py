@@ -254,22 +254,10 @@ class TestRunner:
 
         try:
             from app.github import github_service
-            from app.service import event_hash_from_bytes, verify_gitee_signature
+            from app.service import event_hash_from_bytes
 
-            # 测试签名验证
+            # 测试事件哈希功能（移除了 Gitee 签名验证）
             test_payload = b'{"test": "data"}'
-            test_secret = "test_secret"
-            import hashlib
-            import hmac
-
-            test_signature = hmac.new(test_secret.encode(), test_payload, hashlib.sha256).hexdigest()
-
-            if verify_gitee_signature(test_secret, test_payload, test_signature):
-                self.log_result("签名验证功能", True)
-            else:
-                self.log_result("签名验证功能", False, "签名验证失败")
-
-            # 测试事件哈希
             hash_result = event_hash_from_bytes(test_payload)
             if hash_result and len(hash_result) == 64:  # SHA256 长度
                 self.log_result("事件哈希功能", True)

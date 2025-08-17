@@ -29,11 +29,10 @@ from app.middleware import PrometheusMiddleware
 from app.models import SessionLocal, deadletter_count
 
 # 新增导入
-from app.schemas import GiteeWebhookPayload, GitHubWebhookPayload, NotionWebhookPayload
+from app.schemas import GitHubWebhookPayload, NotionWebhookPayload
 from app.service import (
     RATE_LIMIT_HITS_TOTAL,
     async_process_github_event,
-    process_gitee_event,
     process_notion_event,
     replay_deadletters_once,
     start_deadletter_scheduler,
@@ -522,7 +521,7 @@ async def github_webhook(request: Request):
     # Pydantic 校验（尽量宽松，仅用于基础字段）
     try:
         payload_dict = json.loads(body.decode("utf-8"))
-        _ = GitHubWebhookPayload.model_validate(payload_dict)
+        _ = GitHubWebhookPayload.parse_obj(payload_dict)
     except ValidationError:
         raise HTTPException(status_code=400, detail="invalid_payload")
     except json.JSONDecodeError:
