@@ -1,5 +1,7 @@
 # 🔄 GitHub-Notion 双向同步系统
 
+🚀 **部署状态**: 准备部署到 AWS EC2 服务器 ($(date '+%Y-%m-%d %H:%M:%S'))
+
 [文档入口](./docs/README.md) · [开发环境（dev compose）](#开发环境dev-compose) · ![CI](https://github.com/${GITHUB_REPOSITORY}/actions/workflows/ci.yml/badge.svg) · ![CD](https://github.com/${GITHUB_REPOSITORY}/actions/workflows/cd.yml/badge.svg)
 
 ## 🚨 强制性代码质量规则
