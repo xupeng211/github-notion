@@ -27,16 +27,6 @@ class ConfigValidator:
 
     # 必须配置的环境变量及其不安全的默认值
     REQUIRED_SECURE_VARS = {
-        "GITEE_WEBHOOK_SECRET": [
-            "",
-            "changeme-secure-token",
-            "your_webhook_secret_here",
-            "your-gitee-webhook-secret-here",
-            "test-secret",
-            "CHANGE_ME_SECURE_GITEE_SECRET",
-            "CHANGE_ME_STAGING_GITEE_SECRET",
-            "CHANGE_ME_PRODUCTION_GITEE_SECRET_MINIMUM_32_CHARS",
-        ],
         "GITHUB_WEBHOOK_SECRET": [
             "",
             "changeme-secure-token",
@@ -199,7 +189,7 @@ class ConfigValidator:
         warnings = []
 
         # 检查webhook密钥长度
-        for var_name in ["GITEE_WEBHOOK_SECRET", "GITHUB_WEBHOOK_SECRET"]:
+        for var_name in ["GITHUB_WEBHOOK_SECRET"]:
             value = os.getenv(var_name, "")
             if value and len(value) < 16:
                 warnings.append(f"⚠️ {var_name} 长度只有{len(value)}字符，" f"建议至少16字符以提高安全性")
