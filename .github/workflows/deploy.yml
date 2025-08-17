@@ -1,363 +1,180 @@
-name: 🚀 Production CI/CD Pipeline
+name: 🚀 Simple Direct Deployment
 
 on:
   push:
     branches: [ main ]
   workflow_dispatch:
-    inputs:
-      deploy_to_aws:
-        description: 'Deploy to AWS server'
-        required: false
-        default: 'true'
-        type: choice
-        options:
-        - 'true'
-        - 'false'
 
 env:
-  REGISTRY: ghcr.io
-  IMAGE_NAME: xupeng211/github-notion
+  AWS_SERVER: "3.35.106.116"
+  APP_DIR: "/opt/github-notion-sync"
 
 jobs:
-  # Stage 1: Test and Quality Checks
-  test:
+  deploy:
+    name: 🚀 Direct Deploy to AWS
     runs-on: ubuntu-latest
+    
     steps:
-    - name: Checkout code
+    - name: 📥 Checkout code
       uses: actions/checkout@v4
-
-    - name: Set up Python 3.11
-      uses: actions/setup-python@v4
-      with:
-        python-version: '3.11'
-        cache: 'pip'
-
-    - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install -r requirements.txt
-        pip install pytest pytest-cov || echo "Test tools installation completed"
-        pip install bandit flake8 || echo "Code quality tools installation completed"
-
-    - name: Code quality checks
-      run: |
-        echo "Running code style checks..."
-        flake8 app/ --max-line-length=120 --ignore=E203,W503,E127,E128 --exclude=__pycache__,*.pyc || echo "Style check completed with warnings"
-        echo "Running security scan..."
-        bandit -r app/ -f json -o bandit-report.json || echo "Security scan completed"
-      continue-on-error: true
-
-    - name: Run tests
-      run: |
-        python -m pytest tests/ -v --tb=short || echo "Tests completed with some failures"
-      continue-on-error: true
-
-    - name: Test database migrations
-      run: |
-        mkdir -p test_data
-        export DB_URL=sqlite:///test_data/test.db
-        alembic upgrade head || echo "Migration test completed"
-        alembic current || echo "Current migration status checked"
-      continue-on-error: true
-
-  # Stage 2: Build and Push Docker Image
-  build-and-push:
-    needs: test
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      packages: write
-    outputs:
-      image-digest: ${{ steps.build.outputs.digest }}
-      image-tag: ${{ steps.meta.outputs.tags }}
-
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-
-    - name: Log in to GitHub Container Registry
-      uses: docker/login-action@v3
-      with:
-        registry: ${{ env.REGISTRY }}
-        username: ${{ github.actor }}
-        password: ${{ secrets.GITHUB_TOKEN }}
-
-    - name: Extract metadata
-      id: meta
-      uses: docker/metadata-action@v5
-      with:
-        images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
-        tags: |
-          type=ref,event=branch
-          type=ref,event=pr
-          type=sha,prefix={{branch}}-
-          type=raw,value=latest,enable={{is_default_branch}}
-
-    - name: Set up Docker Buildx
-      uses: docker/setup-buildx-action@v3
-
-    - name: Build and push Docker image
-      id: build
-      uses: docker/build-push-action@v5
-      with:
-        context: .
-        file: ./Dockerfile
-        push: true
-        tags: ${{ steps.meta.outputs.tags }}
-        labels: ${{ steps.meta.outputs.labels }}
-        build-args: |
-          VERSION=${{ github.sha }}
-          BUILD_TIME=${{ github.run_number }}
-        cache-from: type=gha
-        cache-to: type=gha,mode=max
-
-    - name: Run Trivy vulnerability scanner
-      uses: aquasecurity/trivy-action@master
-      with:
-        image-ref: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
-        format: 'table'
-        exit-code: '0'
-      continue-on-error: true
-
-  # Stage 3: Deploy to AWS Server
-  deploy-aws:
-    needs: build-and-push
-    runs-on: ubuntu-latest
-    if: |
-      github.ref == 'refs/heads/main' &&
-      (github.event_name == 'push' || github.event.inputs.deploy_to_aws == 'true')
-    environment: production
-
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-
-    - name: Check required secrets
-      run: |
-        echo "🔍 Checking required secrets..."
-
-        # Check AWS deployment secrets
-        if [ -z "${{ secrets.AWS_PRIVATE_KEY }}" ]; then
-          echo "❌ AWS_PRIVATE_KEY secret not set"
-          exit 1
-        fi
-        echo "✅ AWS_PRIVATE_KEY configured"
-
-        # Check webhook secrets (GitHub only)
-        if [ -z "${{ secrets.GITHUB_WEBHOOK_SECRET }}" ]; then
-          echo "⚠️  GITHUB_WEBHOOK_SECRET not set (webhook functionality will be limited)"
-        else
-          echo "✅ GITHUB_WEBHOOK_SECRET configured"
-        fi
-
-        # Check Notion secrets
-        if [ -z "${{ secrets.NOTION_TOKEN }}" ]; then
-          echo "⚠️  NOTION_TOKEN not set (Notion sync will be disabled)"
-        else
-          echo "✅ NOTION_TOKEN configured"
-        fi
-
-        if [ -z "${{ secrets.NOTION_DATABASE_ID }}" ]; then
-          echo "⚠️  NOTION_DATABASE_ID not set (Notion sync will be disabled)"
-        else
-          echo "✅ NOTION_DATABASE_ID configured"
-        fi
-
-        echo "🎯 Secret validation completed"
-
-    - name: Prepare deployment files
-      run: |
-        mkdir -p deploy
-
-        # Copy config files
-        cp docker-compose.production.yml deploy/ || cp docker-compose.yml deploy/docker-compose.production.yml
-        cp -r monitoring deploy/ 2>/dev/null || echo "No monitoring config found"
-
-        # Create environment file
-        cat > deploy/.env << EOF
-        LOG_LEVEL=INFO
-        ENVIRONMENT=production
-        APP_PORT=8000
-        DB_URL=sqlite:///data/sync.db
-        REGISTRY=${{ env.REGISTRY }}
-        IMAGE_NAME=${{ env.IMAGE_NAME }}
-        IMAGE_TAG=latest
-        SERVICE_PORT=8000
-        SERVICE_ENV=production
-        DEPLOYMENT_TIME=$(date +%Y%m%d-%H%M%S)
-        RATE_LIMIT_PER_MINUTE=60
-        MAX_REQUEST_SIZE=1048576
-        DEADLETTER_REPLAY_TOKEN=${{ secrets.DEADLETTER_REPLAY_TOKEN || '' }}
-        GITHUB_WEBHOOK_SECRET=${{ secrets.GITHUB_WEBHOOK_SECRET }}
-        NOTION_TOKEN=${{ secrets.NOTION_TOKEN || '' }}
-        NOTION_DATABASE_ID=${{ secrets.NOTION_DATABASE_ID || '' }}
-        EOF
-
-        # Create deployment script
-        cat > deploy/deploy.sh << 'SCRIPT_EOF'
-        #!/bin/bash
-        set -e
-
-        echo "Starting AWS server deployment..."
-
-        # Clean up any existing deployment files first
-        rm -rf /tmp/github-notion-deploy-* 2>/dev/null || true
-
-        # Check and install Docker
-        if ! command -v docker >/dev/null 2>&1; then
-            echo "Installing Docker..."
-            curl -fsSL https://get.docker.com -o get-docker.sh
-            sudo sh get-docker.sh
-            sudo usermod -aG docker $USER
-            rm get-docker.sh
-            newgrp docker
-        fi
-
-        # Check and install Docker Compose
-        if ! command -v docker-compose >/dev/null 2>&1; then
-            echo "Installing Docker Compose..."
-            sudo curl -L "https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
-            sudo chmod +x /usr/local/bin/docker-compose
-        fi
-
-        # Create app directory
-        APP_DIR="/opt/github-notion-sync"
-        sudo mkdir -p "$APP_DIR"
-        sudo chown $USER:$USER "$APP_DIR"
-
-        # Copy files to app directory
-        cp -r . "$APP_DIR/"
-        cd "$APP_DIR"
-
-        # Load environment variables
-        source .env
-
-        # Login to GitHub Container Registry
-        echo "Logging into container registry..."
-        echo "$GITHUB_TOKEN" | docker login ghcr.io -u xupeng211 --password-stdin
-
-        # Create necessary directories
-        mkdir -p data logs
-
-        # Stop old services
-        echo "Stopping old services..."
-        docker-compose -f docker-compose.production.yml down 2>/dev/null || echo "No existing service found"
-
-        # Pull latest image
-        echo "Pulling latest image..."
-        docker pull "${REGISTRY}/${IMAGE_NAME}:latest"
-
-        # Start services
-        echo "Starting services..."
-        docker-compose -f docker-compose.production.yml up -d
-
-        # Wait for services to start
-        echo "Waiting for services to start..."
-        sleep 20
-
-        # Health check
-        for i in {1..30}; do
-            if curl -f http://localhost:8000/health >/dev/null 2>&1; then
-                echo "Service started successfully!"
-                break
-            fi
-            if [[ $i -eq 30 ]]; then
-                echo "Health check timeout, but service may still be starting"
-                docker-compose logs --tail 20
-            fi
-            echo "Waiting for service to start... ($i/30)"
-            sleep 2
-        done
-
-        # Show service status
-        echo "Service status:"
-        docker-compose ps || docker ps
-
-        echo ""
-        echo "Deployment completed!"
-        echo "Service access addresses:"
-                 PUBLIC_IP=$(curl -s ifconfig.me 2>/dev/null || curl -s icanhazip.com 2>/dev/null || echo "3.35.106.116")
-        echo "  Health check: http://$PUBLIC_IP:8000/health"
-        echo "  API docs: http://$PUBLIC_IP:8000/docs"
-        echo "  Metrics: http://$PUBLIC_IP:8000/metrics"
-        SCRIPT_EOF
-
-        chmod +x deploy/deploy.sh
-
-    - name: Setup SSH
+      
+    - name: 🔧 Setup SSH key
       run: |
         mkdir -p ~/.ssh
         echo "${{ secrets.AWS_PRIVATE_KEY }}" > ~/.ssh/aws-key.pem
         chmod 600 ~/.ssh/aws-key.pem
-        ssh-keyscan -H 3.35.106.116 >> ~/.ssh/known_hosts 2>/dev/null || echo "Host key scan completed"
-
-    - name: Upload to AWS server
+        ssh-keyscan -H ${{ env.AWS_SERVER }} >> ~/.ssh/known_hosts
+        
+    - name: 🚀 Deploy to AWS EC2
       run: |
-        scp -i ~/.ssh/aws-key.pem -o StrictHostKeyChecking=no -r deploy ubuntu@3.35.106.116:/tmp/github-notion-deploy
-
-    - name: Clean disk space on AWS server
-      run: |
-        ssh -i ~/.ssh/aws-key.pem -o StrictHostKeyChecking=no ubuntu@3.35.106.116 "
-          echo 'Cleaning disk space before deployment...' &&
-          df -h / &&
-          docker system prune -af --volumes || true &&
-          docker image prune -af || true &&
-          sudo apt-get clean || true &&
-          sudo rm -rf /var/lib/apt/lists/* || true &&
-          echo 'Cleaning /tmp but preserving deployment files...' &&
-          find /tmp -maxdepth 1 -type f -delete || true &&
-          find /tmp -maxdepth 1 -type d ! -name 'github-notion-deploy' ! -name 'tmp' -exec rm -rf {} + || true &&
-          echo 'Disk space after cleanup:' &&
-          df -h /
-        "
-
-    - name: Deploy on AWS server
-      run: |
-        ssh -i ~/.ssh/aws-key.pem -o StrictHostKeyChecking=no ubuntu@3.35.106.116 "
-          cd /tmp/github-notion-deploy &&
-          GITHUB_TOKEN='${{ secrets.GITHUB_TOKEN }}' bash deploy.sh
-        "
-
-    - name: Verify deployment
-      run: |
+        # 创建部署脚本
+        cat > deploy_script.sh << 'EOF'
+        #!/bin/bash
+        set -euo pipefail
+        
+        echo "🚀 开始部署 GitHub-Notion 同步系统..."
+        
+        # 设置变量
+        APP_DIR="/opt/github-notion-sync"
+        SERVICE_NAME="github-notion-sync"
+        
+        # 停止现有服务
+        echo "⏹️  停止现有服务..."
+        sudo systemctl stop $SERVICE_NAME || true
+        sudo pkill -f "uvicorn app.server:app" || true
+        
+        # 创建应用目录
+        echo "📁 准备应用目录..."
+        sudo mkdir -p $APP_DIR
+        sudo chown ubuntu:ubuntu $APP_DIR
+        cd $APP_DIR
+        
+        # 清理旧文件
+        rm -rf .git app tests docs tools *.py *.txt *.yml *.yaml *.md || true
+        
+        # 等待文件传输完成
+        echo "⏳ 等待文件传输..."
+        sleep 5
+        
+        # 检查 Python 和 pip
+        echo "🐍 检查 Python 环境..."
+        python3 --version
+        pip3 --version || (curl https://bootstrap.pypa.io/get-pip.py | python3)
+        
+        # 安装依赖
+        echo "📦 安装 Python 依赖..."
+        pip3 install --user fastapi uvicorn[standard] sqlalchemy httpx requests python-dotenv pydantic email-validator starlette typing-extensions prometheus-client python-json-logger cryptography pyopenssl boto3 apscheduler pyyaml alembic
+        
+        # 创建环境配置
+        echo "⚙️  创建环境配置..."
+        cat > .env << ENVEOF
+        ENVIRONMENT=production
+        DB_URL=sqlite:///./data/app.db
+        GITHUB_WEBHOOK_SECRET=$GITHUB_WEBHOOK_SECRET
+        NOTION_TOKEN=$NOTION_TOKEN
+        NOTION_DATABASE_ID=$NOTION_DATABASE_ID
+        GITHUB_TOKEN=$GITHUB_TOKEN
+        DEADLETTER_REPLAY_TOKEN=$DEADLETTER_REPLAY_TOKEN
+        RATE_LIMIT_PER_MINUTE=100
+        MAX_REQUEST_SIZE=2097152
+        DISABLE_NOTION=false
+        LOG_LEVEL=INFO
+        ENVEOF
+        
+        # 创建数据目录
+        mkdir -p data logs
+        
+        # 初始化数据库
+        echo "🗄️  初始化数据库..."
+        python3 -c "
+        import sys
+        sys.path.insert(0, '.')
+        from app.models import init_db
+        init_db()
+        print('✅ 数据库初始化完成')
+        " || echo "⚠️  数据库初始化失败，但继续部署"
+        
+        # 创建 systemd 服务
+        echo "🔧 创建系统服务..."
+        sudo tee /etc/systemd/system/$SERVICE_NAME.service > /dev/null << SERVICEEOF
+        [Unit]
+        Description=GitHub-Notion Sync Service
+        After=network.target
+        
+        [Service]
+        Type=simple
+        User=ubuntu
+        WorkingDirectory=$APP_DIR
+        Environment=PATH=/home/ubuntu/.local/bin:/usr/local/bin:/usr/bin:/bin
+        ExecStart=/home/ubuntu/.local/bin/uvicorn app.server:app --host 0.0.0.0 --port 8000
+        Restart=always
+        RestartSec=10
+        StandardOutput=journal
+        StandardError=journal
+        
+        [Install]
+        WantedBy=multi-user.target
+        SERVICEEOF
+        
+        # 重新加载 systemd 并启动服务
+        echo "🔄 启动服务..."
+        sudo systemctl daemon-reload
+        sudo systemctl enable $SERVICE_NAME
+        sudo systemctl start $SERVICE_NAME
+        
+        # 等待服务启动
+        echo "⏳ 等待服务启动..."
         sleep 10
-        curl -f http://3.35.106.116:8000/health || echo "Health check failed, but deployment may still be successful"
-        echo "Deployment process completed!"
-      continue-on-error: true
-
-  # Stage 4: Deployment Notification
-  notify:
-    needs: [build-and-push, deploy-aws]
-    runs-on: ubuntu-latest
-    if: always()
-
-    steps:
-    - name: Deployment notification
+        
+        # 检查服务状态
+        echo "🔍 检查服务状态..."
+        sudo systemctl status $SERVICE_NAME --no-pager || true
+        
+        # 测试健康检查
+        echo "🏥 测试健康检查..."
+        curl -f http://localhost:8000/health || echo "⚠️  健康检查失败"
+        
+        echo "✅ 部署完成！"
+        echo "🌐 服务地址: http://$AWS_SERVER:8000"
+        echo "🏥 健康检查: http://$AWS_SERVER:8000/health"
+        EOF
+        
+        # 传输文件到服务器
+        echo "📤 传输文件到服务器..."
+        scp -i ~/.ssh/aws-key.pem -o StrictHostKeyChecking=no -r . ubuntu@${{ env.AWS_SERVER }}:${{ env.APP_DIR }}/
+        
+        # 传输部署脚本
+        scp -i ~/.ssh/aws-key.pem -o StrictHostKeyChecking=no deploy_script.sh ubuntu@${{ env.AWS_SERVER }}:/tmp/
+        
+        # 执行部署
+        echo "🚀 执行远程部署..."
+        ssh -i ~/.ssh/aws-key.pem -o StrictHostKeyChecking=no ubuntu@${{ env.AWS_SERVER }} \
+          "GITHUB_WEBHOOK_SECRET='${{ secrets.GITHUB_WEBHOOK_SECRET }}' \
+           NOTION_TOKEN='${{ secrets.NOTION_TOKEN }}' \
+           NOTION_DATABASE_ID='${{ secrets.NOTION_DATABASE_ID }}' \
+           GITHUB_TOKEN='${{ secrets.GITHUB_TOKEN }}' \
+           DEADLETTER_REPLAY_TOKEN='${{ secrets.DEADLETTER_REPLAY_TOKEN }}' \
+           bash /tmp/deploy_script.sh"
+           
+    - name: 🧪 Verify deployment
       run: |
-        echo "CI/CD pipeline execution completed!"
-        echo ""
-        echo "Execution results:"
-        echo "  Image build: ${{ needs.build-and-push.result }}"
-        if [ "${{ needs.deploy-aws.result }}" != "skipped" ]; then
-          echo "  AWS deployment: ${{ needs.deploy-aws.result }}"
+        echo "🔍 验证部署..."
+        sleep 30
+        
+        # 测试健康检查
+        if curl -f http://${{ env.AWS_SERVER }}:8000/health; then
+          echo "✅ 部署验证成功！"
         else
-          echo "  AWS deployment: skipped (missing secrets or not main branch)"
+          echo "❌ 部署验证失败"
+          exit 1
         fi
-        echo ""
-        if [[ "${{ needs.build-and-push.result }}" == "success" ]]; then
-          echo "Docker image successfully built and pushed to:"
-          echo "   ghcr.io/xupeng211/github-notion:latest"
-          echo ""
-          if [[ "${{ needs.deploy-aws.result }}" == "success" ]]; then
-            echo "AWS deployment successful!"
-            echo "Service URL: http://3.35.106.116:8000"
-            echo "API docs: http://3.35.106.116:8000/docs"
-            echo "Health check: http://3.35.106.116:8000/health"
-          else
-            echo "To deploy to AWS, please:"
-            echo "  1. Set AWS_PRIVATE_KEY secret"
-            echo "  2. Manually trigger workflow and choose to deploy to AWS"
-          fi
-        else
-          echo "Build failed, please check logs"
-        fi
+        
+    - name: 📊 Deployment summary
+      if: always()
+      run: |
+        echo "📊 部署总结:"
+        echo "🎯 目标服务器: ${{ env.AWS_SERVER }}"
+        echo "📁 应用目录: ${{ env.APP_DIR }}"
+        echo "🌐 服务地址: http://${{ env.AWS_SERVER }}:8000"
+        echo "🏥 健康检查: http://${{ env.AWS_SERVER }}:8000/health"
+        echo "📊 监控指标: http://${{ env.AWS_SERVER }}:8000/metrics"

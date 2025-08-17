@@ -32,9 +32,13 @@ cryptography==42.0.5
 boto3==1.34.51
 botocore==1.34.51
 
-# FastAPI服务
+# FastAPI服务和依赖
 fastapi==0.111.0
 uvicorn[standard]==0.30.1
+pydantic==1.10.22
+email-validator==2.2.0
+starlette==0.37.2
+typing-extensions==4.14.1
 SQLAlchemy==2.0.30
 
 # 任务调度

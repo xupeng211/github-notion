@@ -18,13 +18,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
     ca-certificates \
     build-essential \
-    gcc g++ make \
+    gcc \
     libffi-dev \
     libssl-dev \
-    libpq-dev \
-    pkg-config \
-    rustc cargo \
-    git \
     && rm -rf /var/lib/apt/lists/* \
     && apt-get clean
 
