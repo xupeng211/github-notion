@@ -1,6 +1,6 @@
 # 🔄 GitHub-Notion 双向同步系统
 
-🚀 **部署状态**: GitHub Secrets 已配置，正在部署到 AWS EC2 服务器...
+🚀 **部署状态**: 强制触发部署 - $(date '+%Y-%m-%d %H:%M:%S')
 
 [文档入口](./docs/README.md) · [开发环境（dev compose）](#开发环境dev-compose) · ![CI](https://github.com/${GITHUB_REPOSITORY}/actions/workflows/ci.yml/badge.svg) · ![CD](https://github.com/${GITHUB_REPOSITORY}/actions/workflows/cd.yml/badge.svg)
 
