@@ -3,7 +3,7 @@ version: '3.8'
 services:
   app:
     image: ${REGISTRY}/${IMAGE_NAME}:${IMAGE_TAG:-latest}
-    container_name: gitee-notion-sync-prod
+    container_name: github-notion-sync-prod
     restart: always
     ports:
       - "${SERVICE_PORT:-8000}:8000"
@@ -12,38 +12,38 @@ services:
       - APP_PORT=8000
       - LOG_LEVEL=INFO
       - ENVIRONMENT=production
-      
+
       # 数据库配置
       - DB_URL=sqlite:///data/sync.db
-      
-      # Gitee 配置
-      - GITEE_WEBHOOK_SECRET=${GITEE_WEBHOOK_SECRET}
-      
+
+      # GitHub 配置
+      - GITHUB_WEBHOOK_SECRET=${GITHUB_WEBHOOK_SECRET}
+
       # Notion 配置 (可选)
       - NOTION_TOKEN=${NOTION_TOKEN:-}
       - NOTION_DATABASE_ID=${NOTION_DATABASE_ID:-}
-      
+
       # 安全和限制
       - RATE_LIMIT_PER_MINUTE=60
       - MAX_REQUEST_SIZE=1048576
       - DEADLETTER_REPLAY_TOKEN=${DEADLETTER_REPLAY_TOKEN:-default-token-123}
-      
+
       # 生产配置
       - DISABLE_NOTION=false
       - DISABLE_METRICS=false
-      
+
     volumes:
       - ./data:/app/data
       - ./logs:/app/logs
-    
+
     labels:
-      - "com.gitee-notion-sync.environment=production"
-      - "com.gitee-notion-sync.version=${IMAGE_TAG:-latest}"
-      - "com.gitee-notion-sync.deployment-time=${DEPLOYMENT_TIME:-unknown}"
-    
+      - "com.github-notion-sync.environment=production"
+      - "com.github-notion-sync.version=${IMAGE_TAG:-latest}"
+      - "com.github-notion-sync.deployment-time=${DEPLOYMENT_TIME:-unknown}"
+
     networks:
-      - gitee-notion-network
-    
+      - github-notion-network
+
     # 日志配置
     logging:
       driver: "json-file"
@@ -52,5 +52,5 @@ services:
         max-file: "3"
 
 networks:
-  gitee-notion-network:
-    driver: bridge 
+  github-notion-network:
+    driver: bridge

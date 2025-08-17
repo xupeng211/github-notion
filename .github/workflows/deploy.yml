@@ -16,7 +16,7 @@ on:
 
 env:
   REGISTRY: ghcr.io
-  IMAGE_NAME: xupeng211/gitee-notion
+  IMAGE_NAME: xupeng211/github-notion
 
 jobs:
   # Stage 1: Test and Quality Checks
@@ -201,7 +201,7 @@ jobs:
         echo "Starting AWS server deployment..."
 
         # Clean up any existing deployment files first
-        rm -rf /tmp/gitee-notion-deploy-* 2>/dev/null || true
+        rm -rf /tmp/github-notion-deploy-* 2>/dev/null || true
 
         # Check and install Docker
         if ! command -v docker >/dev/null 2>&1; then
@@ -221,7 +221,7 @@ jobs:
         fi
 
         # Create app directory
-        APP_DIR="/opt/gitee-notion-sync"
+        APP_DIR="/opt/github-notion-sync"
         sudo mkdir -p "$APP_DIR"
         sudo chown $USER:$USER "$APP_DIR"
 
@@ -293,7 +293,7 @@ jobs:
 
     - name: Upload to AWS server
       run: |
-        scp -i ~/.ssh/aws-key.pem -o StrictHostKeyChecking=no -r deploy ubuntu@3.35.106.116:/tmp/gitee-notion-deploy
+        scp -i ~/.ssh/aws-key.pem -o StrictHostKeyChecking=no -r deploy ubuntu@3.35.106.116:/tmp/github-notion-deploy
 
     - name: Clean disk space on AWS server
       run: |
@@ -306,7 +306,7 @@ jobs:
           sudo rm -rf /var/lib/apt/lists/* || true &&
           echo 'Cleaning /tmp but preserving deployment files...' &&
           find /tmp -maxdepth 1 -type f -delete || true &&
-          find /tmp -maxdepth 1 -type d ! -name 'gitee-notion-deploy' ! -name 'tmp' -exec rm -rf {} + || true &&
+          find /tmp -maxdepth 1 -type d ! -name 'github-notion-deploy' ! -name 'tmp' -exec rm -rf {} + || true &&
           echo 'Disk space after cleanup:' &&
           df -h /
         "
@@ -314,7 +314,7 @@ jobs:
     - name: Deploy on AWS server
       run: |
         ssh -i ~/.ssh/aws-key.pem -o StrictHostKeyChecking=no ubuntu@3.35.106.116 "
-          cd /tmp/gitee-notion-deploy &&
+          cd /tmp/github-notion-deploy &&
           GITHUB_TOKEN='${{ secrets.GITHUB_TOKEN }}' bash deploy.sh
         "
 
@@ -346,7 +346,7 @@ jobs:
         echo ""
         if [[ "${{ needs.build-and-push.result }}" == "success" ]]; then
           echo "Docker image successfully built and pushed to:"
-          echo "   ghcr.io/xupeng211/gitee-notion:latest"
+          echo "   ghcr.io/xupeng211/github-notion:latest"
           echo ""
           if [[ "${{ needs.deploy-aws.result }}" == "success" ]]; then
             echo "AWS deployment successful!"
