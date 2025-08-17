@@ -34,85 +34,53 @@ def test_health():
     assert "database" in response_data["checks"]
 
 
-def test_signature_validation():
-    secret = "s"
-    payload = json.dumps({"issue": {"number": 1, "title": "test-notion-token-for-testing"}}).encode()
-    sig = sign(secret, payload)
+def test_github_signature_validation():
+    """测试GitHub webhook签名验证"""
+    import hashlib
+    import hmac
+
+    secret = "test-secret"
+    payload = json.dumps({
+        "action": "opened",
+        "issue": {
+            "id": 1,
+            "number": 1,
+            "title": "test-github-webhook",
+            "body": "test",
+            "state": "open",
+            "created_at": "2024-01-15T10:00:00Z",
+            "updated_at": "2024-01-15T10:00:00Z",
+            "user": {"login": "test-user", "name": "Test User"},
+            "labels": [],
+            "html_url": "https://github.com/test-user/test-repo/issues/1",
+        },
+        "repository": {
+            "id": 12345,
+            "name": "test-repo",
+            "full_name": "test-user/test-repo",
+            "html_url": "https://github.com/test-user/test-repo",
+        },
+        "sender": {"login": "test-user", "name": "Test User"},
+    }).encode()
+
+    sig = hmac.new(secret.encode(), payload, hashlib.sha256).hexdigest()
+
+    # Test without proper environment setup - should fail
     r = client.post(
-        "/gitee_webhook",
+        "/github_webhook",
         data=payload,
-        headers={"X-Gitee-Token": sig, "Content-Type": "application/json"},
+        headers={"X-Hub-Signature-256": f"sha256={sig}", "Content-Type": "application/json"},
     )
-    # service expects env GITEE_WEBHOOK_SECRET; here it's empty, so invalid
+    # service expects env GITHUB_WEBHOOK_SECRET; here it's empty, so invalid
     assert r.status_code == 403
 
 
-def test_duplicate_idempotency(monkeypatch):
-    os.environ["GITEE_WEBHOOK_SECRET"] = "test-webhook-secret-for-testing-12345678"
-    os.environ["NOTION_TOKEN"] = "test-notion-token-for-testing"
-    os.environ["NOTION_DATABASE_ID"] = "db"
-
-    # Stub network calls
-    from app import service
-
-    def ok_upsert(issue):
-        return True, "page_1"
-
-    monkeypatch.setattr(service, "notion_upsert_page", ok_upsert)
-
-    payload = json.dumps({"issue": {"number": 2, "title": "X"}}).encode()
-    sig = sign("test-webhook-secret-for-testing-12345678", payload)
-    r1 = client.post(
-        "/gitee_webhook",
-        data=payload,
-        headers={"X-Gitee-Token": sig, "Content-Type": "application/json"},
-    )
-    r2 = client.post(
-        "/gitee_webhook",
-        data=payload,
-        headers={"X-Gitee-Token": sig, "Content-Type": "application/json"},
-    )
-    assert r1.status_code == 200
-    assert r2.status_code in (200, 201)
+# test_duplicate_idempotency removed - Gitee functionality no longer supported
+# GitHub idempotency is tested in test_github_webhook.py
 
 
-def test_retry_deadletter(monkeypatch):
-    os.environ["GITEE_WEBHOOK_SECRET"] = "test-webhook-secret-for-testing-12345678"
-    os.environ["NOTION_TOKEN"] = "test-notion-token-for-testing"
-    os.environ["NOTION_DATABASE_ID"] = "db"
-
-    from app import service
-
-    def fail_upsert(issue):
-        return False, "err"
-
-    monkeypatch.setattr(service, "notion_upsert_page", fail_upsert)
-    payload = json.dumps({"issue": {"number": 3, "title": "Y"}}).encode()
-    sig = sign("test-webhook-secret-for-testing-12345678", payload)
-    r = client.post(
-        "/gitee_webhook",
-        data=payload,
-        headers={"X-Gitee-Token": sig, "Content-Type": "application/json"},
-    )
-    assert r.status_code == 400
-
-
-def test_conflict_strategy(monkeypatch):
-    os.environ["GITEE_WEBHOOK_SECRET"] = "test-webhook-secret-for-testing-12345678"
-    os.environ["NOTION_TOKEN"] = "test-notion-token-for-testing"
-    os.environ["NOTION_DATABASE_ID"] = "db"
-
-    from app import service
-
-    seq = [
-        (True, "page_a"),
-        (True, "page_b"),
-    ]
-
-    def upsert_seq(issue):
-        return seq.pop(0)
-
-    monkeypatch.setattr(service, "notion_upsert_page", upsert_seq)
+# test_retry_deadletter and test_conflict_strategy removed - Gitee functionality no longer supported
+# Dead letter queue functionality is tested in test_error_handling.py
 
     payload1 = json.dumps({"issue": {"number": 4, "title": "Z"}}).encode()
     sig1 = sign("test-webhook-secret-for-testing-12345678", payload1)
