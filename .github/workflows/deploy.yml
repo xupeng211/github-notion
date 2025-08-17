@@ -1,16 +1,14 @@
-name: CI/CD Pipeline - Production Ready
+name: 🚀 Production CI/CD Pipeline
 
 on:
   push:
-    branches: [ main, master ]
-  pull_request:
-    branches: [ main, master ]
+    branches: [ main ]
   workflow_dispatch:
     inputs:
       deploy_to_aws:
         description: 'Deploy to AWS server'
         required: false
-        default: 'false'
+        default: 'true'
         type: choice
         options:
         - 'true'
@@ -136,12 +134,42 @@ jobs:
 
     - name: Check required secrets
       run: |
-        echo "Checking required secrets..."
+        echo "🔍 Checking required secrets..."
+
+        # Check AWS deployment secrets
         if [ -z "${{ secrets.AWS_PRIVATE_KEY }}" ]; then
-          echo "AWS_PRIVATE_KEY secret not set"
+          echo "❌ AWS_PRIVATE_KEY secret not set"
           exit 1
         fi
-        echo "Basic secrets check passed"
+        echo "✅ AWS_PRIVATE_KEY configured"
+
+        # Check webhook secrets
+        if [ -z "${{ secrets.GITEE_WEBHOOK_SECRET }}" ]; then
+          echo "⚠️  GITEE_WEBHOOK_SECRET not set (webhook functionality will be limited)"
+        else
+          echo "✅ GITEE_WEBHOOK_SECRET configured"
+        fi
+
+        if [ -z "${{ secrets.GITHUB_WEBHOOK_SECRET }}" ]; then
+          echo "⚠️  GITHUB_WEBHOOK_SECRET not set (webhook functionality will be limited)"
+        else
+          echo "✅ GITHUB_WEBHOOK_SECRET configured"
+        fi
+
+        # Check Notion secrets
+        if [ -z "${{ secrets.NOTION_TOKEN }}" ]; then
+          echo "⚠️  NOTION_TOKEN not set (Notion sync will be disabled)"
+        else
+          echo "✅ NOTION_TOKEN configured"
+        fi
+
+        if [ -z "${{ secrets.NOTION_DATABASE_ID }}" ]; then
+          echo "⚠️  NOTION_DATABASE_ID not set (Notion sync will be disabled)"
+        else
+          echo "✅ NOTION_DATABASE_ID configured"
+        fi
+
+        echo "🎯 Secret validation completed"
 
     - name: Prepare deployment files
       run: |
@@ -165,10 +193,9 @@ jobs:
         DEPLOYMENT_TIME=$(date +%Y%m%d-%H%M%S)
         RATE_LIMIT_PER_MINUTE=60
         MAX_REQUEST_SIZE=1048576
-                  DEADLETTER_REPLAY_TOKEN=${{ secrets.DEADLETTER_REPLAY_TOKEN }}
-          GRAFANA_PASSWORD=${{ secrets.GRAFANA_PASSWORD }}
-                    GRAFANA_SECRET_KEY=${{ secrets.GRAFANA_SECRET_KEY }}
-            GITEE_WEBHOOK_SECRET=${{ secrets.GITEE_WEBHOOK_SECRET }}
+        DEADLETTER_REPLAY_TOKEN=${{ secrets.DEADLETTER_REPLAY_TOKEN || '' }}
+        GITEE_WEBHOOK_SECRET=${{ secrets.GITEE_WEBHOOK_SECRET }}
+        GITHUB_WEBHOOK_SECRET=${{ secrets.GITHUB_WEBHOOK_SECRET }}
         NOTION_TOKEN=${{ secrets.NOTION_TOKEN || '' }}
         NOTION_DATABASE_ID=${{ secrets.NOTION_DATABASE_ID || '' }}
         EOF

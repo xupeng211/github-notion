@@ -1,8 +1,13 @@
-name: 🚀 Continuous Delivery
+# DEPRECATED: This workflow has been replaced by deploy.yml
+# To avoid duplicate deployments, this workflow is disabled
+# Use deploy.yml for production deployments
+
+name: 🚀 Continuous Delivery (DISABLED)
 
 on:
-  push:
-    branches: [ main ]
+  # Disabled to prevent duplicate deployments with deploy.yml
+  # push:
+  #   branches: [ main ]
   workflow_dispatch:
 
 env:
