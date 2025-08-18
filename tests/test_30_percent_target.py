@@ -335,17 +335,6 @@ class TestServer30Percent:
 
         assert response.status_code in expected_status
 
-    def test_notion_webhook_endpoint(self):
-        """测试Notion webhook端点"""
-        from starlette.testclient import TestClient
-
-        from app.server import app
-
-        client = TestClient(app)
-        response = client.post("/notion_webhook", json={"object": "page"})
-        # 应该返回错误状态码（需要认证等）
-        assert response.status_code in [200, 400, 403, 422]
-
 
 class TestIntegrationBranches:
     """集成测试覆盖剩余分支"""

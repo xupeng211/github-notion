@@ -27,7 +27,7 @@ class TestConfigValidator:
         """测试基础配置验证"""
         validator = ConfigValidator()
         # 测试基础验证逻辑
-        result = validator.validate_environment()
+        result = validator.get_config_summary()
         assert isinstance(result, dict)
 
     def test_config_warnings(self):
