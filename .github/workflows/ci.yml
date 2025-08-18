@@ -8,8 +8,22 @@ permissions:
 on:
   push:
     branches: [ main, develop ]
+    paths:
+      - 'app/**'
+      - 'tests/**'
+      - 'Dockerfile*'
+      - '.github/workflows/**'
   pull_request:
     branches: [ main, develop ]
+    paths:
+      - 'app/**'
+      - 'tests/**'
+      - 'Dockerfile*'
+      - '.github/workflows/**'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 env:
   PYTHON_VERSION: "3.11"

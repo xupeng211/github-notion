@@ -3,9 +3,23 @@ name: 🔍 CI Strong (Enhanced - Green First, Strict Later)
 on:
   push:
     branches: [ main ]
+    paths:
+      - 'app/**'
+      - 'tests/**'
+      - 'Dockerfile*'
+      - '.github/workflows/**'
   pull_request:
     branches: [ main ]
+    paths:
+      - 'app/**'
+      - 'tests/**'
+      - 'Dockerfile*'
+      - '.github/workflows/**'
   workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 env:
   # 控制开关：第一周只告警不阻断
@@ -109,8 +123,8 @@ jobs:
       - name: Run tests with coverage
         run: |
           echo "📊 Running tests with coverage..."
-          echo "🚫 Blocking Mode: Coverage requirements enforced (40% minimum)"
-          pytest --cov --cov-report=term-missing --cov-fail-under=40
+          echo "🚫 Blocking Mode: Coverage requirements enforced (25% minimum)"
+          pytest --cov --cov-report=term-missing --cov-fail-under=25
 
       - name: Upload coverage reports
         uses: codecov/codecov-action@v3

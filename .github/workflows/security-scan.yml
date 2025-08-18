@@ -3,11 +3,26 @@ name: "Security Scanning"
 on:
   push:
     branches: [ main, develop ]
+    paths:
+      - 'app/**'
+      - 'tests/**'
+      - 'Dockerfile*'
+      - '.github/workflows/**'
   pull_request:
     branches: [ main, develop ]
+    paths:
+      - 'app/**'
+      - 'tests/**'
+      - 'Dockerfile*'
+      - '.github/workflows/**'
   schedule:
     # 每天凌晨2点运行安全扫描
     - cron: '0 2 * * *'
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 permissions:
   contents: read

@@ -4,6 +4,15 @@ on:
   pull_request:
     branches: [ main, develop ]
     types: [ opened, synchronize, reopened ]
+    paths:
+      - 'app/**'
+      - 'tests/**'
+      - 'Dockerfile*'
+      - '.github/workflows/**'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   quick-validation:

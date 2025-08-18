@@ -1,9 +1,13 @@
 name: 🚀 Simple Direct Deployment
 
 on:
-  push:
-    branches: [ main ]
+  # push:
+  #   branches: [ main ]  # 注释掉自动部署，仅手动触发
   workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 env:
   AWS_SERVER: "3.35.106.116"
@@ -13,58 +17,58 @@ jobs:
   deploy:
     name: 🚀 Direct Deploy to AWS
     runs-on: ubuntu-latest
-    
+
     steps:
     - name: 📥 Checkout code
       uses: actions/checkout@v4
-      
+
     - name: 🔧 Setup SSH key
       run: |
         mkdir -p ~/.ssh
         echo "${{ secrets.AWS_PRIVATE_KEY }}" > ~/.ssh/aws-key.pem
         chmod 600 ~/.ssh/aws-key.pem
         ssh-keyscan -H ${{ env.AWS_SERVER }} >> ~/.ssh/known_hosts
-        
+
     - name: 🚀 Deploy to AWS EC2
       run: |
         # 创建部署脚本
         cat > deploy_script.sh << 'EOF'
         #!/bin/bash
         set -euo pipefail
-        
+
         echo "🚀 开始部署 GitHub-Notion 同步系统..."
-        
+
         # 设置变量
         APP_DIR="/opt/github-notion-sync"
         SERVICE_NAME="github-notion-sync"
-        
+
         # 停止现有服务
         echo "⏹️  停止现有服务..."
         sudo systemctl stop $SERVICE_NAME || true
         sudo pkill -f "uvicorn app.server:app" || true
-        
+
         # 创建应用目录
         echo "📁 准备应用目录..."
         sudo mkdir -p $APP_DIR
         sudo chown ubuntu:ubuntu $APP_DIR
         cd $APP_DIR
-        
+
         # 清理旧文件
         rm -rf .git app tests docs tools *.py *.txt *.yml *.yaml *.md || true
-        
+
         # 等待文件传输完成
         echo "⏳ 等待文件传输..."
         sleep 5
-        
+
         # 检查 Python 和 pip
         echo "🐍 检查 Python 环境..."
         python3 --version
         pip3 --version || (curl https://bootstrap.pypa.io/get-pip.py | python3)
-        
+
         # 安装依赖
         echo "📦 安装 Python 依赖..."
         pip3 install --user fastapi uvicorn[standard] sqlalchemy httpx requests python-dotenv pydantic email-validator starlette typing-extensions prometheus-client python-json-logger cryptography pyopenssl boto3 apscheduler pyyaml alembic
-        
+
         # 创建环境配置
         echo "⚙️  创建环境配置..."
         cat > .env << ENVEOF
@@ -80,10 +84,10 @@ jobs:
         DISABLE_NOTION=false
         LOG_LEVEL=INFO
         ENVEOF
-        
+
         # 创建数据目录
         mkdir -p data logs
-        
+
         # 初始化数据库
         echo "🗄️  初始化数据库..."
         python3 -c "
@@ -93,14 +97,14 @@ jobs:
         init_db()
         print('✅ 数据库初始化完成')
         " || echo "⚠️  数据库初始化失败，但继续部署"
-        
+
         # 创建 systemd 服务
         echo "🔧 创建系统服务..."
         sudo tee /etc/systemd/system/$SERVICE_NAME.service > /dev/null << SERVICEEOF
         [Unit]
         Description=GitHub-Notion Sync Service
         After=network.target
-        
+
         [Service]
         Type=simple
         User=ubuntu
@@ -111,41 +115,41 @@ jobs:
         RestartSec=10
         StandardOutput=journal
         StandardError=journal
-        
+
         [Install]
         WantedBy=multi-user.target
         SERVICEEOF
-        
+
         # 重新加载 systemd 并启动服务
         echo "🔄 启动服务..."
         sudo systemctl daemon-reload
         sudo systemctl enable $SERVICE_NAME
         sudo systemctl start $SERVICE_NAME
-        
+
         # 等待服务启动
         echo "⏳ 等待服务启动..."
         sleep 10
-        
+
         # 检查服务状态
         echo "🔍 检查服务状态..."
         sudo systemctl status $SERVICE_NAME --no-pager || true
-        
+
         # 测试健康检查
         echo "🏥 测试健康检查..."
         curl -f http://localhost:8000/health || echo "⚠️  健康检查失败"
-        
+
         echo "✅ 部署完成！"
         echo "🌐 服务地址: http://$AWS_SERVER:8000"
         echo "🏥 健康检查: http://$AWS_SERVER:8000/health"
         EOF
-        
+
         # 传输文件到服务器
         echo "📤 传输文件到服务器..."
         scp -i ~/.ssh/aws-key.pem -o StrictHostKeyChecking=no -r . ubuntu@${{ env.AWS_SERVER }}:${{ env.APP_DIR }}/
-        
+
         # 传输部署脚本
         scp -i ~/.ssh/aws-key.pem -o StrictHostKeyChecking=no deploy_script.sh ubuntu@${{ env.AWS_SERVER }}:/tmp/
-        
+
         # 执行部署
         echo "🚀 执行远程部署..."
         ssh -i ~/.ssh/aws-key.pem -o StrictHostKeyChecking=no ubuntu@${{ env.AWS_SERVER }} \
@@ -155,12 +159,12 @@ jobs:
            GITHUB_TOKEN='${{ secrets.GITHUB_TOKEN }}' \
            DEADLETTER_REPLAY_TOKEN='${{ secrets.DEADLETTER_REPLAY_TOKEN }}' \
            bash /tmp/deploy_script.sh"
-           
+
     - name: 🧪 Verify deployment
       run: |
         echo "🔍 验证部署..."
         sleep 30
-        
+
         # 测试健康检查
         if curl -f http://${{ env.AWS_SERVER }}:8000/health; then
           echo "✅ 部署验证成功！"
@@ -168,7 +172,7 @@ jobs:
           echo "❌ 部署验证失败"
           exit 1
         fi
-        
+
     - name: 📊 Deployment summary
       if: always()
       run: |

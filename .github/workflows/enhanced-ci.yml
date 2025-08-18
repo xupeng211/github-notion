@@ -3,16 +3,30 @@ name: 🔍 Enhanced CI (First Iteration)
 on:
   push:
     branches: [ main ]
+    paths:
+      - 'app/**'
+      - 'tests/**'
+      - 'Dockerfile*'
+      - '.github/workflows/**'
   pull_request:
     branches: [ main ]
+    paths:
+      - 'app/**'
+      - 'tests/**'
+      - 'Dockerfile*'
+      - '.github/workflows/**'
   workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   # 保持原有的基础检查（确保绿灯）
   basic-check:
     name: 🟢 Basic Check (MVP)
     runs-on: ubuntu-latest
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -41,7 +55,7 @@ jobs:
     name: 📋 Code Quality (Non-blocking)
     runs-on: ubuntu-latest
     continue-on-error: true  # 非阻塞：即使失败也不影响整体状态
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -85,21 +99,14 @@ jobs:
             echo "⚠️ Security scan: FOUND ISSUES (non-blocking)"
             echo "Please review security recommendations"
           fi
-          
+
           # Always show summary even if there are issues
           if [ -f bandit-report.json ]; then
             echo "📊 Security scan summary:"
-            python3 -c "
-import json
-try:
-    with open('bandit-report.json') as f:
-        data = json.load(f)
-    print(f'Total issues: {len(data.get(\"results\", []))}')
-    print(f'High severity: {len([r for r in data.get(\"results\", []) if r.get(\"issue_severity\") == \"HIGH\"])}')
-    print(f'Medium severity: {len([r for r in data.get(\"results\", []) if r.get(\"issue_severity\") == \"MEDIUM\"])}')
-except:
-    print('Could not parse security report')
-"
+            echo "📄 Bandit report generated successfully"
+            wc -l bandit-report.json || echo "Report file exists"
+          else
+            echo "⚠️ No bandit report found"
           fi
 
   # 新增：基础测试（非阻塞）
@@ -107,7 +114,7 @@ except:
     name: 🧪 Basic Tests (Non-blocking)
     runs-on: ubuntu-latest
     continue-on-error: true  # 非阻塞
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -147,7 +154,7 @@ except:
     name: 🐳 Build Test (MVP)
     runs-on: ubuntu-latest
     needs: basic-check  # 只依赖基础检查
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -166,13 +173,13 @@ except:
           echo "🚀 Testing container run..."
           docker run -d --name test-container -p 8001:8000 enhanced-test:latest
           sleep 30
-          
+
           if curl -f http://localhost:8001/health > /dev/null 2>&1; then
             echo "✅ Container health check passed"
           else
             echo "⚠️ Health check failed but build succeeded"
           fi
-          
+
           docker stop test-container || true
           docker rm test-container || true
 
@@ -182,7 +189,7 @@ except:
     runs-on: ubuntu-latest
     needs: [basic-check, build-test]  # 只依赖关键检查
     if: success()
-    
+
     steps:
       - name: Enhanced success report
         run: |
