@@ -105,11 +105,37 @@ quick_fix() {
 # 本地测试命令
 local_test() {
     echo -e "${BLUE}🧪 本地测试...${NC}"
-    
+
     if [ -f "./test-build-locally.sh" ]; then
         ./test-build-locally.sh
     else
         echo -e "${YELLOW}⚠️  本地测试脚本不存在${NC}"
+    fi
+}
+
+# 安全测试命令
+security_test() {
+    echo -e "${BLUE}🔐 安全测试...${NC}"
+
+    if [ -f "./run-security-tests.sh" ]; then
+        ./run-security-tests.sh
+    else
+        echo -e "${YELLOW}⚠️  安全测试脚本不存在${NC}"
+        echo "运行以下命令设置安全测试:"
+        echo "  ./setup-priority-tests.sh"
+    fi
+}
+
+# 核心业务逻辑测试命令
+core_business_test() {
+    echo -e "${BLUE}🟡 核心业务逻辑测试...${NC}"
+
+    if [ -f "./run-core-business-tests.sh" ]; then
+        ./run-core-business-tests.sh
+    else
+        echo -e "${YELLOW}⚠️  核心业务逻辑测试脚本不存在${NC}"
+        echo "运行以下命令设置核心业务逻辑测试:"
+        echo "  ./setup-priority-tests.sh"
     fi
 }
 
@@ -119,6 +145,8 @@ export -f safe_push
 export -f dev_flow
 export -f quick_fix
 export -f local_test
+export -f security_test
+export -f core_business_test
 
 echo -e "${GREEN}🛠️ 开发者命令已加载！${NC}"
 echo ""
@@ -128,4 +156,6 @@ echo -e "  ${PURPLE}safe_push${NC}           - 安全推送（诊断 + 推送）
 echo -e "  ${PURPLE}dev_flow \"消息\"${NC}     - 完整流程（修复 + 提交 + 推送）"
 echo -e "  ${PURPLE}quick_fix${NC}           - 快速修复代码问题"
 echo -e "  ${PURPLE}local_test${NC}          - 本地构建测试"
+echo -e "  ${PURPLE}security_test${NC}       - 运行安全测试（30秒）"
+echo -e "  ${PURPLE}core_business_test${NC}  - 运行核心业务逻辑测试（1分钟）"
 echo ""
