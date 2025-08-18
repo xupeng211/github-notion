@@ -473,6 +473,78 @@ async def health():
     return health_data
 
 
+@app.get(
+    "/health/ci",
+    summary="CI/CD 健康检查",
+    description="专为 CI/CD 环境设计的简化健康检查，只检查核心功能",
+    response_description="简化的健康检查结果",
+)
+async def health_ci():
+    """CI/CD 环境的简化健康检查"""
+
+    # 基础信息
+    health_data = {
+        "status": "healthy",
+        "timestamp": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+        "environment": os.getenv("ENVIRONMENT", os.getenv("PY_ENV", "development")),
+        "app_info": {
+            "app": "fastapi",
+            "log_level": os.getenv("LOG_LEVEL", "INFO"),
+            "version": "1.0.0",
+        },
+        "checks": {},
+    }
+
+    # 只检查数据库连接（核心功能）
+    try:
+        from sqlalchemy import text
+
+        with SessionLocal() as db:
+            db.execute(text("SELECT 1"))
+        health_data["checks"]["database"] = {
+            "status": "ok",
+            "message": "Database connection successful",
+        }
+    except Exception as e:
+        health_data["checks"]["database"] = {
+            "status": "error",
+            "message": f"Database error: {str(e)}",
+        }
+        health_data["status"] = "unhealthy"
+
+    # 检查磁盘空间（基础检查）
+    try:
+        import shutil
+
+        disk_usage = shutil.disk_usage("/")
+        free_gb = disk_usage.free / (1024**3)
+
+        if free_gb < 0.5:  # 少于 500MB 才报错
+            health_data["checks"]["disk_space"] = {
+                "status": "error",
+                "message": f"磁盘空间严重不足: {free_gb:.2f}GB 可用",
+            }
+            health_data["status"] = "unhealthy"
+        else:
+            health_data["checks"]["disk_space"] = {
+                "status": "ok",
+                "message": f"磁盘空间充足: {free_gb:.2f}GB 可用",
+            }
+    except Exception as e:
+        health_data["checks"]["disk_space"] = {
+            "status": "warning",
+            "message": f"无法检查磁盘空间: {str(e)}",
+        }
+
+    # 应用状态检查
+    health_data["checks"]["application"] = {
+        "status": "ok",
+        "message": "Application is running and responsive",
+    }
+
+    return health_data
+
+
 # Initialize metrics system
 initialize_metrics()
 
