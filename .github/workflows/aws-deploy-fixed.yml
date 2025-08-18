@@ -1,0 +1,208 @@
+name: 🚀 AWS Deployment Fixed
+
+on:
+  workflow_dispatch:
+    inputs:
+      deployment_mode:
+        description: 'Deployment mode'
+        required: true
+        default: 'full'
+        type: choice
+        options:
+        - 'full'
+        - 'minimal'
+
+env:
+  AWS_SERVER: "3.35.106.116"
+  APP_DIR: "/opt/github-notion-sync"
+  SERVICE_NAME: "github-notion-sync"
+
+jobs:
+  deploy:
+    name: 🚀 Deploy to AWS EC2
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    
+    steps:
+    - name: 📥 Checkout code
+      uses: actions/checkout@v4
+      
+    - name: 🔧 Setup SSH
+      run: |
+        mkdir -p ~/.ssh
+        echo "${{ secrets.AWS_PRIVATE_KEY }}" > ~/.ssh/aws-key.pem
+        chmod 600 ~/.ssh/aws-key.pem
+        ssh-keyscan -H ${{ env.AWS_SERVER }} >> ~/.ssh/known_hosts
+        
+        # 测试 SSH 连接
+        echo "🔍 测试 SSH 连接..."
+        ssh -i ~/.ssh/aws-key.pem -o ConnectTimeout=10 -o StrictHostKeyChecking=no ubuntu@${{ env.AWS_SERVER }} "echo 'SSH 连接成功'"
+        
+    - name: 🧹 Cleanup server
+      run: |
+        echo "🧹 清理服务器环境..."
+        ssh -i ~/.ssh/aws-key.pem -o StrictHostKeyChecking=no ubuntu@${{ env.AWS_SERVER }} '
+        sudo systemctl stop github-notion-sync 2>/dev/null || true
+        sudo systemctl stop emergency-service 2>/dev/null || true
+        sudo pkill -f "uvicorn" 2>/dev/null || true
+        sudo fuser -k 8000/tcp 2>/dev/null || true
+        sudo mkdir -p /opt/github-notion-sync
+        sudo chown ubuntu:ubuntu /opt/github-notion-sync
+        cd /opt/github-notion-sync
+        rm -rf app/ *.py *.txt *.log 2>/dev/null || true
+        echo "✅ 服务器清理完成"
+        '
+        
+    - name: 📦 Install dependencies
+      run: |
+        echo "📦 安装依赖..."
+        ssh -i ~/.ssh/aws-key.pem -o StrictHostKeyChecking=no ubuntu@${{ env.AWS_SERVER }} '
+        python3 --version
+        python3 -m pip install --user --upgrade pip
+        
+        if [ "${{ github.event.inputs.deployment_mode }}" = "minimal" ]; then
+          echo "最小化安装..."
+          python3 -m pip install --user fastapi==0.111.0 uvicorn==0.30.1 pydantic==1.10.22 sqlalchemy==2.0.30 python-dotenv==1.0.1 httpx==0.27.0
+        else
+          echo "完整安装..."
+          python3 -m pip install --user fastapi==0.111.0 uvicorn[standard]==0.30.1
+          python3 -m pip install --user pydantic==1.10.22 sqlalchemy==2.0.30 python-dotenv==1.0.1
+          python3 -m pip install --user httpx==0.27.0 requests==2.31.0 cryptography==42.0.5
+          python3 -m pip install --user prometheus-client==0.20.0 python-json-logger==2.0.7
+        fi
+        
+        python3 -c "import fastapi, uvicorn, sqlalchemy; print(\"✅ 核心依赖验证通过\")"
+        echo "✅ 依赖安装完成"
+        '
+        
+    - name: 📤 Transfer files
+      run: |
+        echo "📤 传输应用文件..."
+        scp -i ~/.ssh/aws-key.pem -o StrictHostKeyChecking=no -r app/ ubuntu@${{ env.AWS_SERVER }}:/opt/github-notion-sync/
+        scp -i ~/.ssh/aws-key.pem -o StrictHostKeyChecking=no requirements.txt ubuntu@${{ env.AWS_SERVER }}:/opt/github-notion-sync/
+        echo "✅ 文件传输完成"
+        
+    - name: ⚙️ Configure environment
+      run: |
+        echo "⚙️ 配置环境..."
+        ssh -i ~/.ssh/aws-key.pem -o StrictHostKeyChecking=no ubuntu@${{ env.AWS_SERVER }} '
+        cd /opt/github-notion-sync
+        
+        cat > .env << ENVEOF
+        ENVIRONMENT=production
+        DB_URL=sqlite:///./data/app.db
+        LOG_LEVEL=INFO
+        RATE_LIMIT_PER_MINUTE=100
+        MAX_REQUEST_SIZE=2097152
+        DISABLE_NOTION=false
+        GITHUB_WEBHOOK_SECRET=${{ secrets.GITHUB_WEBHOOK_SECRET }}
+        GITHUB_TOKEN=${{ secrets.GITHUB_TOKEN }}
+        NOTION_TOKEN=${{ secrets.NOTION_TOKEN }}
+        NOTION_DATABASE_ID=${{ secrets.NOTION_DATABASE_ID }}
+        DEADLETTER_REPLAY_TOKEN=${{ secrets.DEADLETTER_REPLAY_TOKEN }}
+        ENVEOF
+        
+        mkdir -p data logs
+        echo "✅ 环境配置完成"
+        '
+        
+    - name: 🗄️ Initialize database
+      run: |
+        echo "🗄️ 初始化数据库..."
+        ssh -i ~/.ssh/aws-key.pem -o StrictHostKeyChecking=no ubuntu@${{ env.AWS_SERVER }} '
+        cd /opt/github-notion-sync
+        python3 -c "
+import sys
+sys.path.insert(0, \".\")
+from app.models import init_db
+init_db()
+print(\"✅ 数据库初始化成功\")
+"
+        echo "✅ 数据库初始化完成"
+        '
+        
+    - name: 🔧 Create service
+      run: |
+        echo "🔧 创建 systemd 服务..."
+        ssh -i ~/.ssh/aws-key.pem -o StrictHostKeyChecking=no ubuntu@${{ env.AWS_SERVER }} '
+        sudo tee /etc/systemd/system/github-notion-sync.service > /dev/null << "SERVICEEOF"
+        [Unit]
+        Description=GitHub-Notion Sync Service
+        After=network.target
+        
+        [Service]
+        Type=simple
+        User=ubuntu
+        WorkingDirectory=/opt/github-notion-sync
+        Environment=PATH=/home/ubuntu/.local/bin:/usr/local/bin:/usr/bin:/bin
+        EnvironmentFile=/opt/github-notion-sync/.env
+        ExecStart=/home/ubuntu/.local/bin/uvicorn app.server:app --host 0.0.0.0 --port 8000
+        Restart=always
+        RestartSec=10
+        StandardOutput=journal
+        StandardError=journal
+        
+        [Install]
+        WantedBy=multi-user.target
+        SERVICEEOF
+        
+        sudo systemctl daemon-reload
+        sudo systemctl enable github-notion-sync
+        echo "✅ systemd 服务创建完成"
+        '
+        
+    - name: 🚀 Start service
+      run: |
+        echo "🚀 启动服务..."
+        ssh -i ~/.ssh/aws-key.pem -o StrictHostKeyChecking=no ubuntu@${{ env.AWS_SERVER }} '
+        sudo systemctl start github-notion-sync
+        sleep 15
+        sudo systemctl status github-notion-sync --no-pager
+        ps aux | grep uvicorn | grep -v grep || echo "⚠️ 未找到进程"
+        sudo netstat -tlnp | grep :8000 || echo "⚠️ 端口未监听"
+        echo "✅ 服务启动完成"
+        '
+        
+    - name: 🧪 Verify deployment
+      run: |
+        echo "🧪 验证部署..."
+        sleep 20
+        
+        for i in {1..5}; do
+          if curl -f -s http://${{ env.AWS_SERVER }}:8000/health >/dev/null; then
+            echo "✅ 健康检查通过"
+            break
+          else
+            echo "❌ 健康检查失败，重试 $i/5"
+            sleep 10
+          fi
+        done
+        
+        echo "📊 健康检查详情:"
+        curl -s http://${{ env.AWS_SERVER }}:8000/health | python3 -c "
+import sys, json
+try:
+    data = json.load(sys.stdin)
+    print('状态:', data.get('status', 'unknown'))
+    print('环境:', data.get('environment', 'unknown'))
+except:
+    print('解析响应失败')
+"
+        
+    - name: 📊 Summary
+      if: always()
+      run: |
+        echo "📊 部署总结:"
+        echo "🌐 服务地址: http://${{ env.AWS_SERVER }}:8000"
+        echo "🏥 健康检查: http://${{ env.AWS_SERVER }}:8000/health"
+        echo "🔗 GitHub Webhook: http://${{ env.AWS_SERVER }}:8000/github_webhook"
+        
+        if curl -f -s http://${{ env.AWS_SERVER }}:8000/health >/dev/null; then
+          echo "🎉 部署成功！"
+        else
+          echo "❌ 部署失败，获取诊断信息..."
+          ssh -i ~/.ssh/aws-key.pem -o StrictHostKeyChecking=no ubuntu@${{ env.AWS_SERVER }} '
+          sudo systemctl status github-notion-sync --no-pager || true
+          sudo journalctl -u github-notion-sync --no-pager -n 20 || true
+          '
+        fi
