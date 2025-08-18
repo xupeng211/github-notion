@@ -58,7 +58,9 @@ def isolated_db():
     try:
         processed_event_columns = [col["name"] for col in inspector.get_columns("processed_event")]
         if "source_platform" not in processed_event_columns:
-            raise RuntimeError(f"测试数据库表结构错误: processed_event 表缺少 source_platform 字段. 当前字段: {processed_event_columns}")
+            raise RuntimeError(
+                f"测试数据库表结构错误: processed_event 表缺少 source_platform 字段. 当前字段: {processed_event_columns}"
+            )
     except Exception:
         # 如果表不存在或其他错误，跳过验证
         pass
