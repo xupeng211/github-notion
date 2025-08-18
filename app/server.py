@@ -17,10 +17,7 @@ from pythonjsonlogger import jsonlogger
 from starlette.middleware.base import BaseHTTPMiddleware
 
 from app.config_validator import validate_config_on_startup
-from app.enhanced_metrics import (  # record_idempotency_check,  # 暂时注释未使用的导入; record_security_event,     # 暂时注释未使用的导入; record_webhook_request,    # 暂时注释未使用的导入
-    METRICS_REGISTRY,
-    initialize_metrics,
-)
+from app.enhanced_metrics import METRICS_REGISTRY, initialize_metrics
 from app.idempotency import IdempotencyManager
 from app.middleware import PrometheusMiddleware
 from app.models import SessionLocal, deadletter_count
