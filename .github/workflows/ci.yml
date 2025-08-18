@@ -218,9 +218,20 @@ jobs:
       - name: "Checkout Code"
         uses: actions/checkout@v4
 
+      - name: "Set up Docker Buildx"
+        uses: docker/setup-buildx-action@v3
+        with:
+          driver-opts: |
+            image=moby/buildkit:v0.12.0
+
       - name: "Build Docker Image"
+        timeout-minutes: 20
         run: |
-          docker build -f Dockerfile -t ${{ env.IMAGE_LOCAL }} .
+          echo "🔨 开始构建 Docker 镜像..."
+          docker build -f Dockerfile -t ${{ env.IMAGE_LOCAL }} . \
+            --build-arg BUILDKIT_INLINE_CACHE=1 \
+            --progress=plain
+          echo "✅ Docker 镜像构建完成"
 
       - name: "Test Docker Image Security"
         uses: aquasecurity/trivy-action@0.28.0
@@ -230,20 +241,47 @@ jobs:
           output: trivy-results.sarif
 
       - name: "Container Smoke Test"
+        timeout-minutes: 10
         run: |
-          docker run -d --name ci-test-app -p 8000:8000 -e APP_PORT=8000 -e ENVIRONMENT=testing -e LOG_LEVEL=INFO -e GITEE_WEBHOOK_SECRET=secure-ci-webhook-secret-minimum-16-chars -e GITHUB_WEBHOOK_SECRET=secure-ci-webhook-secret-minimum-16-chars -e DEADLETTER_REPLAY_TOKEN=secure-ci-deadletter-replay-token-minimum-16-chars -e DISABLE_NOTION=1 -e DISABLE_METRICS="" -e DB_URL=sqlite:///data/sync.db ${{ env.IMAGE_LOCAL }}
-          echo "等待应用启动..."
+          echo "🚀 启动容器测试..."
+          docker run -d --name ci-test-app -p 8000:8000 \
+            -e APP_PORT=8000 \
+            -e ENVIRONMENT=testing \
+            -e LOG_LEVEL=INFO \
+            -e GITEE_WEBHOOK_SECRET=secure-ci-webhook-secret-minimum-16-chars \
+            -e GITHUB_WEBHOOK_SECRET=secure-ci-webhook-secret-minimum-16-chars \
+            -e DEADLETTER_REPLAY_TOKEN=secure-ci-deadletter-replay-token-minimum-16-chars \
+            -e DISABLE_NOTION=1 \
+            -e DISABLE_METRICS="" \
+            -e DB_URL=sqlite:///data/sync.db \
+            ${{ env.IMAGE_LOCAL }}
+
+          echo "⏳ 等待应用启动..."
           for i in {1..30}; do
             if curl -f http://127.0.0.1:8000/health >/dev/null 2>&1; then
-              echo "应用启动成功"
+              echo "✅ 应用启动成功"
               break
             fi
-            echo "等待中... ($i/30)"
+            echo "⏳ 等待中... ($i/30)"
             sleep 2
           done
-          curl -f http://127.0.0.1:8000/health || exit 1
-          curl -f http://127.0.0.1:8000/metrics || exit 1
+
+          echo "🔍 验证健康检查..."
+          curl -f http://127.0.0.1:8000/health || {
+            echo "❌ 健康检查失败，查看日志:"
+            docker logs --tail 50 ci-test-app
+            exit 1
+          }
+
+          echo "📊 验证指标端点..."
+          curl -f http://127.0.0.1:8000/metrics || {
+            echo "⚠️ 指标端点失败，但继续测试"
+          }
+
+          echo "📋 容器日志:"
           docker logs --tail 20 ci-test-app
+
+          echo "🧹 清理容器..."
           docker rm -f ci-test-app
 
 

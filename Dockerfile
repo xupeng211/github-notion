@@ -35,6 +35,8 @@ RUN --mount=type=cache,target=/tmp/pip-cache \
     pip install --user --no-warn-script-location \
     --cache-dir=/tmp/pip-cache \
     --prefer-binary \
+    --timeout=300 \
+    --retries=3 \
     -r requirements.txt
 
 # 生产阶段：使用相同基础镜像保持兼容性
