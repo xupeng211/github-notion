@@ -12,12 +12,6 @@ on:
         - 'production'
         - 'staging'
         - 'testing'
-  push:
-    branches: [ main ]
-    paths:
-      - 'app/**'
-      - 'requirements.txt'
-      - 'Dockerfile*'
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
