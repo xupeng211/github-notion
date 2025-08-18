@@ -90,7 +90,7 @@ class GitHubNotionService(win32serviceutil.ServiceFramework):
     def SvcDoRun(self):
         os.chdir(r"C:\github-notion-sync")
         self.process = subprocess.Popen([
-            "python", "-m", "uvicorn", "app.server:app", 
+            "python", "-m", "uvicorn", "app.server:app",
             "--host", "0.0.0.0", "--port", "8000"
         ])
         win32event.WaitForSingleObject(self.hWaitStop, win32event.INFINITE)

@@ -9,7 +9,7 @@
 python scripts/run_full_tests.py
 ```
 
-**期望结果**: 
+**期望结果**:
 - ✅ 所有测试通过
 - ✅ 成功率 100%
 - ✅ 显示 "代码可以安全推送到仓库"
@@ -41,7 +41,7 @@ python -m mypy app/ --ignore-missing-imports
 # 验证关键模块可正常导入
 python -c "
 import app.server
-import app.service  
+import app.service
 import app.models
 import app.notion
 import app.github
@@ -70,7 +70,7 @@ print('✅ 所有模块导入成功')
 ## 📚 **第五步：文档检查**
 
 - [ ] **README 文档是否需要更新**
-- [ ] **API 文档是否需要更新** 
+- [ ] **API 文档是否需要更新**
 - [ ] **配置示例文件是否最新**
   ```bash
   # 检查 env.example 是否包含新增的环境变量
@@ -100,7 +100,7 @@ kill $SERVER_PID
   ```bash
   # 验证 Prometheus 配置
   promtool check config monitoring/prometheus.yml
-  
+
   # 验证告警规则
   promtool check rules monitoring/alert_rules.yml
   ```
@@ -146,7 +146,7 @@ git log --oneline -5
 
 ### 推送前最后确认
 - [ ] ✅ 完整测试套件通过
-- [ ] ✅ 架构验证通过  
+- [ ] ✅ 架构验证通过
 - [ ] ✅ 代码质量检查通过
 - [ ] ✅ 安全检查通过
 - [ ] ✅ 文档已更新
@@ -233,4 +233,4 @@ chmod +x check_before_commit.sh
 
 ---
 
-**🎯 记住**: 质量第一！宁可多花几分钟测试，也不要推送有问题的代码到生产环境。 
+**🎯 记住**: 质量第一！宁可多花几分钟测试，也不要推送有问题的代码到生产环境。

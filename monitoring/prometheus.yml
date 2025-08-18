@@ -34,4 +34,4 @@ scrape_configs:
       - targets: ['localhost:8000']
     metrics_path: '/health'
     scrape_interval: 60s
-    scrape_timeout: 10s 
+    scrape_timeout: 10s

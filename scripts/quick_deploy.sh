@@ -101,41 +101,41 @@ run_tests() {
         log_warning "跳过测试阶段"
         return
     fi
-    
+
     log_info "📋 运行测试..."
-    
+
     # 检查虚拟环境
     if [[ ! -d ".venv" ]]; then
         log_info "创建虚拟环境..."
         python3 -m venv .venv
     fi
-    
+
     source .venv/bin/activate
     pip install -q -r requirements.txt
-    
+
     # 运行测试
     python -m pytest tests/ -v --tb=short -x
-    
+
     # 检查代码质量 (可选)
     if command -v flake8 >/dev/null 2>&1; then
         log_info "检查代码风格..."
         flake8 app/ --max-line-length=120 --ignore=E203,W503 || log_warning "代码风格检查发现问题"
     fi
-    
+
     log_success "测试完成"
 }
 
 # 阶段 2: 构建镜像
 build_image() {
     log_info "🏗️ 构建 Docker 镜像..."
-    
+
     # 使用优化的 Dockerfile
     if [[ -f "Dockerfile.optimized" ]]; then
         DOCKERFILE="Dockerfile.optimized"
     else
         DOCKERFILE="Dockerfile"
     fi
-    
+
     # 构建镜像
     docker build \
         --build-arg VERSION="$VERSION" \
@@ -147,18 +147,18 @@ build_image() {
         -t "${IMAGE_FULL}:latest" \
         -t "${IMAGE_FULL}:${TIMESTAMP}" \
         .
-    
+
     log_success "镜像构建完成"
-    
+
     # 快速冒烟测试
     log_info "💨 运行冒烟测试..."
     docker run -d --name quick-test -p 18000:8000 \
         -e GITEE_WEBHOOK_SECRET=test \
         -e LOG_LEVEL=INFO \
         "${IMAGE_FULL}:${VERSION}"
-    
+
     sleep 3
-    
+
     if curl -f http://localhost:18000/health >/dev/null 2>&1; then
         log_success "冒烟测试通过"
     else
@@ -167,18 +167,18 @@ build_image() {
         docker rm -f quick-test
         exit 1
     fi
-    
+
     docker rm -f quick-test
-    
+
     # 推送镜像 (如果配置了 registry)
     if [[ -n "$REGISTRY_PASSWORD" && -n "$REGISTRY_USERNAME" ]]; then
         log_info "📤 推送镜像到仓库..."
         echo "$REGISTRY_PASSWORD" | docker login "$REGISTRY" -u "$REGISTRY_USERNAME" --password-stdin
-        
+
         docker push "${IMAGE_FULL}:${VERSION}"
         docker push "${IMAGE_FULL}:latest"
         docker push "${IMAGE_FULL}:${TIMESTAMP}"
-        
+
         log_success "镜像推送完成"
     else
         log_warning "未配置镜像仓库凭据，跳过推送"
@@ -188,7 +188,7 @@ build_image() {
 # 阶段 3: 部署服务
 deploy_service() {
     log_info "🚀 部署到 $ENVIRONMENT 环境..."
-    
+
     # 确定 compose 文件
     case $ENVIRONMENT in
         dev)
@@ -208,22 +208,22 @@ deploy_service() {
             exit 1
             ;;
     esac
-    
+
     # 检查配置文件
     if [[ ! -f "$COMPOSE_FILE" ]]; then
         log_error "找不到配置文件: $COMPOSE_FILE"
         exit 1
     fi
-    
+
     # 设置环境变量
     export IMAGE_TAG="$VERSION"
     export SERVICE_PORT="$PORT"
     export SERVICE_ENV="$ENVIRONMENT"
     export DEPLOYMENT_TIME="$TIMESTAMP"
-    
+
     # 创建必要目录
     mkdir -p data logs monitoring
-    
+
     # 部署服务
     if [[ "$WITH_MONITORING" == "true" ]]; then
         log_info "启用监控服务..."
@@ -231,11 +231,11 @@ deploy_service() {
     else
         docker-compose -f "$COMPOSE_FILE" up -d
     fi
-    
+
     # 等待服务启动
     log_info "等待服务启动..."
     sleep 10
-    
+
     # 健康检查
     MAX_ATTEMPTS=30
     for i in $(seq 1 $MAX_ATTEMPTS); do
@@ -243,28 +243,28 @@ deploy_service() {
             log_success "服务启动成功"
             break
         fi
-        
+
         if [[ $i -eq $MAX_ATTEMPTS ]]; then
             log_error "服务启动失败"
             docker-compose -f "$COMPOSE_FILE" logs
             exit 1
         fi
-        
+
         log_info "等待服务启动... ($i/$MAX_ATTEMPTS)"
         sleep 2
     done
-    
+
     # 显示服务状态
     log_info "📊 服务状态:"
     docker-compose -f "$COMPOSE_FILE" ps
-    
+
     echo ""
     log_success "部署完成!"
     log_info "服务访问地址:"
     echo "  🏥 健康检查: http://localhost:$PORT/health"
     echo "  📚 API 文档:  http://localhost:$PORT/docs"
     echo "  📊 监控指标: http://localhost:$PORT/metrics"
-    
+
     if [[ "$WITH_MONITORING" == "true" ]]; then
         echo "  📈 Prometheus: http://localhost:9090"
         echo "  📊 Grafana:    http://localhost:3000"
@@ -278,12 +278,12 @@ main() {
         log_error "未安装 Docker"
         exit 1
     fi
-    
+
     if ! command -v docker-compose >/dev/null 2>&1; then
         log_error "未安装 Docker Compose"
         exit 1
     fi
-    
+
     # 执行流程
     if [[ "$DEPLOY_ONLY" == "true" ]]; then
         deploy_service
@@ -296,7 +296,7 @@ main() {
         build_image
         deploy_service
     fi
-    
+
     log_success "🎉 所有任务完成!"
 }
 
@@ -304,4 +304,4 @@ main() {
 trap 'log_error "部署过程被中断"' INT TERM
 
 # 执行主函数
-main 
+main

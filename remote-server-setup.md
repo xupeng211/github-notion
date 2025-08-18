@@ -32,7 +32,7 @@ nano .env
 ```bash
 # 基础配置 (必须)
 export GITEE_WEBHOOK_SECRET="your-actual-secret"
-export GITHUB_WEBHOOK_SECRET="your-actual-secret" 
+export GITHUB_WEBHOOK_SECRET="your-actual-secret"
 
 # API配置 (推荐)
 export NOTION_TOKEN="your-notion-token"
@@ -74,7 +74,7 @@ export ENVIRONMENT="production"
 **适用于：暂时不需要Notion集成**
 
 ```bash
-export GITEE_WEBHOOK_SECRET="your-secret"  
+export GITEE_WEBHOOK_SECRET="your-secret"
 export GITHUB_WEBHOOK_SECRET="your-secret"
 export DISABLE_NOTION=1                     # 禁用Notion
 export DISABLE_METRICS=""                   # 启用监控
@@ -86,7 +86,7 @@ export ENVIRONMENT="production"
 
 ```bash
 export GITEE_WEBHOOK_SECRET="your-secret"
-export GITHUB_WEBHOOK_SECRET="your-secret" 
+export GITHUB_WEBHOOK_SECRET="your-secret"
 export DISABLE_NOTION=1
 export DISABLE_METRICS=""
 export LOG_LEVEL="DEBUG"                    # 详细日志
@@ -152,7 +152,7 @@ curl -X POST http://localhost:8000/gitee_webhook \
 ### 问题1：webhook_secret_not_configured
 **解决**：确保设置了 `GITEE_WEBHOOK_SECRET` 和 `GITHUB_WEBHOOK_SECRET`
 
-### 问题2：invalid_signature  
+### 问题2：invalid_signature
 **解决**：检查webhook secret是否与平台配置一致
 
 ### 问题3：Notion API错误
@@ -180,7 +180,7 @@ scrape_configs:
 ## 🛡️ 安全建议
 
 1. **使用强密码**：webhook secret应该足够复杂
-2. **防火墙配置**：仅开放必要端口  
+2. **防火墙配置**：仅开放必要端口
 3. **HTTPS部署**：生产环境使用反向代理
 4. **定期更新**：及时拉取代码更新
-5. **日志监控**：定期检查应用日志 
+5. **日志监控**：定期检查应用日志

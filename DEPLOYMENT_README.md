@@ -341,4 +341,4 @@ echo "=== 最近日志 ===" && sudo journalctl -u github-notion-sync -n 10 --no-
 3. 参考故障排除部分
 4. 确保防火墙和安全组设置正确
 
-**🎊 祝部署成功！现在你的 GitHub-Notion 双向同步系统已经准备就绪！** 
+**🎊 祝部署成功！现在你的 GitHub-Notion 双向同步系统已经准备就绪！**

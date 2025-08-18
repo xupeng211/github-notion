@@ -17,27 +17,27 @@ stages:
           - python3 -V
           - python3 -m pip install --upgrade pip
           - pip install -r requirements.txt
-          
+
           # 代码质量检查
           - echo "📝 代码质量检查..."
           - python3 -m flake8 app/ --max-line-length=120 --ignore=E203,W503 || echo "代码风格检查完成"
           - python3 -m mypy app/ --ignore-missing-imports || echo "类型检查完成"
-          
+
           # 安全扫描
           - echo "🔍 安全扫描..."
           - pip install bandit
           - bandit -r app/ -f json -o bandit-report.json || echo "安全扫描完成"
-          
+
           # 单元测试
           - echo "🧪 运行单元测试..."
           - python3 -m pytest tests/ -v --tb=short --cov=app --cov-report=xml --cov-report=term
-          
+
           # 数据库迁移测试
           - echo "🗄️ 测试数据库迁移..."
           - mkdir -p test_data
           - DB_URL=sqlite:///test_data/test.db alembic upgrade head
           - DB_URL=sqlite:///test_data/test.db alembic current
-          
+
           # 生成测试报告
           - echo "📊 生成测试报告..."
           - ls -la coverage.xml || echo "无覆盖率报告"
@@ -60,11 +60,11 @@ stages:
             TIMESTAMP=$(date +%Y%m%d-%H%M%S)
             IMAGE_FULL="${REGISTRY}/${IMAGE_NAME}"
             echo "构建版本: ${VERSION}, 时间戳: ${TIMESTAMP}"
-            
+
           # Docker 登录
           - echo "🔑 登录镜像仓库..."
           - echo "${REGISTRY_PASSWORD}" | docker login "${REGISTRY}" -u "${REGISTRY_USERNAME}" --password-stdin
-          
+
           # 多阶段构建优化
           - echo "🏗️ 构建 Docker 镜像..."
           - |
@@ -77,11 +77,11 @@ stages:
               -t "${IMAGE_FULL}:latest" \
               -t "${IMAGE_FULL}:${TIMESTAMP}" \
               .
-            
+
           # 容器安全扫描
           - echo "🛡️ 容器安全扫描..."
           - docker run --rm -v /var/run/docker.sock:/var/run/docker.sock aquasec/trivy image --exit-code 0 --severity HIGH,CRITICAL "${IMAGE_FULL}:${VERSION}" || echo "安全扫描完成"
-          
+
           # 冒烟测试
           - echo "💨 运行冒烟测试..."
           - |
@@ -93,7 +93,7 @@ stages:
               -e DB_URL=sqlite:///data/sync.db \
               -e ENVIRONMENT=ci \
               "${IMAGE_FULL}:${VERSION}"
-            
+
             # 等待服务启动
             echo "等待服务启动..."
             for i in {1..30}; do
@@ -103,30 +103,30 @@ stages:
               fi
               sleep 1
             done
-            
+
             # 健康检查测试
             echo "🏥 健康检查测试..."
             health_response=$(curl -s http://127.0.0.1:8000/health)
             echo "健康检查响应: $health_response"
-            
+
             # 指标端点测试
             echo "📊 指标端点测试..."
             metrics_code=$(curl -s -o /dev/null -w "%{http_code}" http://127.0.0.1:8000/metrics)
-            if [ "$metrics_code" != "200" ]; then 
+            if [ "$metrics_code" != "200" ]; then
               echo "指标端点测试失败: $metrics_code"
               docker logs ci-app
               exit 1
             fi
-            
+
             # API 文档测试
             echo "📚 API 文档测试..."
             docs_code=$(curl -s -o /dev/null -w "%{http_code}" http://127.0.0.1:8000/docs)
-            if [ "$docs_code" != "200" ]; then 
+            if [ "$docs_code" != "200" ]; then
               echo "API 文档测试失败: $docs_code"
               docker logs ci-app
               exit 1
             fi
-            
+
             # Webhook 功能测试
             echo "🔗 Webhook 功能测试..."
             BODY='{"issue":{"id":9001,"number":9001,"title":"ci-test"}}'
@@ -142,9 +142,9 @@ PY
               -H "Content-Type: application/json" \
               -d "$BODY" \
               http://127.0.0.1:8000/gitee_webhook)
-            
+
             echo "Webhook 测试响应码: $webhook_code"
-            
+
             # 输出日志并清理
             echo "📋 容器日志:"
             docker logs --tail 50 ci-app
@@ -166,11 +166,11 @@ PY
             VERSION=$(git rev-parse --short HEAD)
             TIMESTAMP=$(date +%Y%m%d-%H%M%S)
             IMAGE_FULL="${REGISTRY}/${IMAGE_NAME}"
-            
+
             docker push "${IMAGE_FULL}:${VERSION}"
-            docker push "${IMAGE_FULL}:latest" 
+            docker push "${IMAGE_FULL}:latest"
             docker push "${IMAGE_FULL}:${TIMESTAMP}"
-            
+
             echo "✅ 镜像推送完成:"
             echo "  - ${IMAGE_FULL}:${VERSION}"
             echo "  - ${IMAGE_FULL}:latest"
@@ -192,7 +192,7 @@ PY
           - |
             VERSION=$(git rev-parse --short HEAD)
             echo "部署版本: ${VERSION}"
-            
+
             # 这里可以添加具体的部署脚本
             # 例如: kubectl, docker-compose, ansible 等
             echo "TODO: 添加具体的预发布部署逻辑"
@@ -213,13 +213,13 @@ PY
           - |
             VERSION=$(git rev-parse --short HEAD)
             echo "生产部署版本: ${VERSION}"
-            
+
             # 生产部署前的最终检查
             echo "🔍 生产部署前检查..."
-            
+
             # 这里添加生产部署脚本
             echo "TODO: 添加具体的生产部署逻辑"
-            
+
             echo "✅ 生产部署完成"
 
 # 流水线参数
@@ -228,7 +228,7 @@ parameters:
     displayName: 部署到预发布环境
     type: boolean
     default: false
-    
+
   - name: deploy_production
     displayName: 部署到生产环境
     type: boolean
@@ -244,4 +244,4 @@ triggers:
   pull_request:
     branches:
       include:
-        - main 
+        - main

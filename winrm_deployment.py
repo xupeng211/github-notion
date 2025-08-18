@@ -66,7 +66,7 @@ def run_winrm_command(session, command, description=""):
         result = session.run_cmd(command)
 
         if result.status_code == 0:
-            print(f"   ✅ 成功")
+            print("   ✅ 成功")
             if result.std_out:
                 print(f"   输出: {result.std_out.decode('utf-8').strip()}")
         else:
@@ -90,7 +90,7 @@ def run_winrm_powershell(session, script, description=""):
         result = session.run_ps(script)
 
         if result.status_code == 0:
-            print(f"   ✅ 成功")
+            print("   ✅ 成功")
             if result.std_out:
                 print(f"   输出: {result.std_out.decode('utf-8').strip()}")
         else:

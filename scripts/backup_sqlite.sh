@@ -32,4 +32,3 @@ if [ -n "${OSS_BUCKET:-}" ]; then
     echo "No ossutil64/aws cli installed, skip upload"
   fi
 fi
-

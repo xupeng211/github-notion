@@ -55,4 +55,3 @@ done
 
 echo "Health check failed"
 exit 1
-

@@ -44,7 +44,7 @@ app/
 # mapping.yml
 github_to_notion:
   title: "Task"              # Issue 标题 -> Notion Task
-  body: "Description"        # Issue 内容 -> Notion Description  
+  body: "Description"        # Issue 内容 -> Notion Description
   "user.login": "Reporter"   # GitHub 用户 -> Notion Reporter
   state: "Status"            # Issue 状态 -> Notion Status
 
@@ -105,7 +105,7 @@ status_mapping:
 export GITHUB_TOKEN="your_github_token"
 export GITHUB_WEBHOOK_SECRET="your_webhook_secret"
 
-# Notion 配置  
+# Notion 配置
 export NOTION_TOKEN="your_notion_token"
 export NOTION_DATABASE_ID="your_database_id"
 export NOTION_WEBHOOK_SECRET="your_notion_webhook_secret"
@@ -188,7 +188,7 @@ import asyncio
 # 同步指定仓库的 Issues
 async def bulk_sync():
     success, result = await sync_existing_issues_to_notion(
-        owner="your-username", 
+        owner="your-username",
         repo="your-repo",
         limit=100  # 同步最近 100 个 Issues
     )
@@ -218,7 +218,7 @@ sync_config:
   rate_limit_delay: 1.0     # API 限流延迟（秒）
   retry_attempts: 3         # 重试次数
 
-  # 防循环配置  
+  # 防循环配置
   loop_detection: true      # 启用循环检测
   sync_marker_timeout: 300  # 同步标记超时（秒）
 
@@ -251,7 +251,7 @@ sync_config:
 # 查看同步日志
 tail -f logs/app.log | grep -E "(sync|notion|github)"
 
-# 查看错误日志  
+# 查看错误日志
 tail -f logs/app.log | grep ERROR
 ```
 
@@ -421,4 +421,4 @@ python -m pytest tests/
 
 ✅ **恭喜！你的 GitHub-Notion 双向同步系统已经全面升级优化！** 🎉
 
-现在你拥有了更智能、更可靠、更强大的同步功能。享受无缝的跨平台协作体验吧！ 
+现在你拥有了更智能、更可靠、更强大的同步功能。享受无缝的跨平台协作体验吧！

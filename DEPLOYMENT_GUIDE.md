@@ -12,7 +12,7 @@
 
 ### ✅ 必需环境变量
 - [ ] `GITHUB_TOKEN` - GitHub Personal Access Token
-- [ ] `NOTION_TOKEN` - Notion Integration Token  
+- [ ] `NOTION_TOKEN` - Notion Integration Token
 - [ ] `NOTION_DATABASE_ID` - 目标 Notion 数据库 ID
 
 ### ✅ 推荐环境变量
@@ -354,7 +354,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      
+
       - name: Deploy to EC2
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -383,4 +383,4 @@ jobs:
 
 ---
 
-**重要提醒**: 所有架构问题已修复，按此指南部署可确保服务稳定运行。 
+**重要提醒**: 所有架构问题已修复，按此指南部署可确保服务稳定运行。

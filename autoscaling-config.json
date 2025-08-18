@@ -1,62 +1,62 @@
 {
-    "TargetTrackingScalingPolicies": [
-        {
-            "PolicyName": "CPUUtilizationScaling",
-            "ServiceNamespace": "ecs",
-            "ScalableDimension": "ecs:service:DesiredCount",
-            "ResourceId": "service/gitee-notion-sync-cluster/gitee-notion-sync-service",
-            "TargetTrackingScalingPolicyConfiguration": {
-                "TargetValue": 75.0,
-                "PredefinedMetricSpecification": {
-                    "PredefinedMetricType": "ECSServiceAverageCPUUtilization"
-                },
-                "ScaleOutCooldown": 300,
-                "ScaleInCooldown": 300
-            }
+  "ScalableTargetConfiguration": {
+    "MaxCapacity": 10,
+    "MinCapacity": 1,
+    "ResourceId": "service/gitee-notion-sync-cluster/gitee-notion-sync-service",
+    "ScalableDimension": "ecs:service:DesiredCount",
+    "ServiceNamespace": "ecs"
+  },
+  "TargetTrackingScalingPolicies": [
+    {
+      "PolicyName": "CPUUtilizationScaling",
+      "ResourceId": "service/gitee-notion-sync-cluster/gitee-notion-sync-service",
+      "ScalableDimension": "ecs:service:DesiredCount",
+      "ServiceNamespace": "ecs",
+      "TargetTrackingScalingPolicyConfiguration": {
+        "PredefinedMetricSpecification": {
+          "PredefinedMetricType": "ECSServiceAverageCPUUtilization"
         },
-        {
-            "PolicyName": "MemoryUtilizationScaling",
-            "ServiceNamespace": "ecs",
-            "ScalableDimension": "ecs:service:DesiredCount",
-            "ResourceId": "service/gitee-notion-sync-cluster/gitee-notion-sync-service",
-            "TargetTrackingScalingPolicyConfiguration": {
-                "TargetValue": 80.0,
-                "PredefinedMetricSpecification": {
-                    "PredefinedMetricType": "ECSServiceAverageMemoryUtilization"
-                },
-                "ScaleOutCooldown": 300,
-                "ScaleInCooldown": 300
-            }
+        "ScaleInCooldown": 300,
+        "ScaleOutCooldown": 300,
+        "TargetValue": 75.0
+      }
+    },
+    {
+      "PolicyName": "MemoryUtilizationScaling",
+      "ResourceId": "service/gitee-notion-sync-cluster/gitee-notion-sync-service",
+      "ScalableDimension": "ecs:service:DesiredCount",
+      "ServiceNamespace": "ecs",
+      "TargetTrackingScalingPolicyConfiguration": {
+        "PredefinedMetricSpecification": {
+          "PredefinedMetricType": "ECSServiceAverageMemoryUtilization"
         },
-        {
-            "PolicyName": "RequestCountScaling",
-            "ServiceNamespace": "ecs",
-            "ScalableDimension": "ecs:service:DesiredCount",
-            "ResourceId": "service/gitee-notion-sync-cluster/gitee-notion-sync-service",
-            "TargetTrackingScalingPolicyConfiguration": {
-                "TargetValue": 1000.0,
-                "CustomizedMetricSpecification": {
-                    "MetricName": "RequestCount",
-                    "Namespace": "AWS/ApplicationELB",
-                    "Dimensions": [
-                        {
-                            "Name": "TargetGroup",
-                            "Value": "gitee-notion-sync-tg"
-                        }
-                    ],
-                    "Statistic": "Sum",
-                    "Unit": "Count"
-                },
-                "ScaleOutCooldown": 300,
-                "ScaleInCooldown": 300
+        "ScaleInCooldown": 300,
+        "ScaleOutCooldown": 300,
+        "TargetValue": 80.0
+      }
+    },
+    {
+      "PolicyName": "RequestCountScaling",
+      "ResourceId": "service/gitee-notion-sync-cluster/gitee-notion-sync-service",
+      "ScalableDimension": "ecs:service:DesiredCount",
+      "ServiceNamespace": "ecs",
+      "TargetTrackingScalingPolicyConfiguration": {
+        "CustomizedMetricSpecification": {
+          "Dimensions": [
+            {
+              "Name": "TargetGroup",
+              "Value": "gitee-notion-sync-tg"
             }
-        }
-    ],
-    "ScalableTargetConfiguration": {
-        "ServiceNamespace": "ecs",
-        "ScalableDimension": "ecs:service:DesiredCount",
-        "ResourceId": "service/gitee-notion-sync-cluster/gitee-notion-sync-service",
-        "MinCapacity": 1,
-        "MaxCapacity": 10
+          ],
+          "MetricName": "RequestCount",
+          "Namespace": "AWS/ApplicationELB",
+          "Statistic": "Sum",
+          "Unit": "Count"
+        },
+        "ScaleInCooldown": 300,
+        "ScaleOutCooldown": 300,
+        "TargetValue": 1000.0
+      }
     }
-} 
+  ]
+}

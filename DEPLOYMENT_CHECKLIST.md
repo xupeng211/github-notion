@@ -48,7 +48,7 @@ cp env.example .env
 
 # 必需变量 (❌ 缺失会导致服务无法启动)
 GITHUB_TOKEN=ghp_xxxxxxxxxxxx
-NOTION_TOKEN=secret_xxxxxxxxxxxx  
+NOTION_TOKEN=secret_xxxxxxxxxxxx
 NOTION_DATABASE_ID=xxxxxxxxxxxxxxxx
 
 # 推荐变量 (⚠️ 影响安全性和功能)
@@ -89,7 +89,7 @@ python scripts/start_service.py
 
 **脚本会自动完成**:
 - ✅ 环境变量验证
-- ✅ 数据库初始化 
+- ✅ 数据库初始化
 - ✅ 服务健康检查
 - ✅ 启动 FastAPI 服务
 
@@ -299,4 +299,4 @@ grep -i "error\|fail\|exception" logs/app.log
 3. **查看日志** `sudo journalctl -u github-notion-sync -f`
 4. **验证环境变量** 确保所有必需变量已正确设置
 
-**🎉 部署完成！您的 GitHub-Notion 同步服务已经可以稳定运行了。** 
+**🎉 部署完成！您的 GitHub-Notion 同步服务已经可以稳定运行了。**

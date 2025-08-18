@@ -30,4 +30,3 @@ curl -sS -X POST \
   -H "X-Gitee-Token: $SIG" \
   --data "$EVENT_PAYLOAD" \
   http://localhost:${APP_PORT:-8000}/gitee_webhook | jq .
-

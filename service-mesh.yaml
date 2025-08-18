@@ -167,4 +167,4 @@ spec:
     - portMapping:
         port: 443
         protocol: http
-  backends: [] 
+  backends: []

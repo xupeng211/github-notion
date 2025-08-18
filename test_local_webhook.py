@@ -73,7 +73,7 @@ def test_github_webhook():
             try:
                 response_json = response.json()
                 print(f"响应内容: {json.dumps(response_json, indent=2, ensure_ascii=False)}")
-            except:
+            except Exception:
                 print(f"响应内容: {response.text}")
         else:
             print("响应内容: (空)")

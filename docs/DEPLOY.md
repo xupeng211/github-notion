@@ -116,4 +116,3 @@ curl -sS https://$DOMAIN_NAME/metrics | grep deadletter_replay_total
 - 手工回滚（SSH 登录服务器）：
   cd /opt/gitee-notion-sync
   IMAGE_REF=${REGISTRY_HOST}:<previous_tag> ./infra/rollback.sh
-

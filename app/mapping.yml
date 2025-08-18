@@ -1,5 +1,5 @@
 # GitHub <-> Notion 双向同步字段映射配置
-# 
+#
 # 配置说明：
 # - github_to_notion: GitHub 字段 -> Notion 属性映射
 # - notion_to_github: Notion 属性 -> GitHub 字段映射
@@ -11,22 +11,22 @@ github_to_notion:
   body: "Description"        # Issue 内容 -> Description 属性 (rich_text)
   number: "Issue ID"         # Issue 编号 -> Issue ID 属性 (number)
   html_url: "GitHub URL"     # GitHub URL -> GitHub URL 属性 (url)
-  
+
   # 状态和优先级
   state: "Status"            # Issue 状态 -> Status 属性 (select)
-  
+
   # 标签和分类
   "labels.0.name": "Primary Label"    # 主要标签 -> Primary Label 属性 (select)
   "labels.1.name": "Secondary Label"  # 次要标签 -> Secondary Label 属性 (select)
-  
+
   # 用户信息
   "user.login": "Reporter"   # 报告者 -> Reporter 属性 (rich_text)
   "assignee.login": "Assignee" # 分配者 -> Assignee 属性 (rich_text)
-  
+
   # 时间信息
   created_at: "Created"      # 创建时间 -> Created 属性 (date)
   updated_at: "Updated"      # 更新时间 -> Updated 属性 (date)
-  
+
   # 自定义字段
   milestone: "Milestone"     # 里程碑 -> Milestone 属性 (select)
 
@@ -34,14 +34,14 @@ notion_to_github:
   # 基本信息映射（反向）
   "Task": "title"
   "Description": "body"
-  
+
   # 状态映射（智能转换）
   "Status": "state"
-  
+
   # 标签映射
   "Primary Label": "labels.primary"
   "Secondary Label": "labels.secondary"
-  
+
   # 用户映射
   "Assignee": "assignee"
 
@@ -86,22 +86,22 @@ label_colors:
 sync_config:
   # 双向同步开关
   bidirectional_sync: true
-  
+
   # 同步内容类型
   sync_issues: true
   sync_comments: true
   sync_labels: true
   sync_assignees: true
-  
+
   # 性能配置
   batch_size: 10           # 批量处理大小
   rate_limit_delay: 1.0    # API 限流延迟（秒）
   retry_attempts: 3        # 重试次数
-  
+
   # 防循环配置
   loop_detection: true
   sync_marker_timeout: 300 # 同步标记超时时间（秒）
-  
+
   # 过滤规则
   ignore_bots: true        # 忽略机器人用户的操作
   ignore_labels:           # 忽略特定标签的 issue

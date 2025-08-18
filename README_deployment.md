@@ -119,4 +119,4 @@ sudo nginx -T
 ```bash
 sudo netstat -tlnp | grep :80
 sudo netstat -tlnp | grep :8000
-``` 
+```

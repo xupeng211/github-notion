@@ -67,7 +67,7 @@ jobs:
     strategy:
       matrix:
         python-version: ['3.11', '3.12']
-    
+
     services:
       postgres:
         image: postgres:15
@@ -120,7 +120,7 @@ jobs:
     outputs:
       image: ${{ steps.image.outputs.image }}
       digest: ${{ steps.build.outputs.digest }}
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -190,7 +190,7 @@ jobs:
     environment:
       name: staging
       url: http://staging.your-domain.com
-    
+
     steps:
       - name: Deploy to staging
         run: |
@@ -206,7 +206,7 @@ jobs:
     environment:
       name: production
       url: http://3.35.106.116:8000
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -222,18 +222,18 @@ jobs:
           mkdir -p ~/.ssh
           echo "$AWS_PRIVATE_KEY" > ~/.ssh/aws_key
           chmod 600 ~/.ssh/aws_key
-          
+
           # 部署到 AWS
           ssh -i ~/.ssh/aws_key -o StrictHostKeyChecking=no $AWS_USER@$AWS_HOST << 'EOF'
             # 停止现有容器
             docker-compose down || true
-            
+
             # 拉取最新镜像
             docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
-            
+
             # 启动新容器
             docker-compose up -d
-            
+
             # 健康检查
             sleep 30
             curl -f http://localhost:8000/health || exit 1

@@ -111,4 +111,4 @@ groups:
           severity: warning
         annotations:
           summary: "API 连接异常"
-          description: "过去 5 分钟内出现多次 API 连接错误" 
+          description: "过去 5 分钟内出现多次 API 连接错误"

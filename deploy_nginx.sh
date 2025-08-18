@@ -57,4 +57,4 @@ echo "3. 测试健康检查端点..."
 curl -i http://3.35.106.116/health
 
 echo -e "\n=== 部署和测试完成 ==="
-echo "请前往 GitHub Webhook 页面点击 'Redeliver' 测试 webhook 功能" 
+echo "请前往 GitHub Webhook 页面点击 'Redeliver' 测试 webhook 功能"

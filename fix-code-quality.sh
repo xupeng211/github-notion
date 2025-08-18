@@ -18,7 +18,7 @@ fi
 
 # 检查Python包
 python3 -c "import black" 2>/dev/null || MISSING_TOOLS+=("black")
-python3 -c "import isort" 2>/dev/null || MISSING_TOOLS+=("isort") 
+python3 -c "import isort" 2>/dev/null || MISSING_TOOLS+=("isort")
 python3 -c "import flake8" 2>/dev/null || MISSING_TOOLS+=("flake8")
 python3 -c "import autoflake" 2>/dev/null || MISSING_TOOLS+=("autoflake")
 
@@ -111,4 +111,4 @@ if [[ $REPLY =~ ^[Yy]$ ]]; then
     git diff --name-only --diff-filter=M | head -10
     echo ""
     echo "💡 使用 'git diff' 查看详细修改"
-fi 
+fi

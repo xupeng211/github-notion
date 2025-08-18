@@ -19,7 +19,7 @@ scrape_configs:
     metrics_path: '/metrics'
     scrape_interval: 30s
     scrape_timeout: 10s
-    
+
   # Prometheus 自身监控
   - job_name: 'prometheus'
     static_configs:
@@ -29,4 +29,4 @@ scrape_configs:
   - job_name: 'node'
     static_configs:
       - targets: ['node-exporter:9100']
-    scrape_interval: 30s 
+    scrape_interval: 30s

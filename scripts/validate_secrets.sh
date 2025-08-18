@@ -21,13 +21,13 @@ validate_secret() {
     local var_name="$1"
     local min_length="${2:-16}"
     local var_value="${!var_name}"
-    
+
     if [ -z "$var_value" ]; then
         echo -e "  ❌ ${RED}$var_name 未设置${NC}"
         VALIDATION_PASSED=false
         return 1
     fi
-    
+
     # 检查是否为占位符值
     case "$var_value" in
         *"your_"*|*"changeme"*|*"default"*|*"secret_here"*|*"token_here"*)
@@ -41,14 +41,14 @@ validate_secret() {
             return 1
             ;;
     esac
-    
+
     # 检查长度
     if [ ${#var_value} -lt $min_length ]; then
         echo -e "  ❌ ${RED}$var_name 长度不足 (< $min_length)${NC}"
         VALIDATION_PASSED=false
         return 1
     fi
-    
+
     echo -e "  ✅ ${GREEN}$var_name 已正确配置${NC}"
     return 0
 }
@@ -102,4 +102,4 @@ else
     echo -e "   2. 确保所有密钥长度足够且随机"
     echo -e "   3. 绝不在代码中硬编码密钥"
     exit 1
-fi 
+fi

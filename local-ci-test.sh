@@ -75,22 +75,22 @@ if ! command -v docker >/dev/null 2>&1; then
     echo "    在生产环境中，请确保 Docker 可用"
 else
     echo -e "  ✅ ${GREEN}Docker 已安装${NC}"
-    
+
     echo "🏗️ 构建 Docker 镜像..."
     docker build -t local-test-build:latest . --no-cache
     check_step "Docker 镜像构建"
-    
+
     echo "🧪 测试容器启动..."
     CONTAINER_ID=$(docker run -d -p 8001:8000 local-test-build:latest)
     sleep 5
-    
+
     # 健康检查
     if curl -f http://localhost:8001/health >/dev/null 2>&1; then
         echo -e "  ✅ ${GREEN}容器健康检查通过${NC}"
     else
         echo -e "  ⚠️ ${YELLOW}容器健康检查失败，但镜像构建成功${NC}"
     fi
-    
+
     # 清理
     docker stop $CONTAINER_ID >/dev/null 2>&1
     docker rm $CONTAINER_ID >/dev/null 2>&1
@@ -103,7 +103,7 @@ echo "-------------------------------------------"
 
 echo "⚙️ 验证配置文件..."
 if [ -f "app/mapping.yml" ]; then
-    python3 -c "import yaml; yaml.safe_load(open('app/mapping.yml'))" 
+    python3 -c "import yaml; yaml.safe_load(open('app/mapping.yml'))"
     check_step "mapping.yml 语法检查"
 else
     echo -e "  ⚠️ ${YELLOW}mapping.yml 不存在${NC}"
@@ -157,4 +157,4 @@ echo "  git add ."
 echo "  git commit -m \"你的提交信息\""
 echo "  git push github main"
 echo ""
-echo -e "${YELLOW}💡 提示：推送后到 GitHub Actions 查看实际的 CI/CD 执行情况${NC}" 
+echo -e "${YELLOW}💡 提示：推送后到 GitHub Actions 查看实际的 CI/CD 执行情况${NC}"

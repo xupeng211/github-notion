@@ -24,12 +24,12 @@
     "python.linting.flake8Enabled": true,
     "python.linting.pylintEnabled": false,
     "python.sortImports.args": ["--profile", "black"],
-    
+
     // 自动格式化配置
     "editor.formatOnSave": true,
     "editor.formatOnPaste": true,
     "editor.formatOnType": true,
-    
+
     // 空白字符配置
     "editor.insertSpaces": true,
     "editor.tabSize": 4,
@@ -38,11 +38,11 @@
     "files.trimTrailingWhitespace": true,
     "files.insertFinalNewline": true,
     "files.trimFinalNewlines": true,
-    
+
     // Python特定配置
     "python.analysis.autoImportCompletions": true,
     "python.analysis.fixAll": ["source.organizeImports"],
-    
+
     // 保存时自动操作
     "editor.codeActionsOnSave": {
         "source.organizeImports": true,
@@ -56,7 +56,7 @@
    - Tab size: 4
    - Indent: 4
    - Use tab character: 取消勾选
-   
+
 2. **Settings → Tools → Actions on Save**
    - ✅ Reformat code
    - ✅ Optimize imports
@@ -113,7 +113,7 @@ use_parentheses = true
 ensure_newline_before_comments = true
 ```
 
-### 3. Git Hooks (推荐) 
+### 3. Git Hooks (推荐)
 
 #### 设置 Pre-commit
 ```bash
@@ -134,25 +134,25 @@ repos:
       - id: check-yaml
       - id: check-added-large-files
       - id: check-merge-conflict
-      
+
   - repo: https://github.com/psf/black
     rev: 22.10.0
     hooks:
       - id: black
         language_version: python3
-        
+
   - repo: https://github.com/pycqa/isort
     rev: 5.10.1
     hooks:
       - id: isort
         name: isort (python)
-        
+
   - repo: https://github.com/pycqa/flake8
     rev: 5.0.4
     hooks:
       - id: flake8
         args: [--max-line-length=120]
-        
+
   - repo: https://github.com/myint/autoflake
     rev: v1.7.7
     hooks:
@@ -211,11 +211,11 @@ test-prep: fix lint
 [flake8]
 max-line-length = 120
 max-complexity = 10
-ignore = 
+ignore =
     E203,  # whitespace before ':'
     W503,  # line break before binary operator
     E501,  # line too long (handled by black)
-exclude = 
+exclude =
     .git,
     __pycache__,
     .pytest_cache,
@@ -225,7 +225,7 @@ exclude =
     migrations,
     build,
     dist
-per-file-ignores = 
+per-file-ignores =
     __init__.py:F401
 ```
 
@@ -299,7 +299,7 @@ echo "✅ 代码质量修复完成！"
 ```bash
 # 好的提交消息格式
 git commit -m "feat: 添加用户认证功能"
-git commit -m "fix: 修复登录页面样式问题"  
+git commit -m "fix: 修复登录页面样式问题"
 git commit -m "refactor: 重构数据库查询逻辑"
 git commit -m "style: 修复代码格式问题"
 ```
@@ -312,7 +312,7 @@ git checkout -b feature/user-auth
 # 修复分支
 git checkout -b fix/login-bug
 
-# 重构分支  
+# 重构分支
 git checkout -b refactor/database-query
 ```
 
@@ -329,7 +329,7 @@ git checkout -b refactor/database-query
 
 ✅ **自动化格式修复** - 保存时自动格式化
 ✅ **提交前质量检查** - Git hooks自动验证
-✅ **统一的代码风格** - 团队协作无障碍  
+✅ **统一的代码风格** - 团队协作无障碍
 ✅ **减少Review时间** - 专注于逻辑而非格式
 ✅ **提高开发效率** - 减少手动修复时间
 
@@ -339,4 +339,4 @@ git checkout -b refactor/database-query
 2. **循序渐进** - 先解决格式问题，再关注复杂规则
 3. **团队统一** - 确保所有成员使用相同配置
 4. **持续改进** - 根据项目需求调整规则
-5. **自动化优先** - 能自动化的绝不手动操作 
+5. **自动化优先** - 能自动化的绝不手动操作

@@ -29,7 +29,7 @@ def test_rdp_connection():
             print("   ✅ 找到 xfreerdp，可以尝试连接:")
             print(f"   xfreerdp /v:{AWS_SERVER}:3389 /u:Administrator")
             return True
-    except:
+    except Exception:
         pass
 
     try:
@@ -38,7 +38,7 @@ def test_rdp_connection():
             print("   ✅ 找到 rdesktop，可以尝试连接:")
             print(f"   rdesktop {AWS_SERVER}:3389")
             return True
-    except:
+    except Exception:
         pass
 
     print("   ⚠️ 未找到 RDP 客户端，请手动安装或使用图形界面")
@@ -154,7 +154,7 @@ Write-Host "📦 检查 pip..." -ForegroundColor Yellow
 python -m pip --version
 
 # 创建应用目录
-$AppDir = "C:\\github-notion-sync"
+$AppDir = "C:\\\\github-notion-sync"
 Write-Host "📁 创建应用目录: $AppDir" -ForegroundColor Yellow
 New-Item -ItemType Directory -Force -Path $AppDir
 Set-Location $AppDir
@@ -163,7 +163,7 @@ Set-Location $AppDir
 Write-Host "⏹️ 停止现有服务..." -ForegroundColor Yellow
 Get-Process -Name "python" -ErrorAction SilentlyContinue | Where-Object {$_.CommandLine -like "*uvicorn*"} | Stop-Process -Force
 netstat -ano | findstr :8000 | ForEach-Object {
-    $processId = ($_ -split '\s+')[-1]
+    $processId = ($_ -split '\\\s+')[-1]
     if ($processId -ne "0") {
         Stop-Process -Id $processId -Force -ErrorAction SilentlyContinue
     }
@@ -195,7 +195,7 @@ New-Item -ItemType Directory -Force -Path "logs"
 Write-Host "🚀 创建启动脚本..." -ForegroundColor Yellow
 $startScript = @"
 @echo off
-cd /d C:\github-notion-sync
+cd /d C:\\\github-notion-sync
 python -m uvicorn app.server:app --host 0.0.0.0 --port 8000
 "@
 $startScript | Out-File -FilePath "start_service.bat" -Encoding ASCII
@@ -226,7 +226,7 @@ class GitHubNotionService(win32serviceutil.ServiceFramework):
         win32event.SetEvent(self.hWaitStop)
 
     def SvcDoRun(self):
-        os.chdir(r"C:\github-notion-sync")
+        os.chdir(r"C:\\\github-notion-sync")
         self.process = subprocess.Popen([
             "python", "-m", "uvicorn", "app.server:app",
             "--host", "0.0.0.0", "--port", "8000"
@@ -241,7 +241,7 @@ $serviceScript | Out-File -FilePath "windows_service.py" -Encoding UTF8
 Write-Host "✅ Windows 部署脚本创建完成" -ForegroundColor Green
 Write-Host "📋 下一步:" -ForegroundColor Yellow
 Write-Host "1. 将应用文件复制到 $AppDir" -ForegroundColor White
-Write-Host "2. 运行: .\\start_service.bat" -ForegroundColor White
+Write-Host "2. 运行: .\\\\start_service.bat" -ForegroundColor White
 Write-Host "3. 或安装为 Windows 服务: python windows_service.py install" -ForegroundColor White
 """
 

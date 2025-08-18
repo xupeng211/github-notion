@@ -36,5 +36,3 @@ echo "OK" >&2
 echo "[3/3] Webhook demo..." >&2
 "$(dirname "$0")/send_webhook.sh" --env-file "$ENV_FILE" --url "$BASE_URL/gitee_webhook"
 echo "Done" >&2
-
-

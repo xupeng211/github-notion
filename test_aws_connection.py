@@ -21,7 +21,7 @@ def run_command(cmd, description="", timeout=30):
     try:
         result = subprocess.run(cmd, shell=True, capture_output=True, text=True, timeout=timeout)
         if result.returncode == 0:
-            print(f"   ✅ 成功")
+            print("   ✅ 成功")
             if result.stdout.strip():
                 print(f"   输出: {result.stdout.strip()}")
         else:

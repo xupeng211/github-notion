@@ -1,130 +1,203 @@
 {
   "dashboard": {
-    "id": null,
-    "title": "GitHub-Notion 同步服务监控",
-    "tags": ["github", "notion", "sync"],
-    "timezone": "browser",
-    "refresh": "30s",
-    "time": {
-      "from": "now-1h",
-      "to": "now"
+    "annotations": {
+      "list": [
+        {
+          "datasource": "prometheus",
+          "expr": "changes(up{job=\"github-notion-sync\"}[1h])",
+          "iconColor": "blue",
+          "name": "Deployments",
+          "textFormat": "\u670d\u52a1\u72b6\u6001\u53d8\u66f4",
+          "titleFormat": "\u670d\u52a1\u91cd\u542f"
+        }
+      ]
     },
+    "id": null,
     "panels": [
       {
-        "id": 1,
-        "title": "服务状态概览",
-        "type": "stat",
-        "targets": [
-          {
-            "expr": "up{job=\"github-notion-sync\"}",
-            "legendFormat": "服务状态"
-          }
-        ],
         "fieldConfig": {
           "defaults": {
-            "color": {"mode": "thresholds"},
-            "thresholds": {
-              "steps": [
-                {"color": "red", "value": 0},
-                {"color": "green", "value": 1}
-              ]
+            "color": {
+              "mode": "thresholds"
             },
             "mappings": [
-              {"options": {"0": {"text": "离线"}}, "type": "value"},
-              {"options": {"1": {"text": "在线"}}, "type": "value"}
-            ]
-          }
-        },
-        "gridPos": {"h": 8, "w": 6, "x": 0, "y": 0}
-      },
-      {
-        "id": 2,
-        "title": "事件处理统计",
-        "type": "timeseries",
-        "targets": [
-          {
-            "expr": "rate(events_total{result=\"success\"}[5m])",
-            "legendFormat": "成功事件/秒"
-          },
-          {
-            "expr": "rate(events_total{result=\"fail\"}[5m])",
-            "legendFormat": "失败事件/秒"
-          },
-          {
-            "expr": "rate(events_total{result=\"skip\"}[5m])",
-            "legendFormat": "跳过事件/秒"
-          }
-        ],
-        "fieldConfig": {
-          "defaults": {
-            "color": {"mode": "palette-classic"},
-            "unit": "reqps"
-          }
-        },
-        "gridPos": {"h": 8, "w": 12, "x": 6, "y": 0}
-      },
-      {
-        "id": 3,
-        "title": "死信队列大小",
-        "type": "stat",
-        "targets": [
-          {
-            "expr": "deadletter_size",
-            "legendFormat": "死信队列"
-          }
-        ],
-        "fieldConfig": {
-          "defaults": {
-            "color": {"mode": "thresholds"},
+              {
+                "options": {
+                  "0": {
+                    "text": "\u79bb\u7ebf"
+                  }
+                },
+                "type": "value"
+              },
+              {
+                "options": {
+                  "1": {
+                    "text": "\u5728\u7ebf"
+                  }
+                },
+                "type": "value"
+              }
+            ],
             "thresholds": {
               "steps": [
-                {"color": "green", "value": 0},
-                {"color": "yellow", "value": 10},
-                {"color": "red", "value": 50}
+                {
+                  "color": "red",
+                  "value": 0
+                },
+                {
+                  "color": "green",
+                  "value": 1
+                }
               ]
             }
           }
         },
-        "gridPos": {"h": 8, "w": 6, "x": 18, "y": 0}
-      },
-      {
-        "id": 4,
-        "title": "处理延迟分布",
-        "type": "timeseries",
+        "gridPos": {
+          "h": 8,
+          "w": 6,
+          "x": 0,
+          "y": 0
+        },
+        "id": 1,
         "targets": [
           {
-            "expr": "histogram_quantile(0.50, rate(process_latency_seconds_bucket[5m]))",
-            "legendFormat": "P50 延迟"
-          },
-          {
-            "expr": "histogram_quantile(0.95, rate(process_latency_seconds_bucket[5m]))",
-            "legendFormat": "P95 延迟"
-          },
-          {
-            "expr": "histogram_quantile(0.99, rate(process_latency_seconds_bucket[5m]))",
-            "legendFormat": "P99 延迟"
+            "expr": "up{job=\"github-notion-sync\"}",
+            "legendFormat": "\u670d\u52a1\u72b6\u6001"
           }
         ],
+        "title": "\u670d\u52a1\u72b6\u6001\u6982\u89c8",
+        "type": "stat"
+      },
+      {
         "fieldConfig": {
           "defaults": {
-            "color": {"mode": "palette-classic"},
+            "color": {
+              "mode": "palette-classic"
+            },
+            "unit": "reqps"
+          }
+        },
+        "gridPos": {
+          "h": 8,
+          "w": 12,
+          "x": 6,
+          "y": 0
+        },
+        "id": 2,
+        "targets": [
+          {
+            "expr": "rate(events_total{result=\"success\"}[5m])",
+            "legendFormat": "\u6210\u529f\u4e8b\u4ef6/\u79d2"
+          },
+          {
+            "expr": "rate(events_total{result=\"fail\"}[5m])",
+            "legendFormat": "\u5931\u8d25\u4e8b\u4ef6/\u79d2"
+          },
+          {
+            "expr": "rate(events_total{result=\"skip\"}[5m])",
+            "legendFormat": "\u8df3\u8fc7\u4e8b\u4ef6/\u79d2"
+          }
+        ],
+        "title": "\u4e8b\u4ef6\u5904\u7406\u7edf\u8ba1",
+        "type": "timeseries"
+      },
+      {
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "thresholds"
+            },
+            "thresholds": {
+              "steps": [
+                {
+                  "color": "green",
+                  "value": 0
+                },
+                {
+                  "color": "yellow",
+                  "value": 10
+                },
+                {
+                  "color": "red",
+                  "value": 50
+                }
+              ]
+            }
+          }
+        },
+        "gridPos": {
+          "h": 8,
+          "w": 6,
+          "x": 18,
+          "y": 0
+        },
+        "id": 3,
+        "targets": [
+          {
+            "expr": "deadletter_size",
+            "legendFormat": "\u6b7b\u4fe1\u961f\u5217"
+          }
+        ],
+        "title": "\u6b7b\u4fe1\u961f\u5217\u5927\u5c0f",
+        "type": "stat"
+      },
+      {
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "palette-classic"
+            },
             "unit": "s"
           }
         },
-        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 8}
+        "gridPos": {
+          "h": 8,
+          "w": 12,
+          "x": 0,
+          "y": 8
+        },
+        "id": 4,
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.50, rate(process_latency_seconds_bucket[5m]))",
+            "legendFormat": "P50 \u5ef6\u8fdf"
+          },
+          {
+            "expr": "histogram_quantile(0.95, rate(process_latency_seconds_bucket[5m]))",
+            "legendFormat": "P95 \u5ef6\u8fdf"
+          },
+          {
+            "expr": "histogram_quantile(0.99, rate(process_latency_seconds_bucket[5m]))",
+            "legendFormat": "P99 \u5ef6\u8fdf"
+          }
+        ],
+        "title": "\u5904\u7406\u5ef6\u8fdf\u5206\u5e03",
+        "type": "timeseries"
       },
       {
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "palette-classic"
+            },
+            "unit": "reqps"
+          }
+        },
+        "gridPos": {
+          "h": 8,
+          "w": 12,
+          "x": 12,
+          "y": 8
+        },
         "id": 5,
-        "title": "API 调用统计",
-        "type": "timeseries",
         "targets": [
           {
             "expr": "rate(notion_api_calls_total{status=\"success\"}[5m])",
-            "legendFormat": "Notion API 成功"
+            "legendFormat": "Notion API \u6210\u529f"
           },
           {
             "expr": "rate(notion_api_calls_total{status=\"error\"}[5m])",
-            "legendFormat": "Notion API 错误"
+            "legendFormat": "Notion API \u9519\u8bef"
           },
           {
             "expr": "rate(http_requests_total{status=~\"2..\"}[5m])",
@@ -135,46 +208,60 @@
             "legendFormat": "HTTP 5xx"
           }
         ],
-        "fieldConfig": {
-          "defaults": {
-            "color": {"mode": "palette-classic"},
-            "unit": "reqps"
-          }
-        },
-        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 8}
+        "title": "API \u8c03\u7528\u7edf\u8ba1",
+        "type": "timeseries"
       },
       {
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "palette-classic"
+            },
+            "max": 100,
+            "min": 0,
+            "unit": "percent"
+          }
+        },
+        "gridPos": {
+          "h": 8,
+          "w": 24,
+          "x": 0,
+          "y": 16
+        },
         "id": 6,
-        "title": "系统资源使用",
-        "type": "timeseries",
         "targets": [
           {
             "expr": "(1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) * 100",
-            "legendFormat": "内存使用率 (%)"
+            "legendFormat": "\u5185\u5b58\u4f7f\u7528\u7387 (%)"
           },
           {
             "expr": "100 - (node_filesystem_avail_bytes{mountpoint=\"/\"} / node_filesystem_size_bytes{mountpoint=\"/\"} * 100)",
-            "legendFormat": "磁盘使用率 (%)"
+            "legendFormat": "\u78c1\u76d8\u4f7f\u7528\u7387 (%)"
           },
           {
             "expr": "rate(node_cpu_seconds_total{mode=\"idle\"}[5m]) * 100",
-            "legendFormat": "CPU 空闲率 (%)"
+            "legendFormat": "CPU \u7a7a\u95f2\u7387 (%)"
           }
         ],
-        "fieldConfig": {
-          "defaults": {
-            "color": {"mode": "palette-classic"},
-            "unit": "percent",
-            "min": 0,
-            "max": 100
-          }
-        },
-        "gridPos": {"h": 8, "w": 24, "x": 0, "y": 16}
+        "title": "\u7cfb\u7edf\u8d44\u6e90\u4f7f\u7528",
+        "type": "timeseries"
       },
       {
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "palette-classic"
+            },
+            "unit": "reqps"
+          }
+        },
+        "gridPos": {
+          "h": 8,
+          "w": 12,
+          "x": 0,
+          "y": 24
+        },
         "id": 7,
-        "title": "Webhook 处理状态",
-        "type": "timeseries",
         "targets": [
           {
             "expr": "rate(http_requests_total{endpoint=\"/github_webhook\"}[5m])",
@@ -186,75 +273,90 @@
           },
           {
             "expr": "rate(webhook_errors_total[5m])",
-            "legendFormat": "Webhook 错误"
+            "legendFormat": "Webhook \u9519\u8bef"
           }
         ],
-        "fieldConfig": {
-          "defaults": {
-            "color": {"mode": "palette-classic"},
-            "unit": "reqps"
-          }
-        },
-        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 24}
+        "title": "Webhook \u5904\u7406\u72b6\u6001",
+        "type": "timeseries"
       },
       {
-        "id": 8,
-        "title": "数据库操作统计",
-        "type": "timeseries",
-        "targets": [
-          {
-            "expr": "rate(database_operations_total{status=\"success\"}[5m])",
-            "legendFormat": "数据库操作成功"
-          },
-          {
-            "expr": "rate(database_operations_total{status=\"error\"}[5m])",
-            "legendFormat": "数据库操作失败"
-          }
-        ],
         "fieldConfig": {
           "defaults": {
-            "color": {"mode": "palette-classic"},
+            "color": {
+              "mode": "palette-classic"
+            },
             "unit": "ops"
           }
         },
-        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 24}
-      },
-      {
-        "id": 9,
-        "title": "最近告警",
-        "type": "table",
+        "gridPos": {
+          "h": 8,
+          "w": 12,
+          "x": 12,
+          "y": 24
+        },
+        "id": 8,
         "targets": [
           {
-            "expr": "ALERTS{job=\"github-notion-sync\"}",
-            "legendFormat": "告警状态"
+            "expr": "rate(database_operations_total{status=\"success\"}[5m])",
+            "legendFormat": "\u6570\u636e\u5e93\u64cd\u4f5c\u6210\u529f"
+          },
+          {
+            "expr": "rate(database_operations_total{status=\"error\"}[5m])",
+            "legendFormat": "\u6570\u636e\u5e93\u64cd\u4f5c\u5931\u8d25"
           }
         ],
+        "title": "\u6570\u636e\u5e93\u64cd\u4f5c\u7edf\u8ba1",
+        "type": "timeseries"
+      },
+      {
         "fieldConfig": {
           "defaults": {
-            "color": {"mode": "thresholds"},
+            "color": {
+              "mode": "thresholds"
+            },
             "thresholds": {
               "steps": [
-                {"color": "green", "value": 0},
-                {"color": "red", "value": 1}
+                {
+                  "color": "green",
+                  "value": 0
+                },
+                {
+                  "color": "red",
+                  "value": 1
+                }
               ]
             }
           }
         },
-        "gridPos": {"h": 8, "w": 24, "x": 0, "y": 32}
+        "gridPos": {
+          "h": 8,
+          "w": 24,
+          "x": 0,
+          "y": 32
+        },
+        "id": 9,
+        "targets": [
+          {
+            "expr": "ALERTS{job=\"github-notion-sync\"}",
+            "legendFormat": "\u544a\u8b66\u72b6\u6001"
+          }
+        ],
+        "title": "\u6700\u8fd1\u544a\u8b66",
+        "type": "table"
       }
     ],
-    "annotations": {
-      "list": [
-        {
-          "name": "Deployments",
-          "datasource": "prometheus",
-          "expr": "changes(up{job=\"github-notion-sync\"}[1h])",
-          "titleFormat": "服务重启",
-          "textFormat": "服务状态变更",
-          "iconColor": "blue"
-        }
-      ]
-    }
+    "refresh": "30s",
+    "tags": [
+      "github",
+      "notion",
+      "sync"
+    ],
+    "time": {
+      "from": "now-1h",
+      "to": "now"
+    },
+    "timezone": "browser",
+    "title": "GitHub-Notion \u540c\u6b65\u670d\u52a1\u76d1\u63a7"
   },
   "overwrite": true
-} 
+}

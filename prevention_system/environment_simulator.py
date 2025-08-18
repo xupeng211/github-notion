@@ -269,7 +269,7 @@ class EnvironmentSimulator:
                         )
                         conn.execute(text("INSERT INTO alembic_version VALUES ('head')"))
                         break  # 只需要创建一次
-                    except:
+                    except Exception:
                         pass  # 表可能已存在
 
             conn.commit()

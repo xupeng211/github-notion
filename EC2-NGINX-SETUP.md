@@ -79,13 +79,13 @@ server {
         proxy_set_header X-Forwarded-Proto $scheme;
         proxy_set_header X-Forwarded-Host $server_name;
         proxy_set_header X-Forwarded-Port $server_port;
-        
+
         # GitHub specific headers
         proxy_set_header X-GitHub-Event $http_x_github_event;
         proxy_set_header X-GitHub-Delivery $http_x_github_delivery;
         proxy_set_header X-Hub-Signature $http_x_hub_signature;
         proxy_set_header X-Hub-Signature-256 $http_x_hub_signature_256;
-        
+
         proxy_cache_bypass $http_upgrade;
         proxy_read_timeout 60s;
         proxy_connect_timeout 60s;
@@ -173,14 +173,14 @@ sudo nginx -t
 
 if [ $? -eq 0 ]; then
     echo "✅ Nginx 配置测试通过"
-    
+
     # 8. 重新加载 Nginx
     echo "8. 重新加载 Nginx..."
     sudo systemctl reload nginx
-    
+
     echo "9. 检查 Nginx 状态..."
     sudo systemctl status nginx --no-pager
-    
+
     echo ""
     echo "🎉 配置完成!"
 else
@@ -251,8 +251,8 @@ sudo ufw status
 ## ✅ 成功标志
 
 - `curl http://3.35.106.116/health` 返回 200 OK
-- GitHub Webhook 测试返回 200 OK  
+- GitHub Webhook 测试返回 200 OK
 - 可以访问 `http://3.35.106.116/docs` 查看 API 文档
 - Nginx 日志显示请求正确代理到后端服务
 
-配置成功后，你的 GitHub Webhook 就能正常接收和处理 Issues 事件了！ 
+配置成功后，你的 GitHub Webhook 就能正常接收和处理 Issues 事件了！

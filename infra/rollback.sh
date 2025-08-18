@@ -13,4 +13,3 @@ sed -i "s|image: .*|image: ${IMAGE_REF}|" docker-compose.prod.yml
 docker compose -f docker-compose.prod.yml up -d
 
 echo "Rollback to ${IMAGE_REF} done"
-

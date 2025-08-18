@@ -269,7 +269,7 @@ gh run list --repo owner/repo
 
 ```bash
 错误: Notion API 调用失败
-解决: 
+解决:
 1. 检查 NOTION_TOKEN 是否正确
 2. 确认 Integration 已连接到目标数据库
 3. 验证 NOTION_DATABASE_ID 格式正确

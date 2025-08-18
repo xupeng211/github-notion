@@ -35,4 +35,4 @@ WantedBy=multi-user.target
 # sudo systemctl daemon-reload
 # sudo systemctl enable github-notion-sync
 # sudo systemctl start github-notion-sync
-# sudo systemctl status github-notion-sync 
+# sudo systemctl status github-notion-sync

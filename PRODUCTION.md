@@ -94,10 +94,10 @@ GUNICORN_KEEP_ALIVE=5
    ```bash
    # 登录到 ECR
    aws ecr get-login-password --region your-region | docker login --username AWS --password-stdin your-account-id.dkr.ecr.your-region.amazonaws.com
-   
+
    # 标记镜像
    docker tag gitee-notion-sync:prod your-account-id.dkr.ecr.your-region.amazonaws.com/gitee-notion-sync:prod
-   
+
    # 推送镜像
    docker push your-account-id.dkr.ecr.your-region.amazonaws.com/gitee-notion-sync:prod
    ```
@@ -148,4 +148,4 @@ GUNICORN_KEEP_ALIVE=5
 3. 安全：
    - 定期更新密钥
    - 检查安全组规则
-   - 更新 SSL 证书 
+   - 更新 SSL 证书

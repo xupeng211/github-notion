@@ -1,106 +1,110 @@
 {
-    "BudgetConfiguration": {
-        "Name": "gitee-notion-sync-budget",
-        "TimeUnit": "MONTHLY",
-        "BudgetLimit": {
-            "Amount": "100",
-            "Unit": "USD"
-        },
-        "Notifications": [
-            {
-                "NotificationType": "ACTUAL",
-                "ComparisonOperator": "GREATER_THAN",
-                "Threshold": 80,
-                "Recipients": ["${NOTIFICATION_EMAIL}"]
-            },
-            {
-                "NotificationType": "FORECASTED",
-                "ComparisonOperator": "GREATER_THAN",
-                "Threshold": 100,
-                "Recipients": ["${NOTIFICATION_EMAIL}"]
-            }
-        ]
+  "BudgetConfiguration": {
+    "BudgetLimit": {
+      "Amount": "100",
+      "Unit": "USD"
     },
-    "CostOptimizationRules": {
-        "EC2AutoScaling": {
-            "MinCapacity": 1,
-            "MaxCapacity": 3,
-            "TargetCPUUtilization": 70,
-            "ScaleInCooldown": 300,
-            "ScaleOutCooldown": 300
-        },
-        "ECSOptimization": {
-            "TaskDefinition": {
-                "CPU": "256",
-                "Memory": "512"
-            },
-            "ServiceScaling": {
-                "MinTasks": 1,
-                "MaxTasks": 3
-            }
-        },
-        "CloudWatchLogs": {
-            "RetentionInDays": 30,
-            "ExportToS3": {
-                "Enabled": true,
-                "Bucket": "${LOG_ARCHIVE_BUCKET}",
-                "Prefix": "logs/",
-                "ExportAfterDays": 7
-            }
-        },
-        "S3Lifecycle": {
-            "BackupBucket": {
-                "TransitionToIA": 30,
-                "TransitionToGlacier": 90,
-                "Expiration": 365
-            },
-            "LogBucket": {
-                "TransitionToIA": 30,
-                "TransitionToGlacier": 60,
-                "Expiration": 180
-            }
-        }
-    },
-    "ResourceTags": {
-        "Environment": "production",
-        "Project": "gitee-notion-sync",
-        "CostCenter": "engineering",
-        "Owner": "devops-team"
-    },
-    "CostAllocationTags": [
-        "Environment",
-        "Project",
-        "CostCenter",
-        "Owner"
+    "Name": "gitee-notion-sync-budget",
+    "Notifications": [
+      {
+        "ComparisonOperator": "GREATER_THAN",
+        "NotificationType": "ACTUAL",
+        "Recipients": [
+          "${NOTIFICATION_EMAIL}"
+        ],
+        "Threshold": 80
+      },
+      {
+        "ComparisonOperator": "GREATER_THAN",
+        "NotificationType": "FORECASTED",
+        "Recipients": [
+          "${NOTIFICATION_EMAIL}"
+        ],
+        "Threshold": 100
+      }
     ],
-    "Savings": {
-        "ReservedInstances": {
-            "Enabled": false,
-            "Terms": "1yr"
-        },
-        "SavingsPlans": {
-            "Enabled": true,
-            "Type": "Compute",
-            "Terms": "1yr",
-            "PaymentOption": "No Upfront"
-        }
+    "TimeUnit": "MONTHLY"
+  },
+  "CostAllocationTags": [
+    "Environment",
+    "Project",
+    "CostCenter",
+    "Owner"
+  ],
+  "CostOptimizationRules": {
+    "CloudWatchLogs": {
+      "ExportToS3": {
+        "Bucket": "${LOG_ARCHIVE_BUCKET}",
+        "Enabled": true,
+        "ExportAfterDays": 7,
+        "Prefix": "logs/"
+      },
+      "RetentionInDays": 30
     },
-    "Monitoring": {
-        "CostAndUsageReport": {
-            "Enabled": true,
-            "TimeUnit": "HOURLY",
-            "Format": "Parquet",
-            "Bucket": "${COST_REPORT_BUCKET}",
-            "Prefix": "cost-reports/"
-        },
-        "Alerts": {
-            "DailyCostThreshold": 10,
-            "WeeklyCostThreshold": 50,
-            "UnusedResourceCheck": true,
-            "AnomalyDetection": {
-                "Enabled": true,
-                "Threshold": 30
-            }
-        }
+    "EC2AutoScaling": {
+      "MaxCapacity": 3,
+      "MinCapacity": 1,
+      "ScaleInCooldown": 300,
+      "ScaleOutCooldown": 300,
+      "TargetCPUUtilization": 70
+    },
+    "ECSOptimization": {
+      "ServiceScaling": {
+        "MaxTasks": 3,
+        "MinTasks": 1
+      },
+      "TaskDefinition": {
+        "CPU": "256",
+        "Memory": "512"
+      }
+    },
+    "S3Lifecycle": {
+      "BackupBucket": {
+        "Expiration": 365,
+        "TransitionToGlacier": 90,
+        "TransitionToIA": 30
+      },
+      "LogBucket": {
+        "Expiration": 180,
+        "TransitionToGlacier": 60,
+        "TransitionToIA": 30
+      }
     }
-} 
+  },
+  "Monitoring": {
+    "Alerts": {
+      "AnomalyDetection": {
+        "Enabled": true,
+        "Threshold": 30
+      },
+      "DailyCostThreshold": 10,
+      "UnusedResourceCheck": true,
+      "WeeklyCostThreshold": 50
+    },
+    "CostAndUsageReport": {
+      "Bucket": "${COST_REPORT_BUCKET}",
+      "Enabled": true,
+      "Format": "Parquet",
+      "Prefix": "cost-reports/",
+      "TimeUnit": "HOURLY"
+    }
+  },
+  "ResourceTags": {
+    "CostCenter": "engineering",
+    "Environment": "production",
+    "Owner": "devops-team",
+    "Project": "gitee-notion-sync"
+  },
+  "Savings": {
+    "ReservedInstances": {
+      "Enabled": false,
+      "Terms": "1yr"
+    },
+    "SavingsPlans": {
+      "Enabled": true,
+      "PaymentOption": "No Upfront",
+      "Terms": "1yr",
+      "Type": "Compute"
+    }
+  }
+}

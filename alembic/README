@@ -1,7 +1,7 @@
 This directory contains Alembic migration environment.
- 
+
 Usage examples:
 - Generate revision: alembic revision -m "init tables"
 - Auto-generate (if configured with compare): alembic revision --autogenerate -m "changes"
 - Apply: alembic upgrade head
-- Downgrade: alembic downgrade -1 
+- Downgrade: alembic downgrade -1

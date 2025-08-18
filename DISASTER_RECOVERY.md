@@ -94,7 +94,7 @@
    ```bash
    # 从 S3 恢复配置
    aws s3 cp s3://backup-bucket/latest/config ./
-   
+
    # 恢复环境变量
    aws s3 cp s3://backup-bucket/latest/env_vars/.env ./
    ```
@@ -176,4 +176,4 @@ aws ecs update-service --cluster gitee-notion-sync-cluster \
 - [ ] 执行恢复程序
 - [ ] 验证服务恢复
 - [ ] 记录事件和改进建议
-- [ ] 更新文档和程序 
+- [ ] 更新文档和程序

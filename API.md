@@ -187,4 +187,4 @@ X-Notion-Signature: sha256=<signature>  # 可选，若配置 NOTION_WEBHOOK_SECR
 ## 更新日志
 
 - v1.1.0: 新增 GitHub ↔ Notion 双向同步、启用 `/github_webhook`、`/notion_webhook`
-- v1.0.0: 初始版本 
+- v1.0.0: 初始版本

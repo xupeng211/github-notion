@@ -1,186 +1,186 @@
 {
-  "timestamp": "2025-08-15 02:37:29",
-  "summary": {
-    "total_tests": 27,
-    "passed": 26,
-    "failed": 1,
-    "warnings": 2,
-    "success_rate": 96.3
-  },
   "details": [
     {
-      "test": "架构验证",
-      "passed": true,
       "message": "",
+      "passed": true,
+      "test": "\u67b6\u6784\u9a8c\u8bc1",
       "warning": false
     },
     {
-      "test": "导入 app.server",
-      "passed": true,
       "message": "",
+      "passed": true,
+      "test": "\u5bfc\u5165 app.server",
       "warning": false
     },
     {
-      "test": "导入 app.service",
-      "passed": true,
       "message": "",
+      "passed": true,
+      "test": "\u5bfc\u5165 app.service",
       "warning": false
     },
     {
-      "test": "导入 app.models",
-      "passed": true,
       "message": "",
+      "passed": true,
+      "test": "\u5bfc\u5165 app.models",
       "warning": false
     },
     {
-      "test": "导入 app.notion",
-      "passed": true,
       "message": "",
+      "passed": true,
+      "test": "\u5bfc\u5165 app.notion",
       "warning": false
     },
     {
-      "test": "导入 app.github",
-      "passed": true,
       "message": "",
+      "passed": true,
+      "test": "\u5bfc\u5165 app.github",
       "warning": false
     },
     {
-      "test": "导入 app.schemas",
-      "passed": true,
       "message": "",
+      "passed": true,
+      "test": "\u5bfc\u5165 app.schemas",
       "warning": false
     },
     {
-      "test": "导入 app.middleware",
-      "passed": true,
       "message": "",
+      "passed": true,
+      "test": "\u5bfc\u5165 app.middleware",
       "warning": false
     },
     {
-      "test": "数据库初始化",
+      "message": "",
       "passed": false,
-      "message": "",
+      "test": "\u6570\u636e\u5e93\u521d\u59cb\u5316",
       "warning": false
     },
     {
-      "test": "数据库读写操作",
+      "message": "\u8df3\u8fc7\uff1a\u6570\u636e\u5e93\u521d\u59cb\u5316\u5931\u8d25",
       "passed": false,
-      "message": "跳过：数据库初始化失败",
+      "test": "\u6570\u636e\u5e93\u8bfb\u5199\u64cd\u4f5c",
       "warning": true
     },
     {
-      "test": "签名验证功能",
-      "passed": true,
       "message": "",
+      "passed": true,
+      "test": "\u7b7e\u540d\u9a8c\u8bc1\u529f\u80fd",
       "warning": false
     },
     {
-      "test": "事件哈希功能",
-      "passed": true,
       "message": "",
+      "passed": true,
+      "test": "\u4e8b\u4ef6\u54c8\u5e0c\u529f\u80fd",
       "warning": false
     },
     {
-      "test": "GitHub URL 解析",
-      "passed": true,
       "message": "",
+      "passed": true,
+      "test": "GitHub URL \u89e3\u6790",
       "warning": false
     },
     {
-      "test": "健康检查端点",
-      "passed": true,
       "message": "",
+      "passed": true,
+      "test": "\u5065\u5eb7\u68c0\u67e5\u7aef\u70b9",
       "warning": false
     },
     {
-      "test": "Prometheus 指标端点",
-      "passed": true,
       "message": "",
+      "passed": true,
+      "test": "Prometheus \u6307\u6807\u7aef\u70b9",
       "warning": false
     },
     {
-      "test": "/github_webhook 端点",
-      "passed": true,
       "message": "",
+      "passed": true,
+      "test": "/github_webhook \u7aef\u70b9",
       "warning": false
     },
     {
-      "test": "/notion_webhook 端点",
-      "passed": true,
       "message": "",
+      "passed": true,
+      "test": "/notion_webhook \u7aef\u70b9",
       "warning": false
     },
     {
-      "test": "/gitee_webhook 端点",
-      "passed": true,
       "message": "",
+      "passed": true,
+      "test": "/gitee_webhook \u7aef\u70b9",
       "warning": false
     },
     {
-      "test": "GitHub 签名验证（空密钥）",
-      "passed": true,
       "message": "",
+      "passed": true,
+      "test": "GitHub \u7b7e\u540d\u9a8c\u8bc1\uff08\u7a7a\u5bc6\u94a5\uff09",
       "warning": false
     },
     {
-      "test": "GitHub 签名验证（错误格式）",
-      "passed": true,
       "message": "",
+      "passed": true,
+      "test": "GitHub \u7b7e\u540d\u9a8c\u8bc1\uff08\u9519\u8bef\u683c\u5f0f\uff09",
       "warning": false
     },
     {
-      "test": "Notion 签名验证",
-      "passed": true,
       "message": "",
+      "passed": true,
+      "test": "Notion \u7b7e\u540d\u9a8c\u8bc1",
       "warning": false
     },
     {
-      "test": "异步 HTTP 请求",
-      "passed": true,
       "message": "",
+      "passed": true,
+      "test": "\u5f02\u6b65 HTTP \u8bf7\u6c42",
       "warning": false
     },
     {
-      "test": "异步 Notion 函数",
+      "message": "\u7ed3\u679c\u5f02\u5e38: {\"error\": \"Illegal header value b'Bearer '\"}",
       "passed": false,
-      "message": "结果异常: {\"error\": \"Illegal header value b'Bearer '\"}",
+      "test": "\u5f02\u6b65 Notion \u51fd\u6570",
       "warning": true
     },
     {
-      "test": "scripts/validate_fixes.py 可执行性",
-      "passed": true,
       "message": "",
+      "passed": true,
+      "test": "scripts/validate_fixes.py \u53ef\u6267\u884c\u6027",
       "warning": false
     },
     {
-      "test": "scripts/init_db.py 可执行性",
-      "passed": true,
       "message": "",
+      "passed": true,
+      "test": "scripts/init_db.py \u53ef\u6267\u884c\u6027",
       "warning": false
     },
     {
-      "test": "scripts/start_service.py 可执行性",
-      "passed": true,
       "message": "",
+      "passed": true,
+      "test": "scripts/start_service.py \u53ef\u6267\u884c\u6027",
       "warning": false
     },
     {
-      "test": "env.example 存在性",
-      "passed": true,
       "message": "",
+      "passed": true,
+      "test": "env.example \u5b58\u5728\u6027",
       "warning": false
     },
     {
-      "test": "monitoring/prometheus.yml 存在性",
-      "passed": true,
       "message": "",
+      "passed": true,
+      "test": "monitoring/prometheus.yml \u5b58\u5728\u6027",
       "warning": false
     },
     {
-      "test": "monitoring/alert_rules.yml 存在性",
-      "passed": true,
       "message": "",
+      "passed": true,
+      "test": "monitoring/alert_rules.yml \u5b58\u5728\u6027",
       "warning": false
     }
-  ]
+  ],
+  "summary": {
+    "failed": 1,
+    "passed": 26,
+    "success_rate": 96.3,
+    "total_tests": 27,
+    "warnings": 2
+  },
+  "timestamp": "2025-08-15 02:37:29"
 }

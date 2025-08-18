@@ -1,91 +1,111 @@
 {
-    "logs": {
-        "logs_collected": {
-            "files": {
-                "collect_list": [
-                    {
-                        "file_path": "/app/logs/app.log",
-                        "log_group_name": "/gitee-notion-sync/application",
-                        "log_stream_name": "{instance_id}",
-                        "timezone": "UTC",
-                        "timestamp_format": "%Y-%m-%d %H:%M:%S",
-                        "multi_line_start_pattern": "{timestamp_format}"
-                    },
-                    {
-                        "file_path": "/var/log/gunicorn/access.log",
-                        "log_group_name": "/gitee-notion-sync/gunicorn-access",
-                        "log_stream_name": "{instance_id}",
-                        "timezone": "UTC"
-                    },
-                    {
-                        "file_path": "/var/log/gunicorn/error.log",
-                        "log_group_name": "/gitee-notion-sync/gunicorn-error",
-                        "log_stream_name": "{instance_id}",
-                        "timezone": "UTC"
-                    }
-                ]
-            }
-        }
-    },
-    "metrics": {
-        "metrics_collected": {
-            "prometheus": {
-                "log_group_name": "/gitee-notion-sync/prometheus",
-                "prometheus_config_path": "/app/prometheus.yml",
-                "emf_processor": {
-                    "metric_declaration": [
-                        {
-                            "source_labels": ["method", "endpoint"],
-                            "label_matcher": ".*",
-                            "dimensions": [["method", "endpoint"]],
-                            "metric_selectors": [
-                                "^http_requests_total$",
-                                "^http_request_duration_seconds.*$"
-                            ]
-                        },
-                        {
-                            "source_labels": ["operation"],
-                            "label_matcher": ".*",
-                            "dimensions": [["operation"]],
-                            "metric_selectors": [
-                                "^notion_api_requests_total$"
-                            ]
-                        },
-                        {
-                            "source_labels": ["event_type"],
-                            "label_matcher": ".*",
-                            "dimensions": [["event_type"]],
-                            "metric_selectors": [
-                                "^gitee_webhook_requests_total$"
-                            ]
-                        }
-                    ]
-                }
-            },
-            "cpu": {
-                "measurement": [
-                    "cpu_usage_idle",
-                    "cpu_usage_user",
-                    "cpu_usage_system"
-                ],
-                "metrics_collection_interval": 60
-            },
-            "mem": {
-                "measurement": [
-                    "mem_used_percent",
-                    "mem_total",
-                    "mem_used"
-                ],
-                "metrics_collection_interval": 60
-            },
-            "disk": {
-                "measurement": [
-                    "disk_used_percent",
-                    "disk_free",
-                    "disk_used"
-                ],
-                "metrics_collection_interval": 60
-            }
-        }
+  "logs": {
+    "logs_collected": {
+      "files": {
+        "collect_list": [
+          {
+            "file_path": "/app/logs/app.log",
+            "log_group_name": "/gitee-notion-sync/application",
+            "log_stream_name": "{instance_id}",
+            "multi_line_start_pattern": "{timestamp_format}",
+            "timestamp_format": "%Y-%m-%d %H:%M:%S",
+            "timezone": "UTC"
+          },
+          {
+            "file_path": "/var/log/gunicorn/access.log",
+            "log_group_name": "/gitee-notion-sync/gunicorn-access",
+            "log_stream_name": "{instance_id}",
+            "timezone": "UTC"
+          },
+          {
+            "file_path": "/var/log/gunicorn/error.log",
+            "log_group_name": "/gitee-notion-sync/gunicorn-error",
+            "log_stream_name": "{instance_id}",
+            "timezone": "UTC"
+          }
+        ]
+      }
     }
-} 
+  },
+  "metrics": {
+    "metrics_collected": {
+      "cpu": {
+        "measurement": [
+          "cpu_usage_idle",
+          "cpu_usage_user",
+          "cpu_usage_system"
+        ],
+        "metrics_collection_interval": 60
+      },
+      "disk": {
+        "measurement": [
+          "disk_used_percent",
+          "disk_free",
+          "disk_used"
+        ],
+        "metrics_collection_interval": 60
+      },
+      "mem": {
+        "measurement": [
+          "mem_used_percent",
+          "mem_total",
+          "mem_used"
+        ],
+        "metrics_collection_interval": 60
+      },
+      "prometheus": {
+        "emf_processor": {
+          "metric_declaration": [
+            {
+              "dimensions": [
+                [
+                  "method",
+                  "endpoint"
+                ]
+              ],
+              "label_matcher": ".*",
+              "metric_selectors": [
+                "^http_requests_total$",
+                "^http_request_duration_seconds.*$"
+              ],
+              "source_labels": [
+                "method",
+                "endpoint"
+              ]
+            },
+            {
+              "dimensions": [
+                [
+                  "operation"
+                ]
+              ],
+              "label_matcher": ".*",
+              "metric_selectors": [
+                "^notion_api_requests_total$"
+              ],
+              "source_labels": [
+                "operation"
+              ]
+            },
+            {
+              "dimensions": [
+                [
+                  "event_type"
+                ]
+              ],
+              "label_matcher": ".*",
+              "metric_selectors": [
+                "^gitee_webhook_requests_total$"
+              ],
+              "source_labels": [
+                "event_type"
+              ]
+            }
+          ]
+        },
+        "log_group_name": "/gitee-notion-sync/prometheus",
+        "prometheus_config_path": "/app/prometheus.yml"
+      }
+    }
+  }
+}

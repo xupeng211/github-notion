@@ -61,27 +61,27 @@ print_info() {
 # 检查依赖
 check_dependencies() {
     print_info "检查依赖..."
-    
+
     # 检查 gh CLI
     if ! command -v gh &> /dev/null; then
         print_error "GitHub CLI (gh) 未安装"
         echo "请安装 GitHub CLI: https://cli.github.com/"
         exit 1
     fi
-    
+
     # 检查 gh 登录状态
     if ! gh auth status &> /dev/null; then
         print_error "GitHub CLI 未登录"
         echo "请先登录: gh auth login"
         exit 1
     fi
-    
+
     # 检查 git 仓库
     if ! git rev-parse --git-dir &> /dev/null; then
         print_error "当前目录不是 Git 仓库"
         exit 1
     fi
-    
+
     print_success "依赖检查通过"
 }
 
@@ -91,15 +91,15 @@ get_repo_info() {
         print_info "使用环境变量指定的仓库: $REPO"
         return
     fi
-    
+
     local remote_url
     remote_url=$(git remote get-url origin 2>/dev/null || echo "")
-    
+
     if [[ -z "$remote_url" ]]; then
         print_error "无法获取 Git 远程仓库 URL"
         exit 1
     fi
-    
+
     # 解析 owner/repo
     if [[ "$remote_url" =~ github\.com[:/]([^/]+)/([^/]+)(\.git)?$ ]]; then
         local owner="${BASH_REMATCH[1]}"
@@ -110,30 +110,30 @@ get_repo_info() {
         print_error "无法解析 GitHub 仓库信息: $remote_url"
         exit 1
     fi
-    
+
     print_info "检测到仓库: $REPO"
 }
 
 # 验证 PEM 私钥格式
 validate_pem_key() {
     local key_content="$1"
-    
+
     if [[ ! "$key_content" =~ -----BEGIN.*PRIVATE\ KEY----- ]]; then
         return 1
     fi
-    
+
     if [[ ! "$key_content" =~ -----END.*PRIVATE\ KEY----- ]]; then
         return 1
     fi
-    
+
     # 检查是否包含实际的密钥内容
     local key_body
     key_body=$(echo "$key_content" | sed -n '/-----BEGIN/,/-----END/p' | grep -v "BEGIN\|END" | tr -d '\n\r ')
-    
+
     if [[ ${#key_body} -lt 100 ]]; then
         return 1
     fi
-    
+
     return 0
 }
 
@@ -143,18 +143,18 @@ load_secrets_from_file() {
         print_warning "未找到 $SECRETS_FILE 文件，将使用交互式输入"
         return
     fi
-    
+
     print_info "从 $SECRETS_FILE 读取配置..."
-    
+
     while IFS='=' read -r key value; do
         # 跳过注释和空行
         [[ "$key" =~ ^[[:space:]]*# ]] && continue
         [[ -z "$key" ]] && continue
-        
+
         # 移除前后空格
         key=$(echo "$key" | xargs)
         value=$(echo "$value" | xargs)
-        
+
         # 只处理期望的 secrets
         if [[ -n "${EXPECTED_SECRETS[$key]:-}" ]]; then
             SECRET_VALUES["$key"]="$value"
@@ -167,30 +167,30 @@ load_secrets_from_file() {
 interactive_input() {
     print_info "交互式输入缺失的 secrets..."
     echo ""
-    
+
     for key in "${!EXPECTED_SECRETS[@]}"; do
         if [[ -n "${SECRET_VALUES[$key]:-}" ]]; then
             continue  # 已从文件读取
         fi
-        
+
         local description="${EXPECTED_SECRETS[$key]#*|}"
         local priority="${EXPECTED_SECRETS[$key]%%|*}"
-        
+
         echo -e "${BLUE}配置 $key${NC}"
         echo -e "描述: $description"
         echo -e "优先级: $priority"
         echo ""
-        
+
         if [[ "$key" == "AWS_PRIVATE_KEY" ]]; then
             echo "请输入 PEM 格式的私钥（包含 -----BEGIN 和 -----END 行）:"
             echo "提示: 可以使用 'cat your-key.pem' 然后复制粘贴"
             echo "输入完成后按 Ctrl+D:"
-            
+
             local pem_content=""
             while IFS= read -r line; do
                 pem_content+="$line"$'\n'
             done
-            
+
             if validate_pem_key "$pem_content"; then
                 SECRET_VALUES["$key"]="$pem_content"
                 print_success "PEM 私钥格式验证通过"
@@ -203,7 +203,7 @@ interactive_input() {
             echo -n "请输入 $key: "
             read -s value
             echo ""
-            
+
             if [[ -z "$value" ]]; then
                 if [[ "$priority" == "必需" ]]; then
                     print_error "$key 是必需的，不能为空"
@@ -213,10 +213,10 @@ interactive_input() {
                     continue
                 fi
             fi
-            
+
             SECRET_VALUES["$key"]="$value"
         fi
-        
+
         echo ""
     done
 }
@@ -225,15 +225,15 @@ interactive_input() {
 write_secrets() {
     print_info "开始写入 GitHub Secrets..."
     echo ""
-    
+
     local success_count=0
     local total_count=${#SECRET_VALUES[@]}
-    
+
     for key in "${!SECRET_VALUES[@]}"; do
         local value="${SECRET_VALUES[$key]}"
-        
+
         print_info "设置 $key..."
-        
+
         if echo -n "$value" | gh secret set "$key" --repo "$REPO" --body -; then
             print_success "$key 设置成功"
             ((success_count++))
@@ -241,7 +241,7 @@ write_secrets() {
             print_error "$key 设置失败"
         fi
     done
-    
+
     echo ""
     echo -e "${GREEN}=================================${NC}"
     echo -e "${GREEN}📊 配置完成统计${NC}"
@@ -249,7 +249,7 @@ write_secrets() {
     echo "成功设置: $success_count/$total_count"
     echo "仓库: $REPO"
     echo ""
-    
+
     if [[ $success_count -eq $total_count ]]; then
         print_success "所有 Secrets 配置成功！"
     else
@@ -320,16 +320,16 @@ main() {
                 ;;
         esac
     done
-    
+
     print_header
-    
+
     # 执行配置流程
     check_dependencies
     get_repo_info
     load_secrets_from_file
     interactive_input
     write_secrets
-    
+
     echo ""
     print_info "配置完成！可以使用以下命令验证:"
     echo "  gh secret list --repo $REPO"

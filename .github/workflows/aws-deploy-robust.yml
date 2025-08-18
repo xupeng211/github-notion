@@ -204,8 +204,8 @@ jobs:
 
         echo "🗄️  初始化数据库..."
         python3 << 'PYEOF'
-import sys
-sys.path.insert(0, '.')
+        import sys
+        sys.path.insert(0, '.')
 try:
     from app.models import init_db
     init_db()

@@ -57,13 +57,13 @@ server {
         proxy_set_header X-Forwarded-Proto $scheme;
         proxy_set_header X-Forwarded-Host $server_name;
         proxy_set_header X-Forwarded-Port $server_port;
-        
+
         # GitHub specific headers passthrough
         proxy_set_header X-GitHub-Event $http_x_github_event;
         proxy_set_header X-GitHub-Delivery $http_x_github_delivery;
         proxy_set_header X-Hub-Signature $http_x_hub_signature;
         proxy_set_header X-Hub-Signature-256 $http_x_hub_signature_256;
-        
+
         proxy_cache_bypass $http_upgrade;
         proxy_read_timeout 60s;
         proxy_connect_timeout 60s;
@@ -82,10 +82,10 @@ server {
         proxy_set_header X-Forwarded-Proto $scheme;
         proxy_set_header X-Forwarded-Host $server_name;
         proxy_set_header X-Forwarded-Port $server_port;
-        
+
         # Notion specific headers passthrough
         proxy_set_header X-Notion-Signature $http_x_notion_signature;
-        
+
         proxy_cache_bypass $http_upgrade;
         proxy_read_timeout 60s;
         proxy_connect_timeout 60s;
@@ -104,11 +104,11 @@ server {
         proxy_set_header X-Forwarded-Proto $scheme;
         proxy_set_header X-Forwarded-Host $server_name;
         proxy_set_header X-Forwarded-Port $server_port;
-        
+
         # Gitee specific headers passthrough
         proxy_set_header X-Gitee-Token $http_x_gitee_token;
         proxy_set_header X-Gitee-Event $http_x_gitee_event;
-        
+
         proxy_cache_bypass $http_upgrade;
         proxy_read_timeout 60s;
         proxy_connect_timeout 60s;
@@ -236,14 +236,14 @@ sudo nginx -t
 
 if [ $? -eq 0 ]; then
     echo "Nginx 配置测试通过"
-    
+
     # 8. 重新加载 Nginx
     echo "8. 重新加载 Nginx..."
     sudo systemctl reload nginx
-    
+
     echo "9. 检查 Nginx 状态..."
     sudo systemctl status nginx
-    
+
     echo ""
     echo "=== 配置完成! ==="
     echo "请执行以下测试命令:"
@@ -255,4 +255,4 @@ if [ $? -eq 0 ]; then
 else
     echo "Nginx 配置测试失败，请检查配置"
     exit 1
-fi 
+fi

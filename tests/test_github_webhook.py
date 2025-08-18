@@ -19,8 +19,6 @@ from app.server import app
 # from datetime import datetime, timezone  # 暂时注释未使用的导入
 
 
-
-
 def generate_github_signature(secret: str, payload: str) -> str:
     """生成GitHub webhook签名"""
     signature = hmac.new(secret.encode("utf-8"), payload.encode("utf-8"), hashlib.sha256).hexdigest()

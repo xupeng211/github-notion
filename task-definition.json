@@ -1,65 +1,67 @@
 {
-    "family": "gitee-notion-sync-task",
-    "networkMode": "awsvpc",
-    "requiresCompatibilities": ["FARGATE"],
-    "cpu": "256",
-    "memory": "512",
-    "executionRoleArn": "arn:aws:iam::YOUR_ACCOUNT_ID:role/ecsTaskExecutionRole",
-    "taskRoleArn": "arn:aws:iam::YOUR_ACCOUNT_ID:role/gitee-notion-sync-task-role",
-    "containerDefinitions": [
+  "containerDefinitions": [
+    {
+      "environment": [
         {
-            "name": "gitee-notion-sync",
-            "image": "YOUR_ACCOUNT_ID.dkr.ecr.ap-northeast-1.amazonaws.com/gitee-notion-sync:latest",
-            "essential": true,
-            "portMappings": [
-                {
-                    "containerPort": 8787,
-                    "protocol": "tcp"
-                }
-            ],
-            "environment": [
-                {
-                    "name": "FLASK_ENV",
-                    "value": "production"
-                },
-                {
-                    "name": "LOG_LEVEL",
-                    "value": "INFO"
-                }
-            ],
-            "secrets": [
-                {
-                    "name": "NOTION_API_TOKEN",
-                    "valueFrom": "arn:aws:secretsmanager:ap-northeast-1:YOUR_ACCOUNT_ID:secret:gitee-notion-sync/notion-api-token"
-                },
-                {
-                    "name": "NOTION_DATABASE_ID",
-                    "valueFrom": "arn:aws:secretsmanager:ap-northeast-1:YOUR_ACCOUNT_ID:secret:gitee-notion-sync/notion-database-id"
-                },
-                {
-                    "name": "GITEE_WEBHOOK_SECRET",
-                    "valueFrom": "arn:aws:secretsmanager:ap-northeast-1:YOUR_ACCOUNT_ID:secret:gitee-notion-sync/gitee-webhook-secret"
-                }
-            ],
-            "logConfiguration": {
-                "logDriver": "awslogs",
-                "options": {
-                    "awslogs-group": "/ecs/gitee-notion-sync",
-                    "awslogs-region": "ap-northeast-1",
-                    "awslogs-stream-prefix": "ecs",
-                    "awslogs-create-group": "true"
-                }
-            },
-            "healthCheck": {
-                "command": [
-                    "CMD-SHELL",
-                    "curl -f http://localhost:8787/health || exit 1"
-                ],
-                "interval": 30,
-                "timeout": 5,
-                "retries": 3,
-                "startPeriod": 60
-            }
+          "name": "FLASK_ENV",
+          "value": "production"
+        },
+        {
+          "name": "LOG_LEVEL",
+          "value": "INFO"
         }
-    ]
-} 
+      ],
+      "essential": true,
+      "healthCheck": {
+        "command": [
+          "CMD-SHELL",
+          "curl -f http://localhost:8787/health || exit 1"
+        ],
+        "interval": 30,
+        "retries": 3,
+        "startPeriod": 60,
+        "timeout": 5
+      },
+      "image": "YOUR_ACCOUNT_ID.dkr.ecr.ap-northeast-1.amazonaws.com/gitee-notion-sync:latest",
+      "logConfiguration": {
+        "logDriver": "awslogs",
+        "options": {
+          "awslogs-create-group": "true",
+          "awslogs-group": "/ecs/gitee-notion-sync",
+          "awslogs-region": "ap-northeast-1",
+          "awslogs-stream-prefix": "ecs"
+        }
+      },
+      "name": "gitee-notion-sync",
+      "portMappings": [
+        {
+          "containerPort": 8787,
+          "protocol": "tcp"
+        }
+      ],
+      "secrets": [
+        {
+          "name": "NOTION_API_TOKEN",
+          "valueFrom": "arn:aws:secretsmanager:ap-northeast-1:YOUR_ACCOUNT_ID:secret:gitee-notion-sync/notion-api-token"
+        },
+        {
+          "name": "NOTION_DATABASE_ID",
+          "valueFrom": "arn:aws:secretsmanager:ap-northeast-1:YOUR_ACCOUNT_ID:secret:gitee-notion-sync/notion-database-id"
+        },
+        {
+          "name": "GITEE_WEBHOOK_SECRET",
+          "valueFrom": "arn:aws:secretsmanager:ap-northeast-1:YOUR_ACCOUNT_ID:secret:gitee-notion-sync/gitee-webhook-secret"
+        }
+      ]
+    }
+  ],
+  "cpu": "256",
+  "executionRoleArn": "arn:aws:iam::YOUR_ACCOUNT_ID:role/ecsTaskExecutionRole",
+  "family": "gitee-notion-sync-task",
+  "memory": "512",
+  "networkMode": "awsvpc",
+  "requiresCompatibilities": [
+    "FARGATE"
+  ],
+  "taskRoleArn": "arn:aws:iam::YOUR_ACCOUNT_ID:role/gitee-notion-sync-task-role"
+}

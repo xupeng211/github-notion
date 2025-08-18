@@ -146,7 +146,7 @@ github_to_notion:
   title: "你的标题字段名"
   body: "你的描述字段名"
   state: "你的状态字段名"
-  
+
 status_mapping:
   github_to_notion:
     "open": "进行中"
@@ -272,4 +272,4 @@ curl -H "Authorization: Bearer $GITHUB_TOKEN" https://api.github.com/rate_limit
 - 📊 **优化总结**: `OPTIMIZATION_SUMMARY.md`
 - 🔧 **升级工具**: `upgrade_sync_system.py`
 
-🎉 **恭喜！你的 GitHub-Notion 双向同步系统已经完全就绪！** 
+🎉 **恭喜！你的 GitHub-Notion 双向同步系统已经完全就绪！**

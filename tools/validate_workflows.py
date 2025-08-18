@@ -19,7 +19,6 @@ from pathlib import Path
 from typing import Dict, List, Set
 
 
-
 # 颜色定义
 class Colors:
     RED = "\033[0;31m"

@@ -9,4 +9,4 @@
 - Scripts: `replay_deadletter.py` switched to main-guarded entry.
 - Dependencies: remove Flask stack, keep FastAPI-only.
 - Compose: dev uses `build` only; prod uses image in `docker-compose.prod.yml`.
-- Documentation updated (`README.md`, `API.md`), add `.env.example`. 
+- Documentation updated (`README.md`, `API.md`), add `.env.example`.

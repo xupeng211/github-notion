@@ -291,4 +291,4 @@ Outputs:
     Description: Name of the ECS service
     Value: !Ref Service
     Export:
-      Name: !Sub ${Environment}-Service-Name 
+      Name: !Sub ${Environment}-Service-Name
