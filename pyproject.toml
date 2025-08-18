@@ -89,7 +89,7 @@ omit = [
 ]
 
 [tool.coverage.report]
-fail_under = 25  # 最低覆盖率要求：25% (临时降低，逐步提升)
+fail_under = 27  # 最低覆盖率要求：27% (覆盖率爬坡计划：25→27→30→35→40)
 show_missing = true
 skip_covered = false
 precision = 2

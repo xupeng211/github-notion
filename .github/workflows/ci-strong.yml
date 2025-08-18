@@ -123,8 +123,8 @@ jobs:
       - name: Run tests with coverage
         run: |
           echo "📊 Running tests with coverage..."
-          echo "🚫 Blocking Mode: Coverage requirements enforced (25% minimum)"
-          pytest --cov --cov-report=term-missing --cov-fail-under=25
+          echo "🚫 Blocking Mode: Coverage requirements enforced (27% minimum)"
+          pytest --cov --cov-report=term-missing --cov-fail-under=27
 
       - name: Upload coverage reports
         uses: codecov/codecov-action@v3
