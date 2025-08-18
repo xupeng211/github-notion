@@ -14,8 +14,8 @@ on:
         - 'debug'
 
 env:
-  AWS_SERVER: "${AWS_HOST:-3.35.106.116}"
-  APP_DIR: "${APP_DIR:-/opt/github-notion-sync}"
+  AWS_SERVER: "3.35.106.116"
+  APP_DIR: "/opt/github-notion-sync"
   SERVICE_NAME: "github-notion-sync"
 
 jobs:

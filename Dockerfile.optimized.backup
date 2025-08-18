@@ -1,0 +1,60 @@
+# 🚀 优化的生产环境 Dockerfile
+# 专为 CI/CD 环境优化，解决常见构建问题
+
+FROM python:3.11-slim
+
+WORKDIR /app
+
+# 设置环境变量 - 优化构建和运行
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PIP_NO_CACHE_DIR=1 \
+    PIP_DISABLE_PIP_VERSION_CHECK=1 \
+    PIP_DEFAULT_TIMEOUT=100 \
+    DEBIAN_FRONTEND=noninteractive
+
+# 安装系统依赖 - 最小化安装
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    curl \
+    ca-certificates \
+    && rm -rf /var/lib/apt/lists/* \
+    && apt-get clean
+
+# 创建非 root 用户 - 安全最佳实践
+RUN useradd -m -u 1000 appuser && \
+    mkdir -p /app/data /app/logs && \
+    chown -R appuser:appuser /app
+
+# 升级 pip - 确保最新版本
+RUN pip install --upgrade pip setuptools wheel
+
+# 复制并安装依赖 - 分层缓存优化
+COPY requirements.txt .
+
+# 安装 Python 依赖 - 网络优化和重试机制
+RUN pip install --no-cache-dir \
+    --timeout 300 \
+    --retries 3 \
+    --prefer-binary \
+    --index-url https://pypi.org/simple/ \
+    --trusted-host pypi.org \
+    -r requirements.txt
+
+# 复制应用代码
+COPY --chown=appuser:appuser . .
+
+# 切换到非 root 用户
+USER appuser
+
+# 设置运行时环境变量
+ENV PATH="/home/appuser/.local/bin:$PATH"
+
+# 健康检查 - 使用环境变量
+HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
+    CMD curl -f http://localhost:${APP_PORT:-8000}/health || exit 1
+
+# 暴露端口 - 使用环境变量
+EXPOSE ${APP_PORT:-8000}
+
+# 启动命令 - 灵活配置
+CMD ["sh", "-c", "python -m uvicorn app.server:app --host 0.0.0.0 --port ${APP_PORT:-8000}"]

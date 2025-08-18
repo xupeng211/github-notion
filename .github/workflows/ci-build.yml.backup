@@ -93,7 +93,7 @@ jobs:
             sleep 30
 
             echo "🧪 健康检查..."
-            if curl -f http://localhost:${APP_PORT:-8000}/health > /dev/null 2>&1; then
+            if curl -f http://localhost:8000/health > /dev/null 2>&1; then
               echo "✅ 部署成功"
             else
               echo "❌ 健康检查失败"
@@ -105,7 +105,7 @@ jobs:
         if: github.ref == 'refs/heads/main'
         run: |
           sleep 10
-          if curl -f http://${AWS_HOST:-3.35.106.116}:${APP_PORT:-8000}/health > /dev/null 2>&1; then
+          if curl -f http://3.35.106.116:8000/health > /dev/null 2>&1; then
             echo "✅ 外部访问验证成功"
           else
             echo "❌ 外部访问验证失败"
@@ -116,5 +116,5 @@ jobs:
         if: success()
         run: |
           echo "🎉 部署成功完成！"
-          echo "🌐 服务地址: http://${AWS_HOST:-3.35.106.116}:${APP_PORT:-8000}"
-          echo "🏥 健康检查: http://${AWS_HOST:-3.35.106.116}:${APP_PORT:-8000}/health"
+          echo "🌐 服务地址: http://3.35.106.116:8000"
+          echo "🏥 健康检查: http://3.35.106.116:8000/health"

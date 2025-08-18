@@ -7,7 +7,7 @@ services:
     container_name: github-notion-sync-prod
     restart: unless-stopped
     ports:
-      - "${APP_PORT:-8000}:8000"
+      - "8000:8000"
     environment:
       - ENVIRONMENT=production
       - DB_URL=${DB_URL:-sqlite:///./data/app.db}
@@ -26,7 +26,7 @@ services:
     networks:
       - app_network
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:${APP_PORT:-8000}/health"]
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
       interval: 30s
       timeout: 10s
       retries: 3
