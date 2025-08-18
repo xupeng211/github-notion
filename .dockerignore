@@ -26,7 +26,9 @@ var/
 
 # Virtual Environment
 venv/
+.venv/
 ENV/
+env/
 
 # IDE
 .idea/
@@ -46,3 +48,47 @@ ENV/
 # Dockerfile
 docker-compose.yml
 .docker/
+
+# Testing and Development
+tests/
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.cache/
+nosetests.xml
+coverage.xml
+*.cover
+.hypothesis/
+
+# Development tools
+.pre-commit-config.yaml
+.github/
+scripts/
+tools/
+docs/
+*.md
+*.txt
+!requirements.txt
+!requirements-dev.txt
+
+# Temporary files
+*.tmp
+*.temp
+.DS_Store
+Thumbs.db
+
+# Database files
+*.db
+*.sqlite
+*.sqlite3
+data/
+
+# Deployment scripts
+deploy*/
+*deploy*
+test-*
+diagnose-*
+fix-*
+enforce-*
+monitor-*
