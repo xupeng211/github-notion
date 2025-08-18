@@ -1,14 +1,14 @@
-# Git
+# 🗂️ Git 相关
 .git
 .gitignore
+.gitattributes
 
-# Python
+# 🐍 Python 相关
 __pycache__/
 *.py[cod]
 *$py.class
 *.so
 .Python
-env/
 build/
 develop-eggs/
 dist/
@@ -20,36 +20,13 @@ lib64/
 parts/
 sdist/
 var/
+wheels/
 *.egg-info/
 .installed.cfg
 *.egg
+MANIFEST
 
-# Virtual Environment
-venv/
-.venv/
-ENV/
-env/
-
-# IDE
-.idea/
-.vscode/
-*.swp
-*.swo
-
-# Environment variables
-.env
-.env.*
-
-# Logs
-*.log
-
-# Docker
-# Keep Dockerfile in build context
-# Dockerfile
-docker-compose.yml
-.docker/
-
-# Testing and Development
+# 🧪 测试和覆盖率
 tests/
 .pytest_cache/
 .coverage
@@ -60,31 +37,35 @@ nosetests.xml
 coverage.xml
 *.cover
 .hypothesis/
+.pytest_cache/
 
-# Development tools
-.pre-commit-config.yaml
-.github/
-scripts/
-tools/
-docs/
-*.md
-*.txt
-!requirements.txt
-!requirements-dev.txt
-
-# Temporary files
-*.tmp
-*.temp
+# 🔧 开发工具
+.vscode/
+.idea/
+*.swp
+*.swo
 .DS_Store
 Thumbs.db
 
-# Database files
-*.db
-*.sqlite
-*.sqlite3
-data/
+# 📦 虚拟环境
+venv/
+.venv/
+ENV/
+env/
 
-# Deployment scripts
+# 🌍 环境变量
+.env
+.env.*
+!.env.template
+
+# 📝 文档和说明
+docs/
+*.md
+!README.md
+
+# 🔨 构建和部署脚本
+scripts/
+tools/
 deploy*/
 *deploy*
 test-*
@@ -92,3 +73,35 @@ diagnose-*
 fix-*
 enforce-*
 monitor-*
+auto-*
+
+# 📊 日志和数据
+*.log
+logs/
+data/
+*.db
+*.sqlite
+*.sqlite3
+
+# 🐳 Docker 相关
+docker-compose*.yml
+!docker-compose.yml
+
+# 📋 CI/CD 相关
+.github/
+.pre-commit-config.yaml
+
+# 🔍 分析报告
+*.json
+*.txt
+*.report
+
+# 📦 依赖文件 (保留必要的)
+!requirements.txt
+!requirements-dev.txt
+
+# 🗃️ 临时文件
+*.tmp
+*.temp
+*.bak
+*.backup

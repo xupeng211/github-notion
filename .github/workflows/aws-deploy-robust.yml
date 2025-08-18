@@ -206,14 +206,14 @@ jobs:
         python3 << 'PYEOF'
         import sys
         sys.path.insert(0, '.')
-try:
-    from app.models import init_db
-    init_db()
-    print('✅ 数据库初始化成功')
-except Exception as e:
-    print('❌ 数据库初始化失败:', str(e))
-    sys.exit(1)
-PYEOF
+        try:
+            from app.models import init_db
+            init_db()
+            print('✅ 数据库初始化成功')
+        except Exception as e:
+            print('❌ 数据库初始化失败:', str(e))
+            sys.exit(1)
+        PYEOF
 
         echo "✅ 数据库初始化完成"
         EOF
@@ -311,18 +311,18 @@ PYEOF
         # 获取健康检查详情
         echo "📊 健康检查详情:"
         curl -s http://${{ env.AWS_SERVER }}:8000/health | python3 -c "
-import sys, json
-try:
-    data = json.load(sys.stdin)
-    print(f'状态: {data.get(\"status\", \"unknown\")}')
-    print(f'环境: {data.get(\"environment\", \"unknown\")}')
-    print(f'时间戳: {data.get(\"timestamp\", \"unknown\")}')
-    if 'checks' in data:
-        for check_name, check_data in data['checks'].items():
-            print(f'{check_name}: {check_data.get(\"status\", \"unknown\")}')
-except Exception as e:
-    print(f'解析响应失败: {e}')
-"
+        import sys, json
+        try:
+            data = json.load(sys.stdin)
+            print(f'状态: {data.get(\"status\", \"unknown\")}')
+            print(f'环境: {data.get(\"environment\", \"unknown\")}')
+            print(f'时间戳: {data.get(\"timestamp\", \"unknown\")}')
+            if 'checks' in data:
+                for check_name, check_data in data['checks'].items():
+                    print(f'{check_name}: {check_data.get(\"status\", \"unknown\")}')
+        except Exception as e:
+            print(f'解析响应失败: {e}')
+        "
 
     - name: 📊 Deployment summary
       if: always()

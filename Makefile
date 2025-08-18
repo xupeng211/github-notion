@@ -222,3 +222,54 @@ release-check:
 	make clean
 	make ci-local
 	@echo "✅ 发布检查完成！项目已准备好发布。"
+
+# 🚀 智能开发流程命令
+.PHONY: smart-commit safe-push dev-flow quick-fix diagnose auto-fix local-test
+
+# 智能提交
+smart-commit:
+	@echo "🧠 智能提交流程..."
+	@if [ -f "./auto-fix-build-issues.sh" ]; then ./auto-fix-build-issues.sh; fi
+	@git add .
+	@read -p "提交信息: " msg; git commit -m "$$msg"
+
+# 安全推送
+safe-push:
+	@echo "🛡️ 安全推送流程..."
+	@if [ -f "./comprehensive-build-diagnostics.sh" ]; then \
+		if ! ./comprehensive-build-diagnostics.sh; then \
+			echo "❌ 诊断失败，推送被阻止"; \
+			exit 1; \
+		fi; \
+	fi
+	@git push
+
+# 完整开发流程
+dev-flow:
+	@echo "🚀 完整开发流程..."
+	@$(MAKE) smart-commit
+	@$(MAKE) safe-push
+	@echo "🎉 开发流程完成！"
+
+# 快速修复
+quick-fix:
+	@echo "⚡ 快速修复..."
+	@if command -v black >/dev/null 2>&1; then black . --quiet; fi
+	@if command -v isort >/dev/null 2>&1; then isort . --quiet; fi
+	@if [ -f "./fix-hardcoded-values.py" ]; then python3 fix-hardcoded-values.py; fi
+	@echo "✅ 快速修复完成"
+
+# 运行诊断
+diagnose:
+	@echo "🔍 运行构建诊断..."
+	@./comprehensive-build-diagnostics.sh
+
+# 自动修复
+auto-fix:
+	@echo "🔧 自动修复问题..."
+	@./auto-fix-build-issues.sh
+
+# 本地测试
+local-test:
+	@echo "🧪 本地构建测试..."
+	@./test-build-locally.sh
