@@ -79,10 +79,7 @@ class TestGitHubWebhook:
                 "name": "test-repo",
                 "full_name": "test-user/test-repo",
                 "html_url": "https://github.com/test-user/test-repo",
-                "owner": {
-                    "login": "test-user",
-                    "name": "Test User"
-                }
+                "owner": {"login": "test-user", "name": "Test User"},
             },
             "sender": {"login": "test-user", "name": "Test User"},
         }
@@ -132,10 +129,7 @@ class TestGitHubWebhook:
                 "name": "test-repo",
                 "full_name": "github-user/test-repo",
                 "html_url": "https://github.com/github-user/test-repo",
-                "owner": {
-                    "login": "github-user",
-                    "name": "GitHub User"
-                }
+                "owner": {"login": "github-user", "name": "GitHub User"},
             },
             "sender": {"login": "github-user", "name": "GitHub User"},
         }
@@ -220,10 +214,7 @@ class TestGitHubWebhook:
                 "name": "test-repo",
                 "full_name": "test-user/test-repo",
                 "html_url": "https://github.com/test-user/test-repo",
-                "owner": {
-                    "login": "test-user",
-                    "name": "Test User"
-                }
+                "owner": {"login": "test-user", "name": "Test User"},
             },
             "sender": {"login": "test-user", "name": "Test User"},
         }
@@ -271,10 +262,7 @@ class TestGitHubWebhook:
                     "name": "test-repo",
                     "full_name": "test-user/test-repo",
                     "html_url": "https://github.com/test-user/test-repo",
-                    "owner": {
-                        "login": "test-user",
-                        "name": "Test User"
-                    }
+                    "owner": {"login": "test-user", "name": "Test User"},
                 },
                 "sender": {"login": "test-user", "name": "Test User"},
             }

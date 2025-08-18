@@ -40,28 +40,30 @@ def test_github_signature_validation():
     import hmac
 
     secret = "test-secret"
-    payload = json.dumps({
-        "action": "opened",
-        "issue": {
-            "id": 1,
-            "number": 1,
-            "title": "test-github-webhook",
-            "body": "test",
-            "state": "open",
-            "created_at": "2024-01-15T10:00:00Z",
-            "updated_at": "2024-01-15T10:00:00Z",
-            "user": {"login": "test-user", "name": "Test User"},
-            "labels": [],
-            "html_url": "https://github.com/test-user/test-repo/issues/1",
-        },
-        "repository": {
-            "id": 12345,
-            "name": "test-repo",
-            "full_name": "test-user/test-repo",
-            "html_url": "https://github.com/test-user/test-repo",
-        },
-        "sender": {"login": "test-user", "name": "Test User"},
-    }).encode()
+    payload = json.dumps(
+        {
+            "action": "opened",
+            "issue": {
+                "id": 1,
+                "number": 1,
+                "title": "test-github-webhook",
+                "body": "test",
+                "state": "open",
+                "created_at": "2024-01-15T10:00:00Z",
+                "updated_at": "2024-01-15T10:00:00Z",
+                "user": {"login": "test-user", "name": "Test User"},
+                "labels": [],
+                "html_url": "https://github.com/test-user/test-repo/issues/1",
+            },
+            "repository": {
+                "id": 12345,
+                "name": "test-repo",
+                "full_name": "test-user/test-repo",
+                "html_url": "https://github.com/test-user/test-repo",
+            },
+            "sender": {"login": "test-user", "name": "Test User"},
+        }
+    ).encode()
 
     sig = hmac.new(secret.encode(), payload, hashlib.sha256).hexdigest()
 
@@ -74,13 +76,11 @@ def test_github_signature_validation():
     # service expects env GITHUB_WEBHOOK_SECRET; here it's empty, so invalid
     assert r.status_code == 403
 
+    # test_duplicate_idempotency removed - Gitee functionality no longer supported
+    # GitHub idempotency is tested in test_github_webhook.py
 
-# test_duplicate_idempotency removed - Gitee functionality no longer supported
-# GitHub idempotency is tested in test_github_webhook.py
-
-
-# test_retry_deadletter and test_conflict_strategy removed - Gitee functionality no longer supported
-# Dead letter queue functionality is tested in test_error_handling.py
+    # test_retry_deadletter and test_conflict_strategy removed - Gitee functionality no longer supported
+    # Dead letter queue functionality is tested in test_error_handling.py
 
     payload1 = json.dumps({"issue": {"number": 4, "title": "Z"}}).encode()
     sig1 = sign("test-webhook-secret-for-testing-12345678", payload1)

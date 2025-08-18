@@ -12,11 +12,12 @@ from pathlib import Path
 AWS_SERVER = "3.35.106.116"
 AWS_USER = "ubuntu"
 
+
 def run_command(cmd, description="", timeout=30):
     """执行命令并显示结果"""
     print(f"🔧 {description}")
     print(f"   命令: {cmd}")
-    
+
     try:
         result = subprocess.run(cmd, shell=True, capture_output=True, text=True, timeout=timeout)
         if result.returncode == 0:
@@ -35,37 +36,40 @@ def run_command(cmd, description="", timeout=30):
         print(f"   ❌ 异常: {e}")
         return False
 
+
 def test_basic_connection():
     """测试基本网络连接"""
     print("🌐 测试基本网络连接...")
-    
+
     # 测试 ping
     cmd = f"ping -c 3 {AWS_SERVER}"
     return run_command(cmd, "Ping 测试", timeout=15)
 
+
 def test_ssh_connection():
     """测试 SSH 连接"""
     print("🔐 测试 SSH 连接...")
-    
+
     # 检查 SSH 密钥
     ssh_key_path = Path.home() / ".ssh" / "aws-key.pem"
     if not ssh_key_path.exists():
         print("❌ SSH 密钥不存在: ~/.ssh/aws-key.pem")
         print("请将 AWS 私钥保存到该位置")
         return False
-    
+
     # 设置权限
     run_command(f"chmod 600 {ssh_key_path}", "设置 SSH 密钥权限")
-    
+
     # 测试连接
-    cmd = f'ssh -i ~/.ssh/aws-key.pem -o ConnectTimeout=10 -o StrictHostKeyChecking=no {AWS_USER}@{AWS_SERVER} "echo \'SSH 连接成功\'"'
+    cmd = f"ssh -i ~/.ssh/aws-key.pem -o ConnectTimeout=10 -o StrictHostKeyChecking=no {AWS_USER}@{AWS_SERVER} \"echo 'SSH 连接成功'\""
     return run_command(cmd, "SSH 连接测试", timeout=15)
+
 
 def test_server_environment():
     """测试服务器环境"""
     print("🖥️ 测试服务器环境...")
-    
-    env_script = '''
+
+    env_script = """
 echo "=== 系统信息 ==="
 uname -a
 echo "=== Python 版本 ==="
@@ -78,16 +82,17 @@ echo "=== 网络状态 ==="
 sudo netstat -tlnp | grep :8000 || echo "端口 8000 空闲"
 echo "=== 当前进程 ==="
 ps aux | grep uvicorn | grep -v grep || echo "没有 uvicorn 进程"
-'''
-    
-    cmd = f'ssh -i ~/.ssh/aws-key.pem -o StrictHostKeyChecking=no {AWS_USER}@{AWS_SERVER} \'{env_script}\''
+"""
+
+    cmd = f"ssh -i ~/.ssh/aws-key.pem -o StrictHostKeyChecking=no {AWS_USER}@{AWS_SERVER} '{env_script}'"
     return run_command(cmd, "检查服务器环境", timeout=30)
+
 
 def test_python_environment():
     """测试 Python 环境"""
     print("🐍 测试 Python 环境...")
-    
-    python_script = '''
+
+    python_script = """
 echo "=== Python 路径 ==="
 which python3
 echo "=== pip 版本 ==="
@@ -114,17 +119,18 @@ try:
 except ImportError:
     print('❌ SQLAlchemy 不可用')
 "
-'''
-    
-    cmd = f'ssh -i ~/.ssh/aws-key.pem -o StrictHostKeyChecking=no {AWS_USER}@{AWS_SERVER} \'{python_script}\''
+"""
+
+    cmd = f"ssh -i ~/.ssh/aws-key.pem -o StrictHostKeyChecking=no {AWS_USER}@{AWS_SERVER} '{python_script}'"
     return run_command(cmd, "检查 Python 环境", timeout=30)
+
 
 def test_minimal_service():
     """测试最小服务"""
     print("🧪 测试最小服务...")
-    
+
     # 创建最小测试应用
-    minimal_app = '''
+    minimal_app = """
 from fastapi import FastAPI
 from datetime import datetime
 
@@ -137,9 +143,9 @@ def root():
 @app.get("/health")
 def health():
     return {"status": "ok", "server": "aws", "timestamp": datetime.utcnow().isoformat()}
-'''
-    
-    service_script = f'''
+"""
+
+    service_script = f"""
 cd /tmp
 cat > test_app.py << 'APPEOF'
 {minimal_app}
@@ -159,15 +165,16 @@ curl -f http://localhost:8000/health || echo "连接失败"
 
 echo "停止测试服务..."
 pkill -f "uvicorn test_app" || true
-'''
-    
-    cmd = f'ssh -i ~/.ssh/aws-key.pem -o StrictHostKeyChecking=no {AWS_USER}@{AWS_SERVER} \'{service_script}\''
+"""
+
+    cmd = f"ssh -i ~/.ssh/aws-key.pem -o StrictHostKeyChecking=no {AWS_USER}@{AWS_SERVER} '{service_script}'"
     return run_command(cmd, "测试最小服务", timeout=60)
+
 
 def test_external_access():
     """测试外部访问"""
     print("🌍 测试外部访问...")
-    
+
     try:
         response = requests.get(f"http://{AWS_SERVER}:8000/health", timeout=10)
         if response.status_code == 200:
@@ -178,25 +185,26 @@ def test_external_access():
             print(f"❌ 外部访问失败: HTTP {response.status_code}")
     except Exception as e:
         print(f"❌ 外部访问异常: {e}")
-    
+
     return False
+
 
 def main():
     """主函数"""
     print("🧪 AWS 连接和环境测试")
     print("=" * 50)
-    
+
     tests = [
         ("基本网络连接", test_basic_connection),
         ("SSH 连接", test_ssh_connection),
         ("服务器环境", test_server_environment),
         ("Python 环境", test_python_environment),
         ("最小服务", test_minimal_service),
-        ("外部访问", test_external_access)
+        ("外部访问", test_external_access),
     ]
-    
+
     results = {}
-    
+
     for test_name, test_func in tests:
         print(f"\n📋 执行测试: {test_name}")
         try:
@@ -209,21 +217,21 @@ def main():
         except Exception as e:
             print(f"❌ 测试异常: {test_name} - {e}")
             results[test_name] = False
-    
+
     print("\n📊 测试结果总结:")
     print("=" * 50)
-    
+
     passed = 0
     total = len(tests)
-    
+
     for test_name, result in results.items():
         status = "✅ 通过" if result else "❌ 失败"
         print(f"{status} {test_name}")
         if result:
             passed += 1
-    
+
     print(f"\n📈 总体结果: {passed}/{total} 测试通过")
-    
+
     if passed == total:
         print("🎉 所有测试通过！AWS 环境就绪")
         return True
@@ -233,6 +241,7 @@ def main():
     else:
         print("❌ 多个测试失败，需要修复环境问题")
         return False
+
 
 if __name__ == "__main__":
     success = main()

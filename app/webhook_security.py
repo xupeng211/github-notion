@@ -79,7 +79,7 @@ class WebhookSecurityValidator:
 
         return hmac.compare_digest(expected_sig, computed_sig)
 
-# _verify_gitee_signature method removed - focusing on GitHub ↔ Notion sync only
+    # _verify_gitee_signature method removed - focusing on GitHub ↔ Notion sync only
 
     def _verify_notion_signature(self, body: bytes, signature: str, timestamp: str) -> bool:
         """Notion签名验证"""

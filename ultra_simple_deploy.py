@@ -9,11 +9,12 @@ import sys
 import time
 import requests
 
+
 def run_command(cmd, description=""):
     """执行命令并显示结果"""
     print(f"🔧 {description}")
     print(f"   命令: {cmd}")
-    
+
     try:
         result = subprocess.run(cmd, shell=True, capture_output=True, text=True, timeout=60)
         if result.returncode == 0:
@@ -32,9 +33,10 @@ def run_command(cmd, description=""):
         print(f"   ❌ 异常: {e}")
         return False
 
+
 def create_minimal_app():
     """创建最小的 FastAPI 应用"""
-    app_code = '''
+    app_code = """
 from fastapi import FastAPI
 from datetime import datetime
 import json
@@ -71,15 +73,16 @@ async def metrics():
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)
-'''
-    
+"""
+
     with open("emergency_app.py", "w") as f:
         f.write(app_code)
     print("✅ 创建了紧急应用文件")
 
+
 def create_deployment_script():
     """创建部署脚本"""
-    deploy_script = '''#!/bin/bash
+    deploy_script = """#!/bin/bash
 set -e
 
 echo "🚨 执行超级简化部署..."
@@ -129,45 +132,58 @@ echo "🧪 测试连接..."
 curl -f http://localhost:8000/health || echo "连接测试失败"
 
 echo "✅ 部署完成"
-'''
-    
+"""
+
     with open("ultra_deploy.sh", "w") as f:
         f.write(deploy_script)
-    
+
     # 设置执行权限
     run_command("chmod +x ultra_deploy.sh", "设置脚本执行权限")
     print("✅ 创建了部署脚本")
 
+
 def deploy_to_server():
     """部署到服务器"""
     server = "3.35.106.116"
-    
+
     print("🚀 开始超级简化部署...")
-    
+
     # 1. 创建应用文件
     create_minimal_app()
-    
+
     # 2. 创建部署脚本
     create_deployment_script()
-    
+
     # 3. 传输文件（假设 SSH 密钥已配置）
     print("📤 传输文件到服务器...")
-    
+
     # 创建目录
-    run_command(f'ssh -i ~/.ssh/aws-key.pem -o StrictHostKeyChecking=no ubuntu@{server} "sudo mkdir -p /opt/github-notion-sync && sudo chown ubuntu:ubuntu /opt/github-notion-sync"', "创建应用目录")
-    
+    run_command(
+        f'ssh -i ~/.ssh/aws-key.pem -o StrictHostKeyChecking=no ubuntu@{server} "sudo mkdir -p /opt/github-notion-sync && sudo chown ubuntu:ubuntu /opt/github-notion-sync"',
+        "创建应用目录",
+    )
+
     # 传输文件
-    run_command(f'scp -i ~/.ssh/aws-key.pem -o StrictHostKeyChecking=no emergency_app.py ubuntu@{server}:/opt/github-notion-sync/', "传输应用文件")
-    run_command(f'scp -i ~/.ssh/aws-key.pem -o StrictHostKeyChecking=no ultra_deploy.sh ubuntu@{server}:/opt/github-notion-sync/', "传输部署脚本")
-    
+    run_command(
+        f"scp -i ~/.ssh/aws-key.pem -o StrictHostKeyChecking=no emergency_app.py ubuntu@{server}:/opt/github-notion-sync/",
+        "传输应用文件",
+    )
+    run_command(
+        f"scp -i ~/.ssh/aws-key.pem -o StrictHostKeyChecking=no ultra_deploy.sh ubuntu@{server}:/opt/github-notion-sync/",
+        "传输部署脚本",
+    )
+
     # 4. 执行部署
     print("🚀 执行远程部署...")
-    run_command(f'ssh -i ~/.ssh/aws-key.pem -o StrictHostKeyChecking=no ubuntu@{server} "cd /opt/github-notion-sync && ./ultra_deploy.sh"', "执行部署脚本")
-    
+    run_command(
+        f'ssh -i ~/.ssh/aws-key.pem -o StrictHostKeyChecking=no ubuntu@{server} "cd /opt/github-notion-sync && ./ultra_deploy.sh"',
+        "执行部署脚本",
+    )
+
     # 5. 验证部署
     print("🔍 验证部署...")
     time.sleep(15)
-    
+
     try:
         response = requests.get(f"http://{server}:8000/health", timeout=10)
         if response.status_code == 200:
@@ -182,21 +198,23 @@ def deploy_to_server():
         print(f"❌ 连接失败: {e}")
         return False
 
+
 def main():
     """主函数"""
     print("🚨 超级简化部署开始...")
     print("=" * 50)
-    
+
     # 检查 SSH 密钥
     import os
+
     if not os.path.exists(os.path.expanduser("~/.ssh/aws-key.pem")):
         print("❌ SSH 密钥不存在: ~/.ssh/aws-key.pem")
         print("请确保 AWS 私钥已正确配置")
         return False
-    
+
     # 执行部署
     success = deploy_to_server()
-    
+
     if success:
         print("\n🎉 超级简化部署成功！")
         print("📊 服务状态: 紧急模式运行")
@@ -204,8 +222,9 @@ def main():
     else:
         print("\n❌ 部署失败")
         print("🔍 请检查服务器日志和网络连接")
-    
+
     return success
+
 
 if __name__ == "__main__":
     success = main()

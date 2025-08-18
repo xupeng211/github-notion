@@ -57,9 +57,11 @@ class EnhancedPreCommitSystem:
         return CheckResult(
             name="Example Values Security",
             passed=len(issues) == 0,
-            message=f"Found {len(issues)} files with dangerous example values"
-            if issues
-            else "No dangerous example values found",
+            message=(
+                f"Found {len(issues)} files with dangerous example values"
+                if issues
+                else "No dangerous example values found"
+            ),
             details=issues,
             fix_command="python -m prevention_system.example_value_manager fix --directory .",
         )
@@ -88,9 +90,11 @@ class EnhancedPreCommitSystem:
         return CheckResult(
             name="Test Completeness",
             passed=len(missing_tests) == 0,
-            message=f"Missing tests for {len(missing_tests)} source files"
-            if missing_tests
-            else "All source files have corresponding tests",
+            message=(
+                f"Missing tests for {len(missing_tests)} source files"
+                if missing_tests
+                else "All source files have corresponding tests"
+            ),
             details=missing_tests,
             fix_command="Create missing test files",
         )
@@ -120,9 +124,11 @@ class EnhancedPreCommitSystem:
         return CheckResult(
             name="Database Compatibility",
             passed=len(issues) == 0,
-            message=f"Found {len(issues)} potential database compatibility issues"
-            if issues
-            else "No database compatibility issues",
+            message=(
+                f"Found {len(issues)} potential database compatibility issues"
+                if issues
+                else "No database compatibility issues"
+            ),
             details=issues,
             fix_command="Use adaptive query patterns or add migration scripts",
         )
@@ -150,9 +156,11 @@ class EnhancedPreCommitSystem:
         return CheckResult(
             name="Environment Consistency",
             passed=len(issues) == 0,
-            message=f"Found {len(issues)} environment consistency issues"
-            if issues
-            else "Environment configuration is consistent",
+            message=(
+                f"Found {len(issues)} environment consistency issues"
+                if issues
+                else "Environment configuration is consistent"
+            ),
             details=issues,
             fix_command="Use environment variables instead of hardcoded values",
         )

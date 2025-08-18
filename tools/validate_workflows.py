@@ -19,15 +19,17 @@ from typing import Dict, List, Set, Tuple
 from dataclasses import dataclass
 import yaml
 
+
 # 颜色定义
 class Colors:
-    RED = '\033[0;31m'
-    GREEN = '\033[0;32m'
-    YELLOW = '\033[1;33m'
-    BLUE = '\033[0;34m'
-    PURPLE = '\033[0;35m'
-    CYAN = '\033[0;36m'
-    NC = '\033[0m'  # No Color
+    RED = "\033[0;31m"
+    GREEN = "\033[0;32m"
+    YELLOW = "\033[1;33m"
+    BLUE = "\033[0;34m"
+    PURPLE = "\033[0;35m"
+    CYAN = "\033[0;36m"
+    NC = "\033[0m"  # No Color
+
 
 @dataclass
 class SecretInfo:
@@ -36,6 +38,7 @@ class SecretInfo:
     description: str
     files: List[str]
     lines: List[int]
+
 
 class WorkflowValidator:
     def __init__(self):
@@ -80,11 +83,11 @@ class WorkflowValidator:
             return secrets_found
 
         # secrets.* 引用的正则表达式
-        secret_pattern = re.compile(r'\$\{\{\s*secrets\.([A-Z_]+)\s*\}\}')
+        secret_pattern = re.compile(r"\$\{\{\s*secrets\.([A-Z_]+)\s*\}\}")
 
         for workflow_file in self.workflows_dir.glob("*.yml"):
             try:
-                with open(workflow_file, 'r', encoding='utf-8') as f:
+                with open(workflow_file, "r", encoding="utf-8") as f:
                     lines = f.readlines()
 
                 for line_num, line in enumerate(lines, 1):
@@ -98,11 +101,7 @@ class WorkflowValidator:
                                 priority, description = "未知", "在 workflow 中发现但未在期望清单中"
 
                             secrets_found[secret_name] = SecretInfo(
-                                name=secret_name,
-                                priority=priority,
-                                description=description,
-                                files=[],
-                                lines=[]
+                                name=secret_name, priority=priority, description=description, files=[], lines=[]
                             )
 
                         secrets_found[secret_name].files.append(str(workflow_file))
@@ -117,23 +116,18 @@ class WorkflowValidator:
         """获取当前仓库中已配置的 secrets"""
         try:
             # 获取仓库信息
-            result = subprocess.run(
-                ["git", "remote", "get-url", "origin"],
-                capture_output=True,
-                text=True,
-                check=True
-            )
+            result = subprocess.run(["git", "remote", "get-url", "origin"], capture_output=True, text=True, check=True)
             remote_url = result.stdout.strip()
 
             # 解析仓库名 - 支持多种 GitHub URL 格式
-            repo_match = re.search(r'github\.com[:/]([^/]+)/([^/]+)(?:\.git)?$', remote_url)
+            repo_match = re.search(r"github\.com[:/]([^/]+)/([^/]+)(?:\.git)?$", remote_url)
             if not repo_match:
                 # 如果不是 GitHub 仓库，尝试从环境变量获取
-                github_repo = os.environ.get('GITHUB_REPO')
+                github_repo = os.environ.get("GITHUB_REPO")
                 if github_repo:
                     self.print_warning(f"当前仓库不是 GitHub: {remote_url}")
                     self.print_info(f"使用环境变量 GITHUB_REPO: {github_repo}")
-                    owner, repo = github_repo.split('/')
+                    owner, repo = github_repo.split("/")
                 else:
                     self.print_error(f"无法解析 GitHub 仓库: {remote_url}")
                     self.print_info("提示: 设置环境变量 GITHUB_REPO=owner/repo 来指定 GitHub 仓库")
@@ -141,7 +135,7 @@ class WorkflowValidator:
             else:
                 owner, repo = repo_match.groups()
 
-            repo = repo.rstrip('.git')
+            repo = repo.rstrip(".git")
             repo_name = f"{owner}/{repo}"
 
             # 使用 gh CLI 获取 secrets 列表
@@ -149,7 +143,7 @@ class WorkflowValidator:
                 ["gh", "secret", "list", "--repo", repo_name, "--json", "name"],
                 capture_output=True,
                 text=True,
-                check=True
+                check=True,
             )
 
             secrets_data = json.loads(result.stdout)
@@ -195,7 +189,7 @@ class WorkflowValidator:
             "extra_secrets": extra_secrets,
             "deprecated_found": deprecated_found,
             "workflow_secrets": workflow_secrets,
-            "current_secrets": current_secrets
+            "current_secrets": current_secrets,
         }
 
     def print_workflow_secrets(self, workflow_secrets: Dict[str, SecretInfo]):
@@ -209,17 +203,14 @@ class WorkflowValidator:
 
         # 按优先级排序
         priority_order = {"必需": 1, "推荐": 2, "可选": 3, "未知": 4}
-        sorted_secrets = sorted(
-            workflow_secrets.values(),
-            key=lambda x: (priority_order.get(x.priority, 5), x.name)
-        )
+        sorted_secrets = sorted(workflow_secrets.values(), key=lambda x: (priority_order.get(x.priority, 5), x.name))
 
         for secret in sorted_secrets:
             priority_color = {
                 "必需": Colors.RED,
                 "推荐": Colors.YELLOW,
                 "可选": Colors.GREEN,
-                "未知": Colors.PURPLE
+                "未知": Colors.PURPLE,
             }.get(secret.priority, Colors.NC)
 
             print(f"  {priority_color}[{secret.priority}]{Colors.NC} {secret.name}")
@@ -274,7 +265,9 @@ class WorkflowValidator:
             print()
 
         # 总结
-        total_missing = len(analysis["missing_required"]) + len(analysis["missing_recommended"]) + len(analysis["missing_unknown"])
+        total_missing = (
+            len(analysis["missing_required"]) + len(analysis["missing_recommended"]) + len(analysis["missing_unknown"])
+        )
         total_extra = len(analysis["extra_secrets"]) + len(analysis["deprecated_found"])
 
         print(f"{Colors.CYAN}📈 统计总结:{Colors.NC}")
@@ -307,7 +300,9 @@ class WorkflowValidator:
         print()
         print("或手动使用 gh CLI:")
         for secret in missing_secrets:
-            print(f"  gh secret set {secret.name} --repo $(git remote get-url origin | sed -E 's#.*[:/](.+)/(.+)\\.git#\\1/\\2#')")
+            print(
+                f"  gh secret set {secret.name} --repo $(git remote get-url origin | sed -E 's#.*[:/](.+)/(.+)\\.git#\\1/\\2#')"
+            )
         print()
 
     def run(self, verbose: bool = False):
@@ -338,6 +333,7 @@ class WorkflowValidator:
             return 1  # 有必需的 secrets 缺失
         return 0
 
+
 def main():
     parser = argparse.ArgumentParser(description="GitHub Workflows Secrets 校验工具")
     parser.add_argument("-v", "--verbose", action="store_true", help="显示详细信息")
@@ -356,6 +352,7 @@ def main():
     except Exception as e:
         print(f"{Colors.RED}未知错误: {e}{Colors.NC}", file=sys.stderr)
         sys.exit(1)
+
 
 if __name__ == "__main__":
     main()

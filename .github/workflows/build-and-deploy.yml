@@ -1,0 +1,111 @@
+name: 🚀 Build and Deploy
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  # 简化的构建任务
+  build-and-deploy:
+    name: 🐳 Build and Deploy
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=ref,event=branch
+            type=sha,prefix={{branch}}-
+            type=raw,value=latest,enable={{is_default_branch}}
+
+      - name: Build Docker image
+        id: build
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./Dockerfile.github
+          platforms: linux/amd64
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          build-args: |
+            BUILDKIT_INLINE_CACHE=1
+
+      - name: Deploy to AWS EC2
+        if: github.ref == 'refs/heads/main'
+        env:
+          AWS_PRIVATE_KEY: ${{ secrets.AWS_PRIVATE_KEY }}
+          AWS_HOST: ${{ secrets.AWS_HOST }}
+          AWS_USER: ${{ secrets.AWS_USER }}
+        run: |
+          # 设置 SSH 密钥
+          mkdir -p ~/.ssh
+          echo "$AWS_PRIVATE_KEY" > ~/.ssh/aws_key
+          chmod 600 ~/.ssh/aws_key
+
+          # 部署到 AWS
+          ssh -i ~/.ssh/aws_key -o StrictHostKeyChecking=no $AWS_USER@$AWS_HOST << 'EOF'
+            cd /opt/github-notion-sync || exit 1
+
+            echo "🔄 停止现有服务..."
+            docker-compose down || true
+
+            echo "📥 拉取最新镜像..."
+            echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+            docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
+
+            echo "🚀 启动新服务..."
+            docker-compose up -d
+
+            echo "⏳ 等待服务启动..."
+            sleep 30
+
+            echo "🧪 健康检查..."
+            if curl -f http://localhost:8000/health > /dev/null 2>&1; then
+              echo "✅ 部署成功"
+            else
+              echo "❌ 健康检查失败"
+              exit 1
+            fi
+          EOF
+
+      - name: Verify deployment
+        if: github.ref == 'refs/heads/main'
+        run: |
+          sleep 10
+          if curl -f http://3.35.106.116:8000/health > /dev/null 2>&1; then
+            echo "✅ 外部访问验证成功"
+          else
+            echo "❌ 外部访问验证失败"
+            exit 1
+          fi
+
+      - name: Notify success
+        if: success()
+        run: |
+          echo "🎉 部署成功完成！"
+          echo "🌐 服务地址: http://3.35.106.116:8000"
+          echo "🏥 健康检查: http://3.35.106.116:8000/health"

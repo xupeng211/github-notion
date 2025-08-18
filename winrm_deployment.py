@@ -12,10 +12,11 @@ from pathlib import Path
 
 AWS_SERVER = "3.35.106.116"
 
+
 def test_winrm_credentials():
     """测试 WinRM 凭据"""
     print("🔐 测试 WinRM 凭据...")
-    
+
     # 常见的默认凭据
     credentials = [
         ("Administrator", ""),
@@ -25,45 +26,46 @@ def test_winrm_credentials():
         ("admin", "admin"),
         ("ubuntu", "ubuntu"),  # 可能是 Linux 子系统
     ]
-    
+
     for username, password in credentials:
         print(f"   尝试凭据: {username} / {'(空)' if not password else '*' * len(password)}")
-        
+
         try:
             # 尝试 HTTP WinRM
-            session = winrm.Session(f'http://{AWS_SERVER}:5985/wsman', auth=(username, password))
+            session = winrm.Session(f"http://{AWS_SERVER}:5985/wsman", auth=(username, password))
             result = session.run_cmd('echo "WinRM 连接成功"')
-            
+
             if result.status_code == 0:
                 print(f"   ✅ HTTP WinRM 连接成功: {username}")
                 return session, username, password
-                
+
         except Exception as e:
             print(f"   ❌ HTTP WinRM 失败: {e}")
-        
+
         try:
             # 尝试 HTTPS WinRM
-            session = winrm.Session(f'https://{AWS_SERVER}:5986/wsman', auth=(username, password))
+            session = winrm.Session(f"https://{AWS_SERVER}:5986/wsman", auth=(username, password))
             result = session.run_cmd('echo "WinRM HTTPS 连接成功"')
-            
+
             if result.status_code == 0:
                 print(f"   ✅ HTTPS WinRM 连接成功: {username}")
                 return session, username, password
-                
+
         except Exception as e:
             print(f"   ❌ HTTPS WinRM 失败: {e}")
-    
+
     print("❌ 所有凭据测试失败")
     return None, None, None
+
 
 def run_winrm_command(session, command, description=""):
     """通过 WinRM 执行命令"""
     print(f"🔧 {description}")
     print(f"   命令: {command}")
-    
+
     try:
         result = session.run_cmd(command)
-        
+
         if result.status_code == 0:
             print(f"   ✅ 成功")
             if result.std_out:
@@ -72,21 +74,22 @@ def run_winrm_command(session, command, description=""):
             print(f"   ❌ 失败 (退出码: {result.status_code})")
             if result.std_err:
                 print(f"   错误: {result.std_err.decode('utf-8').strip()}")
-        
+
         return result.status_code == 0
-        
+
     except Exception as e:
         print(f"   ❌ 异常: {e}")
         return False
+
 
 def run_winrm_powershell(session, script, description=""):
     """通过 WinRM 执行 PowerShell 脚本"""
     print(f"🔧 {description}")
     print(f"   PowerShell 脚本长度: {len(script)} 字符")
-    
+
     try:
         result = session.run_ps(script)
-        
+
         if result.status_code == 0:
             print(f"   ✅ 成功")
             if result.std_out:
@@ -95,17 +98,18 @@ def run_winrm_powershell(session, script, description=""):
             print(f"   ❌ 失败 (退出码: {result.status_code})")
             if result.std_err:
                 print(f"   错误: {result.std_err.decode('utf-8').strip()}")
-        
+
         return result.status_code == 0
-        
+
     except Exception as e:
         print(f"   ❌ 异常: {e}")
         return False
 
+
 def deploy_via_winrm(session):
     """通过 WinRM 部署应用"""
     print("🚀 通过 WinRM 部署应用...")
-    
+
     # 1. 检查系统环境
     commands = [
         ("检查 Windows 版本", "ver"),
@@ -114,13 +118,13 @@ def deploy_via_winrm(session):
         ("检查当前目录", "cd"),
         ("检查网络", "ping -n 1 google.com"),
     ]
-    
+
     for desc, cmd in commands:
         run_winrm_command(session, cmd, desc)
-    
+
     # 2. 创建应用目录
     app_dir = "C:\\github-notion-sync"
-    powershell_setup = f'''
+    powershell_setup = f"""
 Write-Host "📁 创建应用目录..." -ForegroundColor Yellow
 New-Item -ItemType Directory -Force -Path "{app_dir}"
 Set-Location "{app_dir}"
@@ -140,13 +144,13 @@ python -m pip install --upgrade pip
 python -m pip install fastapi uvicorn pydantic sqlalchemy python-dotenv httpx requests
 
 Write-Host "✅ 基础设置完成" -ForegroundColor Green
-'''
-    
+"""
+
     if not run_winrm_powershell(session, powershell_setup, "基础环境设置"):
         return False
-    
+
     # 3. 创建最小应用
-    minimal_app = '''
+    minimal_app = """
 from fastapi import FastAPI, Request
 from datetime import datetime
 import json
@@ -178,9 +182,9 @@ def github_webhook(request: Request):
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)
-'''
-    
-    create_app_script = f'''
+"""
+
+    create_app_script = f"""
 Set-Location "{app_dir}"
 
 Write-Host "📝 创建应用文件..." -ForegroundColor Yellow
@@ -213,17 +217,18 @@ if ($port8000) {{
 }}
 
 Write-Host "✅ 部署完成" -ForegroundColor Green
-'''
-    
+"""
+
     return run_winrm_powershell(session, create_app_script, "创建和启动应用")
+
 
 def verify_deployment():
     """验证部署"""
     print("🧪 验证部署...")
-    
+
     # 等待服务启动
     time.sleep(15)
-    
+
     try:
         response = requests.get(f"http://{AWS_SERVER}:8000/health", timeout=10)
         if response.status_code == 200:
@@ -237,17 +242,18 @@ def verify_deployment():
             print(f"❌ 健康检查失败: HTTP {response.status_code}")
     except Exception as e:
         print(f"❌ 连接失败: {e}")
-    
+
     return False
+
 
 def main():
     """主函数"""
     print("🖥️ WinRM Windows 部署")
     print("=" * 50)
-    
+
     # 测试 WinRM 连接
     session, username, password = test_winrm_credentials()
-    
+
     if not session:
         print("❌ 无法建立 WinRM 连接")
         print("\n🔧 可能的解决方案:")
@@ -256,13 +262,13 @@ def main():
         print("3. 检查防火墙设置")
         print("4. 尝试使用 RDP 连接")
         return False
-    
+
     print(f"✅ WinRM 连接成功: {username}")
-    
+
     # 执行部署
     if deploy_via_winrm(session):
         print("✅ WinRM 部署完成")
-        
+
         # 验证部署
         if verify_deployment():
             print("🎉 部署成功！服务正常运行")
@@ -273,8 +279,9 @@ def main():
             print("❌ 部署验证失败")
     else:
         print("❌ WinRM 部署失败")
-    
+
     return False
+
 
 if __name__ == "__main__":
     success = main()

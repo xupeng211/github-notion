@@ -77,20 +77,12 @@ class TestErrorHandling:
     def test_malformed_requests(self, client):
         """测试格式错误的请求"""
         # 测试无效的Content-Type
-        response = client.post(
-            "/github_webhook",
-            data="invalid data",
-            headers={"Content-Type": "text/plain"}
-        )
+        response = client.post("/github_webhook", data="invalid data", headers={"Content-Type": "text/plain"})
         assert response.status_code in [400, 403, 422]
 
         # 测试超大请求体
         large_payload = "x" * (2 * 1024 * 1024)  # 2MB
-        response = client.post(
-            "/github_webhook",
-            data=large_payload,
-            headers={"Content-Type": "application/json"}
-        )
+        response = client.post("/github_webhook", data=large_payload, headers={"Content-Type": "application/json"})
         assert response.status_code in [400, 403, 413, 422]
 
     def test_missing_headers(self, client):
@@ -98,25 +90,17 @@ class TestErrorHandling:
         payload = {"test": "data"}
 
         # 缺少签名头部
-        response = client.post(
-            "/github_webhook",
-            json=payload,
-            headers={"X-GitHub-Event": "issues"}
-        )
+        response = client.post("/github_webhook", json=payload, headers={"X-GitHub-Event": "issues"})
         assert response.status_code == 403
 
         # 缺少事件类型头部
-        response = client.post(
-            "/github_webhook",
-            json=payload,
-            headers={"X-Hub-Signature-256": "sha256=test"}
-        )
+        response = client.post("/github_webhook", json=payload, headers={"X-Hub-Signature-256": "sha256=test"})
         assert response.status_code == 403
 
     def test_database_error_handling(self, client):
         """测试数据库错误处理"""
         # 模拟数据库连接错误
-        with patch('app.models.SessionLocal') as mock_session:
+        with patch("app.models.SessionLocal") as mock_session:
             mock_session.side_effect = Exception("Database connection failed")
 
             response = client.get("/health")
@@ -184,10 +168,7 @@ class TestErrorHandling:
                 "name": "test-repo",
                 "full_name": "test-user/test-repo",
                 "html_url": "https://github.com/test-user/test-repo",
-                "owner": {
-                    "login": "test-user",
-                    "name": "Test User"
-                }
+                "owner": {"login": "test-user", "name": "Test User"},
             },
             "sender": {"login": "test-user", "name": "Test User"},
         }
@@ -242,7 +223,7 @@ class TestErrorHandling:
     def test_timeout_handling(self, client):
         """测试超时处理"""
         # 模拟慢速请求
-        with patch('app.service.async_process_github_event') as mock_process:
+        with patch("app.service.async_process_github_event") as mock_process:
             import asyncio
 
             async def slow_process(*args, **kwargs):
@@ -284,10 +265,7 @@ class TestErrorHandling:
                     "name": "test-repo",
                     "full_name": "test-user/test-repo",
                     "html_url": "https://github.com/test-user/test-repo",
-                    "owner": {
-                        "login": "test-user",
-                        "name": "Test User"
-                    }
+                    "owner": {"login": "test-user", "name": "Test User"},
                 },
                 "sender": {"login": "test-user", "name": "Test User"},
             },
@@ -311,10 +289,7 @@ class TestErrorHandling:
                     "name": "test-repo",
                     "full_name": "test-user/test-repo",
                     "html_url": "https://github.com/test-user/test-repo",
-                    "owner": {
-                        "login": "test-user",
-                        "name": "Test User"
-                    }
+                    "owner": {"login": "test-user", "name": "Test User"},
                 },
                 "sender": {"login": "test-user", "name": "Test User"},
             },
