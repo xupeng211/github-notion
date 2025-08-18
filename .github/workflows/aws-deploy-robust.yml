@@ -1,0 +1,352 @@
+name: 🚀 Robust AWS Deployment
+
+on:
+  workflow_dispatch:
+    inputs:
+      deployment_mode:
+        description: 'Deployment mode'
+        required: true
+        default: 'full'
+        type: choice
+        options:
+        - 'full'
+        - 'minimal'
+        - 'debug'
+
+env:
+  AWS_SERVER: "3.35.106.116"
+  APP_DIR: "/opt/github-notion-sync"
+  SERVICE_NAME: "github-notion-sync"
+
+jobs:
+  deploy:
+    name: 🚀 Deploy to AWS EC2
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+    - name: 📥 Checkout code
+      uses: actions/checkout@v4
+
+    - name: 🔧 Setup SSH with retry
+      run: |
+        mkdir -p ~/.ssh
+        echo "${{ secrets.AWS_PRIVATE_KEY }}" > ~/.ssh/aws-key.pem
+        chmod 600 ~/.ssh/aws-key.pem
+
+        # 添加 known_hosts 并测试连接
+        ssh-keyscan -H ${{ env.AWS_SERVER }} >> ~/.ssh/known_hosts
+
+        # 测试 SSH 连接
+        echo "🔍 测试 SSH 连接..."
+        for i in {1..3}; do
+          if ssh -i ~/.ssh/aws-key.pem -o ConnectTimeout=10 -o StrictHostKeyChecking=no ubuntu@${{ env.AWS_SERVER }} "echo 'SSH 连接成功'"; then
+            echo "✅ SSH 连接测试通过"
+            break
+          else
+            echo "❌ SSH 连接失败，重试 $i/3"
+            sleep 5
+          fi
+        done
+
+    - name: 🧹 Cleanup and prepare server
+      run: |
+        echo "🧹 清理服务器环境..."
+        ssh -i ~/.ssh/aws-key.pem -o StrictHostKeyChecking=no ubuntu@${{ env.AWS_SERVER }} << 'EOF'
+        set -e
+
+        echo "⏹️  停止所有相关服务..."
+        sudo systemctl stop github-notion-sync 2>/dev/null || true
+        sudo systemctl stop emergency-service 2>/dev/null || true
+        sudo systemctl stop test-service 2>/dev/null || true
+
+        echo "🔪 终止相关进程..."
+        sudo pkill -f "uvicorn" 2>/dev/null || true
+        sudo pkill -f "python.*app" 2>/dev/null || true
+
+        echo "🔓 释放端口 8000..."
+        sudo fuser -k 8000/tcp 2>/dev/null || true
+
+        echo "📁 准备应用目录..."
+        sudo mkdir -p ${{ env.APP_DIR }}
+        sudo chown ubuntu:ubuntu ${{ env.APP_DIR }}
+
+        echo "🧹 清理旧文件..."
+        cd ${{ env.APP_DIR }}
+        rm -rf app/ tests/ docs/ *.py *.txt *.yml *.yaml *.md *.log 2>/dev/null || true
+
+        echo "✅ 服务器清理完成"
+        EOF
+
+    - name: 📦 Install dependencies with retry
+      run: |
+        echo "📦 安装依赖（带重试机制）..."
+        ssh -i ~/.ssh/aws-key.pem -o StrictHostKeyChecking=no ubuntu@${{ env.AWS_SERVER }} << 'EOF'
+        set -e
+
+        echo "🐍 检查 Python 环境..."
+        python3 --version
+
+        echo "📦 升级 pip..."
+        python3 -m pip install --user --upgrade pip --timeout 60 --retries 3
+
+        echo "📦 安装核心依赖（分批安装以提高成功率）..."
+
+        if [ "${{ github.event.inputs.deployment_mode }}" = "minimal" ]; then
+          echo "  最小化安装模式..."
+          python3 -m pip install --user --timeout 60 --retries 3 \
+            fastapi==0.111.0 \
+            uvicorn==0.30.1 \
+            pydantic==1.10.22 \
+            sqlalchemy==2.0.30 \
+            python-dotenv==1.0.1 \
+            httpx==0.27.0
+        else
+          # 第一批：核心 web 框架
+          echo "  安装 FastAPI 和 Uvicorn..."
+          python3 -m pip install --user --timeout 60 --retries 3 \
+            fastapi==0.111.0 \
+            uvicorn[standard]==0.30.1
+
+          # 第二批：数据处理
+          echo "  安装数据处理库..."
+          python3 -m pip install --user --timeout 60 --retries 3 \
+            pydantic==1.10.22 \
+            sqlalchemy==2.0.30 \
+            python-dotenv==1.0.1
+
+          # 第三批：HTTP 和加密
+          echo "  安装 HTTP 和加密库..."
+          python3 -m pip install --user --timeout 60 --retries 3 \
+            httpx==0.27.0 \
+            requests==2.31.0 \
+            cryptography==42.0.5
+
+          # 第四批：其他工具
+          echo "  安装其他工具..."
+          python3 -m pip install --user --timeout 60 --retries 3 \
+            prometheus-client==0.20.0 \
+            python-json-logger==2.0.7 \
+            email-validator==2.2.0 \
+            typing-extensions==4.14.1
+        fi
+
+        echo "✅ 依赖安装完成"
+
+        # 验证关键依赖
+        echo "🔍 验证依赖安装..."
+        python3 -c "import fastapi, uvicorn, sqlalchemy, httpx; print('✅ 核心依赖验证通过')"
+        EOF
+
+    - name: 📤 Transfer application files
+      run: |
+        echo "📤 传输应用文件..."
+
+        # 传输核心应用文件
+        scp -i ~/.ssh/aws-key.pem -o StrictHostKeyChecking=no -r app/ ubuntu@${{ env.AWS_SERVER }}:${{ env.APP_DIR }}/
+
+        # 传输配置文件
+        scp -i ~/.ssh/aws-key.pem -o StrictHostKeyChecking=no requirements.txt ubuntu@${{ env.AWS_SERVER }}:${{ env.APP_DIR }}/
+
+        # 传输 alembic 文件（如果存在）
+        if [ -d "alembic" ]; then
+          scp -i ~/.ssh/aws-key.pem -o StrictHostKeyChecking=no -r alembic/ ubuntu@${{ env.AWS_SERVER }}:${{ env.APP_DIR }}/
+        fi
+
+        if [ -f "alembic.ini" ]; then
+          scp -i ~/.ssh/aws-key.pem -o StrictHostKeyChecking=no alembic.ini ubuntu@${{ env.AWS_SERVER }}:${{ env.APP_DIR }}/
+        fi
+
+        echo "✅ 文件传输完成"
+
+    - name: ⚙️ Configure environment
+      run: |
+        echo "⚙️  配置环境..."
+        ssh -i ~/.ssh/aws-key.pem -o StrictHostKeyChecking=no ubuntu@${{ env.AWS_SERVER }} << 'EOF'
+        set -e
+
+        cd ${{ env.APP_DIR }}
+
+        echo "📝 创建环境配置..."
+        cat > .env << ENVEOF
+        ENVIRONMENT=production
+        DB_URL=sqlite:///./data/app.db
+        LOG_LEVEL=INFO
+        RATE_LIMIT_PER_MINUTE=100
+        MAX_REQUEST_SIZE=2097152
+        DISABLE_NOTION=false
+
+        # GitHub 配置
+        GITHUB_WEBHOOK_SECRET=${{ secrets.GITHUB_WEBHOOK_SECRET }}
+        GITHUB_TOKEN=${{ secrets.GITHUB_TOKEN }}
+
+        # Notion 配置
+        NOTION_TOKEN=${{ secrets.NOTION_TOKEN }}
+        NOTION_DATABASE_ID=${{ secrets.NOTION_DATABASE_ID }}
+
+        # 其他配置
+        DEADLETTER_REPLAY_TOKEN=${{ secrets.DEADLETTER_REPLAY_TOKEN }}
+        ENVEOF
+
+        echo "📁 创建数据目录..."
+        mkdir -p data logs
+
+        echo "✅ 环境配置完成"
+        EOF
+
+    - name: 🗄️ Initialize database
+      run: |
+        echo "🗄️  初始化数据库..."
+        ssh -i ~/.ssh/aws-key.pem -o StrictHostKeyChecking=no ubuntu@${{ env.AWS_SERVER }} << 'EOF'
+        set -e
+
+        cd ${{ env.APP_DIR }}
+
+        echo "🗄️  初始化数据库..."
+        python3 << 'PYEOF'
+import sys
+sys.path.insert(0, '.')
+try:
+    from app.models import init_db
+    init_db()
+    print('✅ 数据库初始化成功')
+except Exception as e:
+    print('❌ 数据库初始化失败:', str(e))
+    sys.exit(1)
+PYEOF
+
+        echo "✅ 数据库初始化完成"
+        EOF
+
+    - name: 🔧 Create systemd service
+      run: |
+        echo "🔧 创建 systemd 服务..."
+        ssh -i ~/.ssh/aws-key.pem -o StrictHostKeyChecking=no ubuntu@${{ env.AWS_SERVER }} << 'EOF'
+        set -e
+
+        echo "🔧 创建 systemd 服务文件..."
+        sudo tee /etc/systemd/system/${{ env.SERVICE_NAME }}.service > /dev/null << 'SERVICEEOF'
+        [Unit]
+        Description=GitHub-Notion Sync Service
+        After=network.target
+        Wants=network-online.target
+
+        [Service]
+        Type=simple
+        User=ubuntu
+        Group=ubuntu
+        WorkingDirectory=${{ env.APP_DIR }}
+        Environment=PATH=/home/ubuntu/.local/bin:/usr/local/bin:/usr/bin:/bin
+        EnvironmentFile=${{ env.APP_DIR }}/.env
+        ExecStart=/home/ubuntu/.local/bin/uvicorn app.server:app --host 0.0.0.0 --port 8000 --workers 1
+        ExecReload=/bin/kill -HUP $MAINPID
+        Restart=always
+        RestartSec=10
+        StartLimitInterval=60
+        StartLimitBurst=3
+        StandardOutput=journal
+        StandardError=journal
+        SyslogIdentifier=github-notion-sync
+
+        # 安全设置
+        NoNewPrivileges=true
+        PrivateTmp=true
+        ProtectSystem=strict
+        ReadWritePaths=${{ env.APP_DIR }}
+
+        [Install]
+        WantedBy=multi-user.target
+        SERVICEEOF
+
+        echo "🔄 重新加载 systemd..."
+        sudo systemctl daemon-reload
+        sudo systemctl enable ${{ env.SERVICE_NAME }}
+
+        echo "✅ systemd 服务创建完成"
+        EOF
+
+    - name: 🚀 Start service
+      run: |
+        echo "🚀 启动服务..."
+        ssh -i ~/.ssh/aws-key.pem -o StrictHostKeyChecking=no ubuntu@${{ env.AWS_SERVER }} << 'EOF'
+        set -e
+
+        echo "🚀 启动 GitHub-Notion 同步服务..."
+        sudo systemctl start ${{ env.SERVICE_NAME }}
+
+        echo "⏳ 等待服务启动..."
+        sleep 15
+
+        echo "🔍 检查服务状态..."
+        sudo systemctl status ${{ env.SERVICE_NAME }} --no-pager
+
+        echo "🔍 检查进程..."
+        ps aux | grep uvicorn | grep -v grep || echo "⚠️  未找到 uvicorn 进程"
+
+        echo "🔍 检查端口..."
+        sudo netstat -tlnp | grep :8000 || echo "⚠️  端口 8000 未监听"
+
+        echo "✅ 服务启动完成"
+        EOF
+
+    - name: 🧪 Verify deployment
+      run: |
+        echo "🧪 验证部署..."
+
+        # 等待服务完全启动
+        sleep 20
+
+        # 测试健康检查
+        echo "🏥 测试健康检查..."
+        for i in {1..5}; do
+          if curl -f -s http://${{ env.AWS_SERVER }}:8000/health >/dev/null; then
+            echo "✅ 健康检查通过"
+            break
+          else
+            echo "❌ 健康检查失败，重试 $i/5"
+            sleep 10
+          fi
+        done
+
+        # 获取健康检查详情
+        echo "📊 健康检查详情:"
+        curl -s http://${{ env.AWS_SERVER }}:8000/health | python3 -c "
+import sys, json
+try:
+    data = json.load(sys.stdin)
+    print(f'状态: {data.get(\"status\", \"unknown\")}')
+    print(f'环境: {data.get(\"environment\", \"unknown\")}')
+    print(f'时间戳: {data.get(\"timestamp\", \"unknown\")}')
+    if 'checks' in data:
+        for check_name, check_data in data['checks'].items():
+            print(f'{check_name}: {check_data.get(\"status\", \"unknown\")}')
+except Exception as e:
+    print(f'解析响应失败: {e}')
+"
+
+    - name: 📊 Deployment summary
+      if: always()
+      run: |
+        echo "📊 部署总结:"
+        echo "🎯 目标服务器: ${{ env.AWS_SERVER }}"
+        echo "📁 应用目录: ${{ env.APP_DIR }}"
+        echo "🔧 服务名称: ${{ env.SERVICE_NAME }}"
+        echo "🌐 服务地址: http://${{ env.AWS_SERVER }}:8000"
+        echo "🏥 健康检查: http://${{ env.AWS_SERVER }}:8000/health"
+        echo "📊 监控指标: http://${{ env.AWS_SERVER }}:8000/metrics"
+        echo "🔗 GitHub Webhook: http://${{ env.AWS_SERVER }}:8000/github_webhook"
+
+        # 最终状态检查
+        if curl -f -s http://${{ env.AWS_SERVER }}:8000/health >/dev/null; then
+          echo "🎉 部署成功！服务正常运行"
+        else
+          echo "❌ 部署可能存在问题，请检查服务状态"
+
+          # 获取诊断信息
+          ssh -i ~/.ssh/aws-key.pem -o StrictHostKeyChecking=no ubuntu@${{ env.AWS_SERVER }} "
+            echo '=== 服务状态 ==='
+            sudo systemctl status ${{ env.SERVICE_NAME }} --no-pager || true
+            echo '=== 最新日志 ==='
+            sudo journalctl -u ${{ env.SERVICE_NAME }} --no-pager -n 20 || true
+          "
+        fi
