@@ -162,7 +162,7 @@ Set-Location $AppDir
 # 停止现有服务
 Write-Host "⏹️ 停止现有服务..." -ForegroundColor Yellow
 Get-Process -Name "python" -ErrorAction SilentlyContinue | Where-Object {$_.CommandLine -like "*uvicorn*"} | Stop-Process -Force
-netstat -ano | findstr :8000 | ForEach-Object {
+netstat -ano | findstr :$env:APP_PORT | ForEach-Object {
     $processId = ($_ -split '\\\s+')[-1]
     if ($processId -ne "0") {
         Stop-Process -Id $processId -Force -ErrorAction SilentlyContinue

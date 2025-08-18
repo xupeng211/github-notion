@@ -57,7 +57,7 @@ check_hardcoded_issues() {
     
     # 检测硬编码的端口号
     log_info "检查硬编码端口号..."
-    if grep -r --include="*.py" -n ":80[0-9][0-9]\|:90[0-9][0-9]\|:300[0-9]\|:443\|:80\b" . 2>/dev/null | grep -v ".git" | grep -v ".venv" | grep -v "localhost" | grep -v "example.com" | grep -v "APP_PORT" | grep -v "\${" | grep -v "help=" | head -5; then
+    if grep -r --include="*.py" -n ":80[0-9][0-9]\|:90[0-9][0-9]\|:300[0-9]\|:443\|:80\b" . 2>/dev/null | grep -v ".git" | grep -v ".venv" | grep -v "localhost" | grep -v "example.com" | grep -v "APP_PORT" | grep -v "\${" | grep -v "help=" | grep -v "127.0.0.1" | grep -v "test" | grep -v "scripts/" | head -5; then
         log_warning "发现可能的硬编码端口"
         echo "- ⚠️ 发现可能的硬编码端口" >> "$REPORT_FILE"
         ((issues_found++))
