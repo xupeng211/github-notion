@@ -231,7 +231,7 @@ sudo systemctl start {SERVICE_NAME}
 sleep 15
 sudo systemctl status {SERVICE_NAME} --no-pager
 ps aux | grep uvicorn | grep -v grep || echo "⚠️ 未找到进程"
-sudo netstat -tlnp | grep :8000 || echo "⚠️ 端口未监听"
+sudo netstat -tlnp | grep :${APP_PORT:-8000} || echo "⚠️ 端口未监听"
 echo "✅ 服务启动完成"
 """
 
@@ -249,7 +249,8 @@ def verify_deployment():
     # 测试健康检查
     for i in range(5):
         try:
-            response = requests.get(f"http://{AWS_SERVER}:8000/health", timeout=10)
+            APP_PORT = os.getenv("APP_PORT", "8000")
+            response = requests.get(f"http://{AWS_SERVER}:{APP_PORT}/health", timeout=10)
             if response.status_code == 200:
                 print("✅ 健康检查通过")
                 health_data = response.json()
@@ -301,8 +302,9 @@ def main():
         print(f"✅ 步骤完成: {step_name}")
 
     print("\n🎉 AWS 部署成功！")
-    print(f"🌐 服务地址: http://{AWS_SERVER}:8000")
-    print(f"🏥 健康检查: http://{AWS_SERVER}:8000/health")
+    APP_PORT = os.getenv("APP_PORT", "8000")
+    print(f"🌐 服务地址: http://{AWS_SERVER}:{APP_PORT}")
+    print(f"🏥 健康检查: http://{AWS_SERVER}:{APP_PORT}/health")
     print(f"🔗 GitHub Webhook: http://{AWS_SERVER}:8000/github_webhook")
 
     return True
