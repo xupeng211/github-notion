@@ -9,7 +9,7 @@ import sys
 
 import requests
 
-AWS_SERVER = os.getenv("AWS_SERVER", "3.35.106.116")
+AWS_SERVER = "3.35.106.116"
 
 
 def test_rdp_connection():

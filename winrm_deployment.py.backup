@@ -1,5 +1,3 @@
-import os
-
 #!/usr/bin/env python3
 """
 通过 WinRM 部署到 Windows 服务器
@@ -11,7 +9,7 @@ import time
 import requests
 import winrm
 
-AWS_SERVER = os.getenv("AWS_SERVER", "3.35.106.116")
+AWS_SERVER = "3.35.106.116"
 
 
 def test_winrm_credentials():

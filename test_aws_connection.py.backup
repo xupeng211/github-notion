@@ -1,5 +1,3 @@
-import os
-
 #!/usr/bin/env python3
 """
 测试 AWS 连接和基本部署能力
@@ -11,7 +9,7 @@ from pathlib import Path
 
 import requests
 
-AWS_SERVER = os.getenv("AWS_SERVER", "3.35.106.116")
+AWS_SERVER = "3.35.106.116"
 AWS_USER = "ubuntu"
 
 

@@ -17,12 +17,12 @@ Parameters:
 
   PublicSubnet1CIDR:
     Type: String
-    Default: 10.0.1.0/24  # AWS VPC subnet
+    Default: 10.0.1.0/24
     Description: Public Subnet 1 CIDR block
 
   PublicSubnet2CIDR:
     Type: String
-    Default: 10.0.2.0/24  # AWS VPC subnet
+    Default: 10.0.2.0/24
     Description: Public Subnet 2 CIDR block
 
 Resources:

@@ -1,5 +1,3 @@
-import os
-
 #!/usr/bin/env python3
 """
 本地到 AWS 的直接部署脚本
@@ -14,7 +12,7 @@ from pathlib import Path
 import requests
 
 # AWS 配置
-AWS_SERVER = os.getenv("AWS_SERVER", "3.35.106.116")
+AWS_SERVER = "3.35.106.116"
 AWS_USER = "ubuntu"
 APP_DIR = "/opt/github-notion-sync"
 SERVICE_NAME = "github-notion-sync"

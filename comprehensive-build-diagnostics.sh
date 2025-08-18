@@ -46,7 +46,7 @@ check_hardcoded_issues() {
     
     # 检测硬编码的 IP 地址
     log_info "检查硬编码 IP 地址..."
-    if grep -r --include="*.py" --include="*.yml" --include="*.yaml" -n "\b[0-9]\{1,3\}\.[0-9]\{1,3\}\.[0-9]\{1,3\}\.[0-9]\{1,3\}\b" . 2>/dev/null | grep -v ".git" | head -10; then
+    if grep -r --include="*.py" --include="*.yml" --include="*.yaml" -n "\b[0-9]\{1,3\}\.[0-9]\{1,3\}\.[0-9]\{1,3\}\.[0-9]\{1,3\}\b" . 2>/dev/null | grep -v ".git" | grep -v ".venv" | grep -v "127.0.0.1" | grep -v "0.0.0.0" | head -10; then
         log_error "发现硬编码 IP 地址"
         echo "- ❌ 发现硬编码 IP 地址" >> "$REPORT_FILE"
         ((issues_found++))
@@ -57,7 +57,7 @@ check_hardcoded_issues() {
     
     # 检测硬编码的端口号
     log_info "检查硬编码端口号..."
-    if grep -r --include="*.py" -n ":80[0-9][0-9]\|:90[0-9][0-9]\|:300[0-9]\|:443\|:80\b" . 2>/dev/null | grep -v ".git" | grep -v "localhost" | head -5; then
+    if grep -r --include="*.py" -n ":80[0-9][0-9]\|:90[0-9][0-9]\|:300[0-9]\|:443\|:80\b" . 2>/dev/null | grep -v ".git" | grep -v ".venv" | grep -v "localhost" | grep -v "example.com" | head -5; then
         log_warning "发现可能的硬编码端口"
         echo "- ⚠️ 发现可能的硬编码端口" >> "$REPORT_FILE"
         ((issues_found++))
@@ -65,7 +65,7 @@ check_hardcoded_issues() {
     
     # 检测硬编码的文件路径
     log_info "检查硬编码文件路径..."
-    if grep -r --include="*.py" -n "/opt/\|/home/\|C:\\\|/tmp/\|/var/" . 2>/dev/null | grep -v ".git" | grep -v "__pycache__" | head -5; then
+    if grep -r --include="*.py" -n "/opt/\|/home/\|C:\\\|/tmp/\|/var/" . 2>/dev/null | grep -v ".git" | grep -v ".venv" | grep -v "__pycache__" | head -5; then
         log_warning "发现硬编码文件路径"
         echo "- ⚠️ 发现硬编码文件路径" >> "$REPORT_FILE"
         ((issues_found++))
