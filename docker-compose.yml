@@ -1,27 +1,50 @@
 version: '3.8'
+
 services:
+  # 主应用服务
   app:
-    build: .
-    # image: ghcr.io/xupeng211/gitee-notion:latest  # use docker-compose.prod.yml for image-based deploys
-    container_name: gitee-notion-sync
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: github-notion-sync:latest
+    container_name: github-notion-sync-app
+    restart: unless-stopped
+    ports:
+      - "${APP_PORT:-8000}:8000"
     env_file:
       - .env
     environment:
+      - ENVIRONMENT=${ENVIRONMENT:-development}
       - APP_PORT=${APP_PORT:-8000}
-    ports:
-      - "${APP_PORT:-8000}:8000"
+      - DB_URL=${DB_URL:-sqlite:///./data/app.db}
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
     volumes:
       - ./data:/app/data
-    restart: unless-stopped
+      - ./logs:/app/logs
+    networks:
+      - app_network
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:8000/health" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
 
+  # 备份服务（保留原有功能）
   backup:
     image: alpine:3.20
-    container_name: gns-backup
+    container_name: github-notion-sync-backup
     volumes:
       - ./data:/app/data:ro
       - ./backups:/app/backups
       - ./scripts/backup_sqlite.sh:/app/backup_sqlite.sh:ro
     working_dir: /app
-    entrypoint: ["/bin/sh","-c"]
-    command: ["crond -f -l 8 -L /dev/stdout & echo '0 3 * * * /bin/sh /app/backup_sqlite.sh DB_PATH=/app/data/sync.db BACKUP_DIR=/app/backups >> /proc/1/fd/1 2>&1' | crontab - && tail -f /dev/null"]
+    entrypoint: [ "/bin/sh", "-c" ]
+    command: [ "crond -f -l 8 -L /dev/stdout & echo '0 3 * * * /bin/sh /app/backup_sqlite.sh DB_PATH=/app/data/sync.db BACKUP_DIR=/app/backups >> /proc/1/fd/1 2>&1' | crontab - && tail -f /dev/null" ]
     restart: unless-stopped
+    networks:
+      - app_network
+
+networks:
+  app_network:
+    driver: bridge
