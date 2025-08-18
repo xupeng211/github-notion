@@ -133,7 +133,7 @@ Write-Host "当前目录: $(Get-Location)" -ForegroundColor Green
 
 Write-Host "⏹️ 停止现有服务..." -ForegroundColor Yellow
 Get-Process -Name "python" -ErrorAction SilentlyContinue | Where-Object {{$_.CommandLine -like "*uvicorn*"}} | Stop-Process -Force
-netstat -ano | findstr :8000 | ForEach-Object {{
+netstat -ano | findstr :$env:APP_PORT | ForEach-Object {{
     $processId = ($_ -split '\\s+')[-1]
     if ($processId -ne "0") {{
         Stop-Process -Id $processId -Force -ErrorAction SilentlyContinue
@@ -209,7 +209,7 @@ if ($processes) {{
 }}
 
 Write-Host "🔍 检查端口..." -ForegroundColor Yellow
-$port8000 = netstat -ano | findstr :8000
+$port8000 = netstat -ano | findstr :$env:APP_PORT
 if ($port8000) {{
     Write-Host "✅ 端口 8000 正在监听" -ForegroundColor Green
     Write-Host "$port8000" -ForegroundColor White
@@ -231,7 +231,8 @@ def verify_deployment():
     time.sleep(15)
 
     try:
-        response = requests.get(f"http://{AWS_SERVER}:8000/health", timeout=10)
+        APP_PORT = os.getenv("APP_PORT", "8000")
+        response = requests.get(f"http://{AWS_SERVER}:{APP_PORT}/health", timeout=10)
         if response.status_code == 200:
             print("✅ 健康检查通过")
             health_data = response.json()
@@ -273,8 +274,9 @@ def main():
         # 验证部署
         if verify_deployment():
             print("🎉 部署成功！服务正常运行")
-            print(f"🌐 服务地址: http://{AWS_SERVER}:8000")
-            print(f"🏥 健康检查: http://{AWS_SERVER}:8000/health")
+            APP_PORT = os.getenv("APP_PORT", "8000")
+            print(f"🌐 服务地址: http://{AWS_SERVER}:{APP_PORT}")
+            print(f"🏥 健康检查: http://{AWS_SERVER}:{APP_PORT}/health")
             return True
         else:
             print("❌ 部署验证失败")
