@@ -96,7 +96,7 @@ sudo systemctl stop test-service 2>/dev/null || true
 
 # 检查端口
 echo "🔍 检查端口 8000..."
-sudo netstat -tlnp | grep :8000 && echo "端口被占用，尝试释放..." || echo "端口空闲"
+sudo netstat -tlnp | grep :${APP_PORT:-8000} && echo "端口被占用，尝试释放..." || echo "端口空闲"
 
 # 强制释放端口
 sudo fuser -k 8000/tcp 2>/dev/null || true
@@ -126,7 +126,7 @@ ps aux | grep uvicorn | grep -v grep || echo "进程未找到"
 
 # 检查端口
 echo "🔍 检查端口..."
-sudo netstat -tlnp | grep :8000 || echo "端口未监听"
+sudo netstat -tlnp | grep :${APP_PORT:-8000} || echo "端口未监听"
 
 # 测试连接
 echo "🧪 测试连接..."
@@ -186,11 +186,13 @@ def deploy_to_server():
     time.sleep(15)
 
     try:
-        response = requests.get(f"http://{server}:8000/health", timeout=10)
+        APP_PORT = os.getenv("APP_PORT", "8000")
+        response = requests.get(f"http://{server}:{APP_PORT}/health", timeout=10)
         if response.status_code == 200:
             print("✅ 部署成功！服务正常运行")
-            print(f"🌐 服务地址: http://{server}:8000")
-            print(f"🏥 健康检查: http://{server}:8000/health")
+            APP_PORT = os.getenv("APP_PORT", "8000")
+            print(f"🌐 服务地址: http://{server}:{APP_PORT}")
+            print(f"🏥 健康检查: http://{server}:{APP_PORT}/health")
             return True
         else:
             print(f"❌ 健康检查失败: HTTP {response.status_code}")
