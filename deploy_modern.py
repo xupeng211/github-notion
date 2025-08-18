@@ -219,7 +219,7 @@ class ModernDeployer:
 
         # 健康检查
         for i in {{1..10}}; do
-            if curl -f http://localhost:8000/health > /dev/null 2>&1; then
+            if curl -f http://localhost:${APP_PORT:-8000}/health > /dev/null 2>&1; then
                 echo "健康检查通过"
                 break
             fi
@@ -228,7 +228,7 @@ class ModernDeployer:
         done
 
         # 最终健康检查
-        if ! curl -f http://localhost:8000/health > /dev/null 2>&1; then
+        if ! curl -f http://localhost:${APP_PORT:-8000}/health > /dev/null 2>&1; then
             echo "健康检查失败，回滚部署"
             exit 1
         fi
@@ -250,7 +250,8 @@ class ModernDeployer:
 
         # 外部健康检查
         try:
-            response = requests.get(f"http://{AWS_SERVER}:8000/health", timeout=10)
+            APP_PORT = os.getenv("APP_PORT", "8000")
+            response = requests.get(f"http://{AWS_SERVER}:{APP_PORT}/health", timeout=10)
             if response.status_code == 200:
                 health_data = response.json()
                 self.log("✅ 外部健康检查通过")
@@ -318,8 +319,9 @@ class ModernDeployer:
                 return False
 
             self.log("🎉 部署成功完成！")
-            self.log(f"🌐 服务地址: http://{AWS_SERVER}:8000")
-            self.log(f"🏥 健康检查: http://{AWS_SERVER}:8000/health")
+            APP_PORT = os.getenv("APP_PORT", "8000")
+            self.log(f"🌐 服务地址: http://{AWS_SERVER}:{APP_PORT}")
+            self.log(f"🏥 健康检查: http://{AWS_SERVER}:{APP_PORT}/health")
             return True
 
         except Exception as e:

@@ -81,7 +81,7 @@ df -h /
 echo "=== 内存信息 ==="
 free -h
 echo "=== 网络状态 ==="
-sudo netstat -tlnp | grep :8000 || echo "端口 8000 空闲"
+sudo netstat -tlnp | grep :${APP_PORT:-8000} || echo "端口 ${APP_PORT:-8000} 空闲"
 echo "=== 当前进程 ==="
 ps aux | grep uvicorn | grep -v grep || echo "没有 uvicorn 进程"
 """
@@ -155,15 +155,15 @@ APPEOF
 
 echo "启动测试服务..."
 python3 -m pip install --user fastapi uvicorn --quiet
-nohup /home/{AWS_USER}/.local/bin/uvicorn test_app:app --host 0.0.0.0 --port 8000 > test_service.log 2>&1 &
+nohup /home/{AWS_USER}/.local/bin/uvicorn test_app:app --host 0.0.0.0 --port ${{APP_PORT:-8000}} > test_service.log 2>&1 &
 sleep 10
 
 echo "检查服务状态..."
 ps aux | grep uvicorn | grep -v grep || echo "服务未启动"
-sudo netstat -tlnp | grep :8000 || echo "端口未监听"
+sudo netstat -tlnp | grep :${APP_PORT:-8000} || echo "端口未监听"
 
 echo "测试连接..."
-curl -f http://localhost:8000/health || echo "连接失败"
+curl -f http://localhost:${APP_PORT:-8000}/health || echo "连接失败"
 
 echo "停止测试服务..."
 pkill -f "uvicorn test_app" || true
@@ -178,7 +178,8 @@ def test_external_access():
     print("🌍 测试外部访问...")
 
     try:
-        response = requests.get(f"http://{AWS_SERVER}:8000/health", timeout=10)
+        APP_PORT = os.getenv("APP_PORT", "8000")
+        response = requests.get(f"http://{AWS_SERVER}:{APP_PORT}/health", timeout=10)
         if response.status_code == 200:
             print("✅ 外部访问成功")
             print(f"   响应: {response.json()}")
