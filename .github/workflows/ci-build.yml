@@ -92,18 +92,44 @@ jobs:
             echo "⏳ 等待服务启动..."
             sleep 30
 
-            echo "🧪 CI/CD 健康检查..."
-            if curl -f http://localhost:${APP_PORT:-8000}/health/ci > /dev/null 2>&1; then
-              echo "✅ 部署成功"
-            else
-              echo "❌ CI/CD 健康检查失败，尝试标准健康检查..."
-              if curl -f http://localhost:${APP_PORT:-8000}/health > /dev/null 2>&1; then
-                echo "⚠️ 标准健康检查通过，但状态可能为 degraded"
-                echo "✅ 部署成功（CI/CD 模式）"
+            echo "🧪 检查容器健康状态..."
+
+            # 首先检查容器是否在运行
+            if docker ps | grep -q github-notion-sync-app; then
+              echo "✅ 容器正在运行"
+
+              # 检查 Docker 健康检查状态
+              health_status=$(docker inspect --format='{{.State.Health.Status}}' github-notion-sync-app 2>/dev/null || echo "unknown")
+              echo "Docker 健康检查状态: $health_status"
+
+              # 如果 Docker 健康检查通过，或者没有健康检查，则进行 HTTP 检查
+              if [ "$health_status" = "healthy" ] || [ "$health_status" = "unknown" ]; then
+                echo "🧪 CI/CD 健康检查..."
+                if curl -f http://localhost:${APP_PORT:-8000}/health/ci > /dev/null 2>&1; then
+                  echo "✅ 部署成功"
+                else
+                  echo "❌ CI/CD 健康检查失败，尝试标准健康检查..."
+                  if curl -f http://localhost:${APP_PORT:-8000}/health > /dev/null 2>&1; then
+                    echo "⚠️ 标准健康检查通过，但状态可能为 degraded"
+                    echo "✅ 部署成功（CI/CD 模式）"
+                  else
+                    echo "❌ 所有健康检查都失败"
+                    echo "容器日志:"
+                    docker logs --tail 20 github-notion-sync-app
+                    exit 1
+                  fi
+                fi
               else
-                echo "❌ 所有健康检查都失败"
+                echo "❌ Docker 健康检查失败: $health_status"
+                echo "容器日志:"
+                docker logs --tail 20 github-notion-sync-app
                 exit 1
               fi
+            else
+              echo "❌ 容器未运行"
+              echo "检查容器状态:"
+              docker ps -a | grep github-notion-sync || echo "未找到相关容器"
+              exit 1
             fi
           EOF
 
