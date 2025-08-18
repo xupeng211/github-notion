@@ -18,6 +18,11 @@ env:
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}
 
+permissions:
+  contents: read
+  packages: write
+  id-token: write
+
 jobs:
   # 简化的构建任务
   build-and-deploy:
@@ -27,6 +32,17 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+
+      - name: Debug environment
+        run: |
+          echo "🔍 Debug information:"
+          echo "GitHub Actor: ${{ github.actor }}"
+          echo "GitHub Repository: ${{ github.repository }}"
+          echo "Registry: ${{ env.REGISTRY }}"
+          echo "Image Name: ${{ env.IMAGE_NAME }}"
+          echo "Docker version: $(docker --version)"
+          echo "Available space: $(df -h /)"
+          echo "Dockerfile.github exists: $(test -f Dockerfile.github && echo 'Yes' || echo 'No')"
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -62,6 +78,12 @@ jobs:
           cache-to: type=gha,mode=max
           build-args: |
             BUILDKIT_INLINE_CACHE=1
+
+      - name: Verify build success
+        run: |
+          echo "🎉 Build completed successfully!"
+          echo "Image digest: ${{ steps.build.outputs.digest }}"
+          echo "Image metadata: ${{ steps.build.outputs.metadata }}"
 
       - name: Deploy to AWS EC2
         if: github.ref == 'refs/heads/main'
