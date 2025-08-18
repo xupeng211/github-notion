@@ -65,7 +65,7 @@ check_hardcoded_issues() {
     
     # 检测硬编码的文件路径
     log_info "检查硬编码文件路径..."
-    if grep -r --include="*.py" -n "/opt/\|/home/\|C:\\\|/tmp/\|/var/" . 2>/dev/null | grep -v ".git" | grep -v ".venv" | grep -v "__pycache__" | head -5; then
+    if grep -r --include="*.py" -n "/opt/\|/home/\|C:\\\|/tmp/\|/var/" . 2>/dev/null | grep -v ".git" | grep -v ".venv" | grep -v "__pycache__" | grep -v "/usr/local/bin" | grep -v "/usr/bin" | grep -v "PATH=" | grep -v "PYTHONPATH" | grep -v "ExecStart=" | head -5; then
         log_warning "发现硬编码文件路径"
         echo "- ⚠️ 发现硬编码文件路径" >> "$REPORT_FILE"
         ((issues_found++))

@@ -13,9 +13,9 @@ on:
         - 'minimal'
 
 env:
-  AWS_SERVER: "3.35.106.116"
-  APP_DIR: "/opt/github-notion-sync"
-  SERVICE_NAME: "github-notion-sync"
+  AWS_SERVER: ${{ secrets.AWS_HOST || '3.35.106.116' }}
+  APP_DIR: ${{ secrets.APP_DIR || '/opt/github-notion-sync' }}
+  SERVICE_NAME: ${{ secrets.SERVICE_NAME || 'github-notion-sync' }}
 
 jobs:
   deploy:
@@ -110,14 +110,14 @@ jobs:
       run: |
         echo "🗄️ 初始化数据库..."
         ssh -i ~/.ssh/aws-key.pem -o StrictHostKeyChecking=no ubuntu@${{ env.AWS_SERVER }} '
-        cd /opt/github-notion-sync
-        python3 -c "
-import sys
-sys.path.insert(0, \".\")
-from app.models import init_db
-init_db()
-print(\"✅ 数据库初始化成功\")
-"
+          cd /opt/github-notion-sync
+          python3 -c "
+          import sys
+          sys.path.insert(0, \".\")
+          from app.models import init_db
+          init_db()
+          print(\"✅ 数据库初始化成功\")
+          "
         echo "✅ 数据库初始化完成"
         '
 
@@ -180,14 +180,14 @@ print(\"✅ 数据库初始化成功\")
 
         echo "📊 健康检查详情:"
         curl -s http://${{ env.AWS_SERVER }}:8000/health | python3 -c "
-import sys, json
-try:
-    data = json.load(sys.stdin)
-    print('状态:', data.get('status', 'unknown'))
-    print('环境:', data.get('environment', 'unknown'))
-except:
-    print('解析响应失败')
-"
+        import sys, json
+        try:
+            data = json.load(sys.stdin)
+            print('状态:', data.get('status', 'unknown'))
+            print('环境:', data.get('environment', 'unknown'))
+        except:
+            print('解析响应失败')
+        "
 
     - name: 📊 Summary
       if: always()
