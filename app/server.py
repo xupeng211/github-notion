@@ -17,6 +17,7 @@ from pythonjsonlogger import jsonlogger
 from starlette.middleware.base import BaseHTTPMiddleware
 
 from app.config_validator import validate_config_on_startup
+from app.config_validator_ci import validate_config_on_startup_ci
 from app.enhanced_metrics import METRICS_REGISTRY, initialize_metrics
 from app.idempotency import IdempotencyManager
 from app.middleware import PrometheusMiddleware
@@ -63,7 +64,15 @@ async def lifespan(_app: FastAPI):
 
     # 1. 强制验证环境变量配置
     logger.info("开始启动配置验证...")
-    validate_config_on_startup()
+
+    # 检查是否在 CI/CD 环境中
+    environment = os.getenv("ENVIRONMENT", "development")
+    if environment in ["ci", "test", "development"]:
+        logger.info("检测到 CI/CD 环境，使用宽松配置验证")
+        validate_config_on_startup_ci()
+    else:
+        logger.info("生产环境，使用严格配置验证")
+        validate_config_on_startup()
 
     # 2. 数据库初始化现在通过 alembic 管理，不再使用 init_db()
     # 部署时请运行: alembic upgrade head

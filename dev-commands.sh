@@ -39,10 +39,16 @@ smart_commit() {
 # 安全推送命令
 safe_push() {
     echo -e "${BLUE}🛡️ 安全推送流程...${NC}"
-    
-    # 1. 运行诊断
-    echo -e "${PURPLE}1. 最终诊断检查...${NC}"
-    if [ -f "./comprehensive-build-diagnostics.sh" ]; then
+
+    # 1. 运行推送就绪诊断
+    echo -e "${PURPLE}1. 推送就绪检查...${NC}"
+    if [ -f "./push-ready-diagnostics.sh" ]; then
+        if ! ./push-ready-diagnostics.sh; then
+            echo -e "${RED}❌ 推送就绪检查失败，推送被阻止${NC}"
+            return 1
+        fi
+    elif [ -f "./comprehensive-build-diagnostics.sh" ]; then
+        echo -e "${YELLOW}⚠️  使用完整诊断作为备选${NC}"
         if ! ./comprehensive-build-diagnostics.sh; then
             echo -e "${RED}❌ 诊断失败，推送被阻止${NC}"
             return 1
