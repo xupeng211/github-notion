@@ -28,14 +28,31 @@ RUN python -m pip install --upgrade pip setuptools wheel
 # 复制 requirements 文件
 COPY requirements.txt .
 
-# 安装所有依赖 - 使用 requirements.txt
-RUN echo "安装所有依赖..." && \
-    pip install --no-cache-dir \
-    --timeout 600 \
-    --retries 10 \
-    --prefer-binary \
-    -r requirements.txt && \
-    echo "✅ 所有依赖安装完成"
+# 分步安装依赖 - 先安装核心依赖
+RUN echo "安装核心 Web 框架..." && \
+    pip install --no-cache-dir --timeout 600 --retries 10 \
+    fastapi==0.104.1 \
+    uvicorn[standard]==0.24.0
+
+# 安装数据库相关依赖
+RUN echo "安装数据库依赖..." && \
+    pip install --no-cache-dir --timeout 600 --retries 10 \
+    sqlalchemy==2.0.23 \
+    alembic==1.12.1
+
+# 安装 HTTP 客户端
+RUN echo "安装 HTTP 客户端..." && \
+    pip install --no-cache-dir --timeout 600 --retries 10 \
+    httpx==0.25.2 \
+    requests==2.31.0
+
+# 安装其他依赖
+RUN echo "安装其他依赖..." && \
+    pip install --no-cache-dir --timeout 600 --retries 10 \
+    pydantic==2.5.0 \
+    python-dotenv==1.0.0 \
+    structlog==23.2.0 \
+    prometheus-client==0.19.0
 
 # 复制应用代码
 COPY . .
