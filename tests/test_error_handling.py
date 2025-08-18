@@ -110,7 +110,8 @@ class TestErrorHandling:
     def test_concurrent_requests(self, client):
         """测试并发请求处理"""
         import threading
-        import time
+
+        # import time  # 暂时注释未使用的导入
 
         results = []
 

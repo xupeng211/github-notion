@@ -4,13 +4,13 @@
 支持 Docker 容器化部署、零停机更新、回滚等功能
 """
 
+import argparse
 import subprocess
 import sys
 import time
-import json
-import argparse
-from pathlib import Path
 from datetime import datetime
+from pathlib import Path
+
 import requests
 
 # 配置
@@ -118,20 +118,20 @@ class ModernDeployer:
 
         backup_script = f"""
         cd /opt/github-notion-sync
-        
+
         # 创建备份目录
         sudo mkdir -p /opt/backups/{self.deployment_id}
-        
+
         # 备份数据
         sudo cp -r data /opt/backups/{self.deployment_id}/ 2>/dev/null || true
-        
+
         # 备份配置
         sudo cp .env /opt/backups/{self.deployment_id}/ 2>/dev/null || true
         sudo cp docker-compose.yml /opt/backups/{self.deployment_id}/ 2>/dev/null || true
-        
+
         # 记录当前运行的容器
         docker ps --format "table {{{{.Names}}}}\\t{{{{.Image}}}}\\t{{{{.Status}}}}" > /opt/backups/{self.deployment_id}/containers.txt
-        
+
         echo "备份完成: /opt/backups/{self.deployment_id}"
         """
 
@@ -186,13 +186,13 @@ class ModernDeployer:
 
         pull_script = f"""
         cd /opt/github-notion-sync
-        
+
         # 登录到 GitHub Container Registry
         echo "$GITHUB_TOKEN" | docker login ghcr.io -u "$GITHUB_USERNAME" --password-stdin
-        
+
         # 拉取最新镜像
         docker pull {DOCKER_REGISTRY}:latest
-        
+
         # 清理旧镜像
         docker image prune -f
         """
@@ -205,16 +205,16 @@ class ModernDeployer:
 
         deploy_script = f"""
         cd /opt/github-notion-sync
-        
+
         # 使用生产配置
         cp docker-compose.prod.yml docker-compose.yml
-        
+
         # 启动新容器（蓝绿部署）
         docker-compose up -d --no-deps app
-        
+
         # 等待新容器启动
         sleep 30
-        
+
         # 健康检查
         for i in {{1..10}}; do
             if curl -f http://localhost:8000/health > /dev/null 2>&1; then
@@ -224,16 +224,16 @@ class ModernDeployer:
             echo "等待服务启动... ($i/10)"
             sleep 10
         done
-        
+
         # 最终健康检查
         if ! curl -f http://localhost:8000/health > /dev/null 2>&1; then
             echo "健康检查失败，回滚部署"
             exit 1
         fi
-        
+
         # 清理旧容器
         docker system prune -f
-        
+
         echo "部署成功"
         """
 
@@ -271,18 +271,18 @@ class ModernDeployer:
 
         rollback_script = f"""
         cd /opt/github-notion-sync
-        
+
         # 停止当前服务
         docker-compose down
-        
+
         # 恢复备份
         sudo cp -r /opt/backups/{backup_id}/data . 2>/dev/null || true
         sudo cp /opt/backups/{backup_id}/.env . 2>/dev/null || true
         sudo cp /opt/backups/{backup_id}/docker-compose.yml . 2>/dev/null || true
-        
+
         # 重新启动服务
         docker-compose up -d
-        
+
         echo "回滚完成"
         """
 

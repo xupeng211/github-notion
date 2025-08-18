@@ -7,9 +7,9 @@
 import subprocess
 import sys
 import time
-import requests
-import os
 from pathlib import Path
+
+import requests
 
 # AWS 配置
 AWS_SERVER = "3.35.106.116"

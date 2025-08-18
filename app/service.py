@@ -549,10 +549,10 @@ def replay_deadletters_once(secret_token: str) -> int:
             )
 
             # Process as GitHub event
-            import asyncio
+            import asyncio as async_loop  # 避免与循环变量冲突
 
             try:
-                ok, _ = asyncio.run(
+                ok, _ = async_loop.run(
                     async_process_github_event(payload, os.getenv("GITHUB_WEBHOOK_SECRET", ""), sig, "replay")
                 )
                 if ok:

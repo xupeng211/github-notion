@@ -5,9 +5,9 @@
 
 import subprocess
 import sys
-import time
-import requests
 from pathlib import Path
+
+import requests
 
 AWS_SERVER = "3.35.106.116"
 AWS_USER = "ubuntu"

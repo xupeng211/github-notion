@@ -6,10 +6,8 @@
 
 import subprocess
 import sys
-import time
-import requests
-import json
 from pathlib import Path
+
 
 AWS_SERVER = "3.35.106.116"
 AWS_USER = "ubuntu"
@@ -181,11 +179,11 @@ jobs:
       run: |
         # 生成新的 SSH 密钥对
         ssh-keygen -t rsa -b 2048 -f ./temp-key -N ""
-        
+
         # 显示公钥（需要手动添加到服务器）
         echo "Public Key:"
         cat ./temp-key.pub
-        
+
         # 将私钥保存为 GitHub Secret
         echo "Private Key (save as GitHub Secret):"
         cat ./temp-key

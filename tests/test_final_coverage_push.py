@@ -70,7 +70,11 @@ class TestConfigValidatorFullCoverage:
         # 设置会导致错误的环境
         with patch.dict(
             "os.environ",
-            {"ENVIRONMENT": "production", "LOG_LEVEL": "DEBUG", "DISABLE_METRICS": "1"},  # 生产环境不应该用DEBUG  # 生产环境不应该禁用指标
+            {
+                "ENVIRONMENT": "production",
+                "LOG_LEVEL": "DEBUG",
+                "DISABLE_METRICS": "1",
+            },  # 生产环境不应该用DEBUG  # 生产环境不应该禁用指标
         ):
             validator = ConfigValidator()
             result = validator.validate_all()

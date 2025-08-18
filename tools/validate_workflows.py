@@ -8,16 +8,16 @@ GitHub Workflows Secrets 校验工具
 作者：DevOps Assistant
 """
 
+import argparse
+import json
 import os
 import re
-import sys
-import json
 import subprocess
-import argparse
-from pathlib import Path
-from typing import Dict, List, Set, Tuple
+import sys
 from dataclasses import dataclass
-import yaml
+from pathlib import Path
+from typing import Dict, List, Set
+
 
 
 # 颜色定义
@@ -162,7 +162,7 @@ class WorkflowValidator:
     def analyze_differences(self, workflow_secrets: Dict[str, SecretInfo], current_secrets: Set[str]) -> Dict:
         """分析差异"""
         workflow_secret_names = set(workflow_secrets.keys())
-        expected_secret_names = set(self.expected_secrets.keys())
+        set(self.expected_secrets.keys())
         deprecated_secret_names = set(self.deprecated_secrets.keys())
 
         # 分类分析

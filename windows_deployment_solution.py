@@ -6,10 +6,8 @@ Windows 服务器部署解决方案
 
 import subprocess
 import sys
-import time
+
 import requests
-import json
-from pathlib import Path
 
 AWS_SERVER = "3.35.106.116"
 
@@ -230,7 +228,7 @@ class GitHubNotionService(win32serviceutil.ServiceFramework):
     def SvcDoRun(self):
         os.chdir(r"C:\github-notion-sync")
         self.process = subprocess.Popen([
-            "python", "-m", "uvicorn", "app.server:app", 
+            "python", "-m", "uvicorn", "app.server:app",
             "--host", "0.0.0.0", "--port", "8000"
         ])
         win32event.WaitForSingleObject(self.hWaitStop, win32event.INFINITE)

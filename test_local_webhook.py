@@ -3,10 +3,11 @@
 测试本地 GitHub Webhook 功能
 """
 
-import requests
-import json
-import hmac
 import hashlib
+import hmac
+import json
+
+import requests
 
 
 def create_github_signature(payload_body, secret):

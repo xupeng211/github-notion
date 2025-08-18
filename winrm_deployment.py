@@ -3,12 +3,11 @@
 通过 WinRM 部署到 Windows 服务器
 """
 
-import winrm
 import sys
 import time
+
 import requests
-import json
-from pathlib import Path
+import winrm
 
 AWS_SERVER = "3.35.106.116"
 

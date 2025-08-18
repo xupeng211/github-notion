@@ -4,18 +4,16 @@
 用于验证系统功能和提供临时服务
 """
 
-from fastapi import FastAPI, Request, HTTPException, BackgroundTasks
-from fastapi.responses import JSONResponse
-import uvicorn
+import asyncio
 import hashlib
 import hmac
 import json
 import logging
-import os
 import sqlite3
 from datetime import datetime
-from typing import Dict, Any
-import asyncio
+
+import uvicorn
+from fastapi import BackgroundTasks, FastAPI, HTTPException, Request
 
 # 配置日志
 logging.basicConfig(level=logging.INFO)
@@ -79,8 +77,8 @@ def save_event(event_id: str, source: str, event_type: str, payload: dict):
 
         cursor.execute(
             """
-            INSERT OR REPLACE INTO sync_events 
-            (event_id, source, event_type, payload) 
+            INSERT OR REPLACE INTO sync_events
+            (event_id, source, event_type, payload)
             VALUES (?, ?, ?, ?)
         """,
             (event_id, source, event_type, json.dumps(payload)),
@@ -223,9 +221,9 @@ async def get_events():
         cursor = conn.cursor()
         cursor.execute(
             """
-            SELECT event_id, source, event_type, processed_at, status 
-            FROM sync_events 
-            ORDER BY processed_at DESC 
+            SELECT event_id, source, event_type, processed_at, status
+            FROM sync_events
+            ORDER BY processed_at DESC
             LIMIT 50
         """
         )
