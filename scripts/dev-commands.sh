@@ -139,6 +139,32 @@ core_business_test() {
     fi
 }
 
+# API 集成测试命令
+api_integration_test() {
+    echo -e "${BLUE}🟢 API 集成测试...${NC}"
+
+    if [ -f "./run-api-integration-tests.sh" ]; then
+        ./run-api-integration-tests.sh
+    else
+        echo -e "${YELLOW}⚠️  API 集成测试脚本不存在${NC}"
+        echo "运行以下命令设置 API 集成测试:"
+        echo "  ./setup-priority-tests.sh"
+    fi
+}
+
+# 运行所有优先级测试命令
+all_priority_tests() {
+    echo -e "${BLUE}🚀 运行所有优先级测试...${NC}"
+
+    if [ -f "./run-all-priority-tests.sh" ]; then
+        ./run-all-priority-tests.sh
+    else
+        echo -e "${YELLOW}⚠️  综合测试脚本不存在${NC}"
+        echo "运行以下命令设置完整测试体系:"
+        echo "  ./setup-priority-tests.sh"
+    fi
+}
+
 # 导出函数
 export -f smart_commit
 export -f safe_push
@@ -147,6 +173,8 @@ export -f quick_fix
 export -f local_test
 export -f security_test
 export -f core_business_test
+export -f api_integration_test
+export -f all_priority_tests
 
 echo -e "${GREEN}🛠️ 开发者命令已加载！${NC}"
 echo ""
@@ -156,6 +184,10 @@ echo -e "  ${PURPLE}safe_push${NC}           - 安全推送（诊断 + 推送）
 echo -e "  ${PURPLE}dev_flow \"消息\"${NC}     - 完整流程（修复 + 提交 + 推送）"
 echo -e "  ${PURPLE}quick_fix${NC}           - 快速修复代码问题"
 echo -e "  ${PURPLE}local_test${NC}          - 本地构建测试"
+echo ""
+echo -e "${CYAN}🧪 测试命令:${NC}"
 echo -e "  ${PURPLE}security_test${NC}       - 运行安全测试（30秒）"
 echo -e "  ${PURPLE}core_business_test${NC}  - 运行核心业务逻辑测试（1分钟）"
+echo -e "  ${PURPLE}api_integration_test${NC} - 运行 API 集成测试（2分钟）"
+echo -e "  ${PURPLE}all_priority_tests${NC}  - 运行所有优先级测试（5分钟）"
 echo ""
