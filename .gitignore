@@ -58,3 +58,21 @@ htmlcov/
 
 # Alembic
 alembic/versions/*.pyc
+
+# 临时开发文件
+*-test*.sh
+*-analysis*/
+*-logs/
+*-backup/
+build_diagnostics_*.md
+quick-*.sh
+check-*.sh
+analyze-*.sh
+simulate-*.sh
+get-*.sh
+final-*.sh
+organize-*.sh
+execute-*.sh
+
+# 清理备份
+.cleanup-backup/
