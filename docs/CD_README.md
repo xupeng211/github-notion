@@ -420,3 +420,6 @@ disallow_untyped_defs = false
 - 考虑暂时调整 `pyproject.toml` 中的严格程度
 
 **记住：目标是渐进改进，不是一次性完美！** 🎯
+
+---
+*最后更新: 2025-08-18 - CI修复完成，覆盖率要求调整为25%，GitHub Actions应该正常触发*
