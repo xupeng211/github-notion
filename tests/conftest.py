@@ -90,9 +90,23 @@ def worker_id(request):
 
 
 def pytest_configure_node(node):
-    """为每个 worker 配置独立的数据库"""
-    worker_id = getattr(node, "workerinput", {}).get("workerid", "master")
-    # 为每个 worker 设置独立的数据库路径
-    test_db_dir = f"test_data_{worker_id}"
+    """为每个 worker 配置独立的数据库 - 兼容新版本pytest"""
+    try:
+        worker_id = getattr(node, "workerinput", {}).get("workerid", "master")
+        # 为每个 worker 设置独立的数据库路径
+        test_db_dir = f"test_data_{worker_id}"
+        os.makedirs(test_db_dir, exist_ok=True)
+        os.environ["DB_URL"] = f"sqlite:///{test_db_dir}/test.db"
+    except Exception:
+        # 如果钩子不被支持，使用默认配置
+        pass
+
+
+@pytest.fixture(scope="session", autouse=True)
+def setup_test_environment():
+    """自动设置测试环境，替代pytest_configure_node"""
+    # 设置默认测试数据库
+    test_db_dir = "test_data_gw0"
     os.makedirs(test_db_dir, exist_ok=True)
-    os.environ["DB_URL"] = f"sqlite:///{test_db_dir}/test.db"
+    if "DB_URL" not in os.environ:
+        os.environ["DB_URL"] = f"sqlite:///{test_db_dir}/test.db"
