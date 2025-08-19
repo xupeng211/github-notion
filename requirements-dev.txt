@@ -11,6 +11,9 @@ pytest>=7.4.0
 pytest-cov>=4.1.0
 pytest-asyncio>=0.23.0
 pytest-xdist>=3.5.0
+pytest-mock>=3.12.0
+pytest-benchmark>=4.0.0
+responses>=0.25.0
 coverage[toml]>=7.5.0
 httpx>=0.27.0
 

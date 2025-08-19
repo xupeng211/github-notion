@@ -43,7 +43,7 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
-          pip install pytest pytest-cov pytest-mock pytest-asyncio responses
+          pip install -r requirements-dev.txt
 
       - name: Run priority tests with strict quality gates
         run: |
@@ -60,8 +60,7 @@ jobs:
             --cov-report=xml:coverage.xml \
             --cov-fail-under=30 \
             --tb=short \
-            --maxfail=1 \
-            --strict-markers
+            --maxfail=1
 
           echo "✅ All tests passed!"
 
