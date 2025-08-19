@@ -8,6 +8,16 @@ on:
       - 'tests/**'
       - 'Dockerfile*'
       - '.github/workflows/**'
+  pull_request:
+    branches: [ main ]
+    paths:
+      - 'app/**'
+      - 'tests/**'
+      - 'Dockerfile*'
+      - 'infra/docker/**'
+      - '.github/workflows/**'
+      - 'scripts/**'
+      - 'security/**'
   workflow_dispatch:
 
 concurrency:
