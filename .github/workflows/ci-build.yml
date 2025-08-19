@@ -93,13 +93,47 @@ jobs:
           set -euo pipefail
           IMG="ghcr.io/${{ github.repository }}/app:${{ github.sha }}"
           echo "📦 生成SBOM (Software Bill of Materials)..."
-          
+
+          # 安装syft
           curl -sSfL https://raw.githubusercontent.com/anchore/syft/main/install.sh | sh -s -- -b /usr/local/bin
-          syft packages "$IMG" -o spdx-json > sbom.spdx.json
-          
+
+          # 生成SBOM
+          if syft packages "$IMG" -o spdx-json > sbom.spdx.json 2>/dev/null; then
+            echo "✅ syft SBOM生成成功"
+          else
+            echo "⚠️ syft失败，尝试docker sbom..."
+            if docker sbom "$IMG" -o spdx-json > sbom.spdx.json 2>/dev/null; then
+              echo "✅ docker sbom生成成功"
+            else
+              echo "❌ SBOM生成失败"
+              exit 1
+            fi
+          fi
+
+          # 验证SBOM
           SBOM_SIZE=$(wc -c < sbom.spdx.json)
-          echo "SBOM size: ${SBOM_SIZE} bytes"
+          echo "SBOM bytes: ${SBOM_SIZE}"
           echo "SBOM文件大小: ${SBOM_SIZE} 字节"
+
+          # 检查包数量
+          if command -v jq >/dev/null 2>&1; then
+            PACKAGE_COUNT=$(jq '.packages | length' sbom.spdx.json 2>/dev/null || echo "0")
+            echo "包数量: ${PACKAGE_COUNT}"
+          else
+            echo "jq不可用，跳过包数量检查"
+          fi
+
+          # 显示SBOM头部内容
+          echo "SBOM头部内容:"
+          head -n 20 sbom.spdx.json
+
+          # 验证SBOM大小
+          if [[ $SBOM_SIZE -lt 1000 ]]; then
+            echo "❌ SBOM文件过小，可能生成失败"
+            exit 1
+          else
+            echo "✅ SBOM文件大小验证通过"
+          fi
 
       - name: Trivy Scan
         run: |
