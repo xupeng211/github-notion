@@ -21,8 +21,10 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 
 # 配置pip超时和重试
 RUN pip config set global.timeout 120 && \
-    pip config set global.retries 5 \
-    DEBIAN_FRONTEND=noninteractive
+    pip config set global.retries 5
+
+# 设置非交互式安装
+ENV DEBIAN_FRONTEND=noninteractive
 
 # 安装系统依赖
 RUN apt-get update && apt-get install -y --no-install-recommends \
