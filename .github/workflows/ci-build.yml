@@ -99,12 +99,51 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 1  # 只获取最新提交，减少.git大小
 
       - name: Set up Python for basic tests
         uses: actions/setup-python@v4
         with:
           python-version: '3.11'
           cache: 'pip'
+
+      - name: 🚦 Pre-build Fail-Fast Checks
+        run: |
+          echo "🚦 执行构建前检查..."
+
+          # 1. 安装bc计算器（用于脚本计算）
+          sudo apt-get update && sudo apt-get install -y bc
+
+          # 2. 上下文体积检查
+          echo "📊 检查构建上下文大小..."
+          chmod +x scripts/context_size.sh scripts/pretty_size.py
+          if ! ./scripts/context_size.sh; then
+            echo "❌ 构建上下文过大，构建失败"
+            exit 1
+          fi
+
+          # 3. 磁盘空间检查
+          echo "💾 检查磁盘空间..."
+          ROOT_AVAIL=$(df / | awk 'NR==2 {print $4}')
+          ROOT_AVAIL_GB=$((ROOT_AVAIL / 1024 / 1024))
+          echo "可用磁盘空间: ${ROOT_AVAIL_GB}GB"
+
+          if [[ $ROOT_AVAIL_GB -lt 5 ]]; then
+            echo "⚠️ 磁盘空间不足，执行清理..."
+            docker system prune -af || true
+            rm -rf ~/.cache/pip || true
+
+            # 重新检查
+            ROOT_AVAIL=$(df / | awk 'NR==2 {print $4}')
+            ROOT_AVAIL_GB=$((ROOT_AVAIL / 1024 / 1024))
+            if [[ $ROOT_AVAIL_GB -lt 5 ]]; then
+              echo "❌ 磁盘空间仍然不足: ${ROOT_AVAIL_GB}GB < 5GB"
+              exit 1
+            fi
+          fi
+
+          echo "✅ 磁盘空间充足: ${ROOT_AVAIL_GB}GB"
 
       - name: Run basic smoke tests
         run: |
@@ -155,12 +194,31 @@ jobs:
       #   id: meta
       #   uses: docker/metadata-action@v5
 
-      - name: Skip Docker build (CI Environment Issues)
+      - name: 🐳 Build Docker Image with BuildKit
         run: |
-          echo "🚫 Skipping Docker build due to CI environment limitations"
-          echo "✅ Code validation completed successfully"
-          echo "📝 Docker build can be performed locally or in production environment"
-          echo "🎉 CI/CD pipeline completed - ready for manual deployment"
+          echo "🐳 构建Docker镜像..."
+
+          # 设置环境变量
+          export DOCKER_BUILDKIT=1
+          export CI_COMMIT_SHA=$(git rev-parse --short HEAD)
+          export REGISTRY_SERVER="ghcr.io"
+          export CI_PROJECT_PATH="${{ github.repository }}"
+
+          # 创建并使用buildx builder
+          docker buildx create --use --name ci || true
+          docker buildx inspect --bootstrap
+
+          # 执行构建
+          docker buildx build \
+            --platform linux/amd64 \
+            --progress=plain \
+            -t ${REGISTRY_SERVER}/${CI_PROJECT_PATH}/app:${CI_COMMIT_SHA} \
+            -f infra/docker/api.Dockerfile \
+            --cache-to type=gha,mode=max \
+            --cache-from type=gha \
+            .
+
+          echo "✅ Docker镜像构建成功"
 
       - name: CI/CD Pipeline Summary
         run: |
