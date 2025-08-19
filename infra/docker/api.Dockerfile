@@ -17,7 +17,11 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     PIP_NO_CACHE_DIR=1 \
     PIP_DISABLE_PIP_VERSION_CHECK=1 \
     PIP_DEFAULT_TIMEOUT=300 \
-    PIP_RETRIES=3 \
+    PIP_RETRIES=5
+
+# 配置pip超时和重试
+RUN pip config set global.timeout 120 && \
+    pip config set global.retries 5 \
     DEBIAN_FRONTEND=noninteractive
 
 # 安装系统依赖

@@ -216,6 +216,9 @@ jobs:
 
           echo "构建指标已保存到 build-metrics/metrics.json"
 
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
         with:
@@ -277,34 +280,29 @@ jobs:
       #   uses: docker/metadata-action@v5
 
       - name: 🐳 Build Docker Image with BuildKit
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: infra/docker/api.Dockerfile
+          platforms: linux/amd64
+          push: false
+          tags: ghcr.io/${{ github.repository }}/app:${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          build-args: |
+            PIP_INDEX_URL=https://pypi.org/simple
+
+      - name: ✅ Build Success Log
         run: |
-          echo "🐳 构建Docker镜像..."
-
-          # 设置环境变量
-          export DOCKER_BUILDKIT=1
-          export CI_COMMIT_SHA=$(git rev-parse --short HEAD)
-          export REGISTRY_SERVER="ghcr.io"
-          export CI_PROJECT_PATH="${{ github.repository }}"
-
-          # 创建并使用buildx builder
-          docker buildx create --use --name ci || true
-          docker buildx inspect --bootstrap
-
-          # 执行构建
-          docker buildx build \
-            --platform linux/amd64 \
-            --progress=plain \
-            -t ${REGISTRY_SERVER}/${CI_PROJECT_PATH}/app:${CI_COMMIT_SHA} \
-            -f infra/docker/api.Dockerfile \
-            --cache-to type=gha,mode=max \
-            --cache-from type=gha \
-            .
-
           echo "✅ Docker镜像构建成功"
+          echo "镜像标签: ghcr.io/${{ github.repository }}/app:${{ github.sha }}"
+          echo "平台: linux/amd64"
+          echo "Dockerfile: infra/docker/api.Dockerfile"
 
-          # 7. 生成SBOM
+      - name: 📦 Generate SBOM
+        run: |
           echo "📦 生成SBOM (Software Bill of Materials)..."
-          IMG="${REGISTRY_SERVER}/${CI_PROJECT_PATH}/app:${CI_COMMIT_SHA}"
+          IMG="ghcr.io/${{ github.repository }}/app:${{ github.sha }}"
 
           # 安装syft
           echo "安装syft..."
@@ -327,12 +325,15 @@ jobs:
           echo "SBOM文件大小: ${SBOM_SIZE} 字节"
           echo "SBOM文件大小(可读): $(du -h sbom.spdx.json 2>/dev/null | cut -f1 || echo '0B')"
 
-          # 8. 运行时冒烟验证
+      - name: 🧪 Smoke Tests
+        run: |
           echo "🧪 执行运行时冒烟验证..."
           ./scripts/smoke_test.sh
 
-          # 9. 安全扫描
+      - name: 🔒 Security Scan
+        run: |
           echo "🔒 执行安全扫描..."
+          IMG="ghcr.io/${{ github.repository }}/app:${{ github.sha }}"
 
           # 安装trivy
           echo "安装trivy..."
