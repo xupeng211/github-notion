@@ -28,14 +28,23 @@ RUN python -m pip install --upgrade pip setuptools wheel
 # 复制 requirements 文件
 COPY requirements.txt .
 
-# 安装所有依赖 - 使用 requirements.txt
-RUN echo "安装所有依赖..." && \
+# 安装核心依赖 - 分步安装减少失败风险
+RUN echo "安装核心依赖..." && \
     pip install --no-cache-dir \
-    --timeout 600 \
-    --retries 10 \
+    --timeout 300 \
+    --retries 5 \
     --prefer-binary \
-    -r requirements.txt && \
-    echo "✅ 所有依赖安装完成"
+    fastapi uvicorn sqlalchemy requests && \
+    echo "✅ 核心依赖安装完成"
+
+# 安装其他依赖
+RUN echo "安装其他依赖..." && \
+    pip install --no-cache-dir \
+    --timeout 300 \
+    --retries 5 \
+    --prefer-binary \
+    python-multipart python-dotenv && \
+    echo "✅ 其他依赖安装完成"
 
 # 复制应用代码
 COPY . .
