@@ -1,0 +1,71 @@
+{
+    "spdxVersion": "SPDX-2.3",
+    "dataLicense": "CC0-1.0",
+    "SPDXID": "SPDXRef-DOCUMENT",
+    "name": "github-notion-app",
+    "documentNamespace": "https://github.com/xupeng211/github-notion/sbom/6e8be0b",
+    "creationInfo": {
+        "created": "2025-08-19T08:52:00.000000Z",
+        "creators": [
+            "Tool: manual-generation"
+        ]
+    },
+    "packages": [
+        {
+            "SPDXID": "SPDXRef-Package-Container",
+            "name": "github-notion-app",
+            "downloadLocation": "NOASSERTION",
+            "filesAnalyzed": false,
+            "copyrightText": "NOASSERTION",
+            "versionInfo": "6e8be0b"
+        },
+        {
+            "SPDXID": "SPDXRef-Package-Python",
+            "name": "python",
+            "downloadLocation": "https://python.org",
+            "filesAnalyzed": false,
+            "copyrightText": "Python Software Foundation",
+            "versionInfo": "3.11"
+        },
+        {
+            "SPDXID": "SPDXRef-Package-FastAPI",
+            "name": "fastapi",
+            "downloadLocation": "https://pypi.org/project/fastapi/",
+            "filesAnalyzed": false,
+            "copyrightText": "Sebastian Ramirez",
+            "versionInfo": "0.104.1"
+        },
+        {
+            "SPDXID": "SPDXRef-Package-SQLAlchemy",
+            "name": "sqlalchemy",
+            "downloadLocation": "https://pypi.org/project/SQLAlchemy/",
+            "filesAnalyzed": false,
+            "copyrightText": "Mike Bayer",
+            "versionInfo": "2.0.23"
+        },
+        {
+            "SPDXID": "SPDXRef-Package-Requests",
+            "name": "requests",
+            "downloadLocation": "https://pypi.org/project/requests/",
+            "filesAnalyzed": false,
+            "copyrightText": "Kenneth Reitz",
+            "versionInfo": "2.31.0"
+        },
+        {
+            "SPDXID": "SPDXRef-Package-Uvicorn",
+            "name": "uvicorn",
+            "downloadLocation": "https://pypi.org/project/uvicorn/",
+            "filesAnalyzed": false,
+            "copyrightText": "Tom Christie",
+            "versionInfo": "0.24.0"
+        },
+        {
+            "SPDXID": "SPDXRef-Package-Pydantic",
+            "name": "pydantic",
+            "downloadLocation": "https://pypi.org/project/pydantic/",
+            "filesAnalyzed": false,
+            "copyrightText": "Samuel Colvin",
+            "versionInfo": "2.5.0"
+        }
+    ]
+}

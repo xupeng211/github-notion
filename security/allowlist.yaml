@@ -1,0 +1,122 @@
+# 🛡️ 安全漏洞白名单
+# 记录已评估并接受的安全漏洞，包含到期时间和豁免理由
+
+version: "1.0"
+last_updated: "2025-08-19"
+maintainer: "DevOps Team"
+
+# 漏洞白名单
+allowlist:
+  # setuptools相关漏洞
+  - id: "CVE-2024-6345"
+    package: "setuptools"
+    version: "65.5.1"
+    severity: "HIGH"
+    reason: "远程代码执行漏洞，但在容器化环境中风险较低，且应用不使用package_index模块"
+    risk_assessment: "LOW"
+    mitigation: "容器化部署，网络隔离，不使用相关功能模块"
+    expires: "2025-10-01"
+    reviewer: "Security Team"
+    status: "approved"
+    
+  - id: "CVE-2025-47273"
+    package: "setuptools"
+    version: "65.5.1"
+    severity: "HIGH"
+    reason: "路径遍历漏洞，应用不使用PackageIndex功能"
+    risk_assessment: "LOW"
+    mitigation: "应用不使用setuptools的PackageIndex功能"
+    expires: "2025-10-01"
+    reviewer: "Security Team"
+    status: "approved"
+    
+  # starlette相关漏洞
+  - id: "CVE-2024-47874"
+    package: "starlette"
+    version: "0.37.2"
+    severity: "HIGH"
+    reason: "DoS漏洞通过multipart/form-data，生产环境有负载均衡和限流保护"
+    risk_assessment: "MEDIUM"
+    mitigation: "负载均衡器限制请求大小，应用层有RequestSizeLimitMiddleware"
+    expires: "2025-09-15"
+    reviewer: "Security Team"
+    status: "approved"
+    upgrade_plan: "等待starlette 0.40.0兼容性验证"
+
+# 系统级漏洞（仅记录，不影响部署）
+system_vulnerabilities:
+  # curl相关漏洞
+  - id: "CVE-2023-23914"
+    package: "curl"
+    severity: "CRITICAL"
+    reason: "HSTS绕过漏洞，应用不直接使用curl进行HTTPS请求"
+    status: "will_not_fix"
+    
+  - id: "CVE-2022-42916"
+    package: "curl"
+    severity: "HIGH"
+    reason: "HSTS绕过漏洞，应用不依赖HSTS功能"
+    status: "will_not_fix"
+    
+  # sqlite相关漏洞
+  - id: "CVE-2025-6965"
+    package: "libsqlite3-0"
+    severity: "CRITICAL"
+    reason: "整数截断漏洞，应用使用PostgreSQL，不直接使用SQLite"
+    status: "fix_deferred"
+    
+  # zlib相关漏洞
+  - id: "CVE-2023-45853"
+    package: "zlib1g"
+    severity: "CRITICAL"
+    reason: "ZIP处理漏洞，应用不处理ZIP文件"
+    status: "will_not_fix"
+
+# 豁免策略
+exemption_policies:
+  # 系统级包豁免策略
+  system_packages:
+    - pattern: "curl*"
+      reason: "应用不直接使用curl"
+      max_severity: "CRITICAL"
+      
+    - pattern: "libsqlite3*"
+      reason: "应用使用PostgreSQL，不使用SQLite"
+      max_severity: "CRITICAL"
+      
+    - pattern: "zlib*"
+      reason: "应用不处理压缩文件"
+      max_severity: "HIGH"
+      
+  # Python包豁免策略
+  python_packages:
+    - pattern: "setuptools"
+      reason: "仅在构建时使用，运行时不暴露相关功能"
+      max_severity: "HIGH"
+      requires_review: true
+      
+# 升级计划
+upgrade_schedule:
+  - package: "starlette"
+    current_version: "0.37.2"
+    target_version: "0.40.0"
+    planned_date: "2025-09-01"
+    blocker: "等待FastAPI兼容性确认"
+    
+  - package: "setuptools"
+    current_version: "65.5.1"
+    target_version: "78.1.1"
+    planned_date: "2025-09-15"
+    blocker: "需要测试构建兼容性"
+
+# 监控和审查
+monitoring:
+  review_frequency: "monthly"
+  next_review: "2025-09-19"
+  escalation_threshold: "7_days_before_expiry"
+  
+# 联系信息
+contacts:
+  security_team: "security@company.com"
+  devops_team: "devops@company.com"
+  escalation: "cto@company.com"
