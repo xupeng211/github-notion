@@ -6,7 +6,7 @@
 # ================================
 # 阶段1: 依赖构建阶段
 # ================================
-FROM python:3.11-slim-bullseye AS dependencies
+FROM python:3.11-slim-bullseye@sha256:9e25f400253a5fa3191813d6a67eb801ca1e6f012b3bd2588fa6920b59e3eba6 AS dependencies
 
 # 设置工作目录
 WORKDIR /app
@@ -47,7 +47,7 @@ RUN echo "🔧 安装Python依赖..." && \
 # ================================
 # 阶段2: 运行时阶段
 # ================================
-FROM python:3.11-slim-bullseye AS runtime
+FROM python:3.11-slim-bullseye@sha256:9e25f400253a5fa3191813d6a67eb801ca1e6f012b3bd2588fa6920b59e3eba6 AS runtime
 
 # 设置工作目录
 WORKDIR /app
