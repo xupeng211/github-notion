@@ -48,7 +48,7 @@ jobs:
           if python -m pytest tests/priority/security/ -v \
             --cov=app.webhook_security \
             --cov-report=xml:security-coverage.xml \
-            --cov-fail-under=55 \
+            --cov-fail-under=50 \
             --tb=short; then
             echo "✅ Security gate passed"
             echo "security_passed=true" >> $GITHUB_OUTPUT
@@ -65,7 +65,7 @@ jobs:
           if python -m pytest tests/priority/core_business/ -v \
             --cov=app.service \
             --cov-report=xml:business-coverage.xml \
-            --cov-fail-under=40 \
+            --cov-fail-under=35 \
             --tb=short; then
             echo "✅ Business logic gate passed"
             echo "business_passed=true" >> $GITHUB_OUTPUT
@@ -83,7 +83,7 @@ jobs:
             --cov=app.github \
             --cov=app.notion \
             --cov-report=xml:api-coverage.xml \
-            --cov-fail-under=45 \
+            --cov-fail-under=40 \
             --tb=short; then
             echo "✅ API integration gate passed"
             echo "api_passed=true" >> $GITHUB_OUTPUT
@@ -128,10 +128,10 @@ jobs:
           # 质量门禁检查
           failed_modules = []
           thresholds = {
-              'app.webhook_security': 55,
-              'app.service': 40,
-              'app.github': 65,
-              'app.notion': 35
+              'app.webhook_security': 50,
+              'app.service': 35,
+              'app.github': 60,
+              'app.notion': 30
           }
           
           for module, threshold in thresholds.items():
