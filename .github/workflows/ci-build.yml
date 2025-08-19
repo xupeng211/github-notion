@@ -145,6 +145,26 @@ jobs:
 
           echo "✅ 磁盘空间充足: ${ROOT_AVAIL_GB}GB"
 
+          # 4. 上下文大小守护检查
+          echo "🛡️ 上下文大小守护检查..."
+          CONTEXT_SIZE_KB=$(./scripts/context_size.sh 2>/dev/null | grep "构建上下文大小(压缩后)" | grep -o '[0-9]*KB' | sed 's/KB//' || echo "0")
+          CONTEXT_SIZE_MB=$((CONTEXT_SIZE_KB / 1024))
+
+          echo "压缩后上下文大小: ${CONTEXT_SIZE_MB}MB"
+
+          if [[ $CONTEXT_SIZE_MB -gt 200 ]]; then
+            echo "❌ 构建上下文过大: ${CONTEXT_SIZE_MB}MB > 200MB"
+            echo "💡 请检查 .dockerignore 白名单配置"
+            echo "📋 确保以下规则正确配置:"
+            echo "   !app/**"
+            echo "   !infra/**"
+            echo "   !requirements*.txt"
+            echo "   !scripts/**"
+            exit 1
+          fi
+
+          echo "✅ 构建上下文大小合理: ${CONTEXT_SIZE_MB}MB ≤ 200MB"
+
       - name: Run basic smoke tests
         run: |
           echo "🧪 Running basic smoke tests..."
@@ -177,7 +197,7 @@ jobs:
           echo "Available space: $(df -h /)"
           echo "Memory info: $(free -h)"
           echo "CPU info: $(nproc) cores"
-          echo "Dockerfile.github exists: $(test -f Dockerfile.github && echo 'Yes' || echo 'No')"
+          echo "infra/docker/api.Dockerfile exists: $(test -f infra/docker/api.Dockerfile && echo 'Yes' || echo 'No')"
           echo "=== 网络连接测试 ==="
           ping -c 3 pypi.org || echo "PyPI ping 失败"
           curl -I https://pypi.org/ || echo "PyPI HTTP 测试失败"
@@ -229,7 +249,7 @@ jobs:
           echo "✅ Core module imports: PASSED"
           echo "📋 Next steps:"
           echo "  - Local testing: Use 'python -m pytest tests/priority/' (68 tests, 45.94% coverage)"
-          echo "  - Local Docker build: Use 'docker build -f Dockerfile.github .'"
+          echo "  - Local Docker build: Use 'docker buildx build -f infra/docker/api.Dockerfile .'"
           echo "  - Manual deployment: Deploy to production when ready"
           echo "🚀 Ready for production deployment!"
 
