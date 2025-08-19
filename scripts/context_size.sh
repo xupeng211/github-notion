@@ -83,12 +83,12 @@ if tar -cf "$TAR_FILE" $(cat "$EXCLUDE_FILE") . 2>/dev/null; then
     COMPRESSED_SIZE=$(stat -c%s "$TAR_FILE.gz")
     echo "构建上下文大小(压缩后): $(python3 "$SCRIPT_DIR/pretty_size.py" $COMPRESSED_SIZE)"
     
-    # 计算压缩比
-    COMPRESSION_RATIO=$(echo "scale=1; $COMPRESSED_SIZE * 100 / $TAR_SIZE" | bc -l)
+    # 计算压缩比（使用Python避免bc依赖）
+    COMPRESSION_RATIO=$(python3 -c "print(f'{$COMPRESSED_SIZE * 100 / $TAR_SIZE:.1f}')" 2>/dev/null || echo "0.0")
     echo "压缩比: ${COMPRESSION_RATIO}%"
-    
-    # 计算减少比例
-    REDUCTION_RATIO=$(echo "scale=1; ($ORIGINAL_SIZE - $TAR_SIZE) * 100 / $ORIGINAL_SIZE" | bc -l)
+
+    # 计算减少比例（使用Python避免bc依赖）
+    REDUCTION_RATIO=$(python3 -c "print(f'{($ORIGINAL_SIZE - $TAR_SIZE) * 100 / $ORIGINAL_SIZE:.1f}')" 2>/dev/null || echo "0.0")
     echo "上下文减少: ${REDUCTION_RATIO}%"
     
 else

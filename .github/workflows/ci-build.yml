@@ -122,12 +122,17 @@ jobs:
         run: |
           echo "🚦 执行构建前检查..."
 
-          # 1. 安装bc计算器（用于脚本计算）
-          sudo apt-get update && sudo apt-get install -y bc
+          # 1. 安装必要工具
+          sudo apt-get update && sudo apt-get install -y tar gzip
 
-          # 2. 上下文体积检查
+          # 2. 检查关键文件存在
+          echo "📋 检查关键文件..."
+          ls -la scripts/context_size.sh scripts/pretty_size.py infra/docker/api.Dockerfile
+
+          # 3. 上下文体积检查
           echo "📊 检查构建上下文大小..."
           chmod +x scripts/context_size.sh scripts/pretty_size.py
+          echo "执行上下文大小检查..."
           if ! ./scripts/context_size.sh; then
             echo "❌ 构建上下文过大，构建失败"
             exit 1
