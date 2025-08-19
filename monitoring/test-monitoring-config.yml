@@ -1,0 +1,215 @@
+# 🔍 测试监控配置
+# 集成测试结果到监控系统
+
+# Prometheus 指标配置
+prometheus:
+  metrics:
+    # 测试执行指标
+    test_execution_duration_seconds:
+      type: histogram
+      description: "测试执行时间分布"
+      labels: ["test_type", "test_name", "status"]
+      buckets: [0.1, 0.5, 1.0, 5.0, 10.0, 30.0, 60.0]
+    
+    test_success_total:
+      type: counter
+      description: "测试成功次数"
+      labels: ["test_type", "test_suite"]
+    
+    test_failure_total:
+      type: counter
+      description: "测试失败次数"
+      labels: ["test_type", "test_suite", "failure_reason"]
+    
+    # 覆盖率指标
+    code_coverage_percentage:
+      type: gauge
+      description: "代码覆盖率百分比"
+      labels: ["module", "test_type"]
+    
+    # 性能指标
+    performance_benchmark_duration_seconds:
+      type: histogram
+      description: "性能基准测试时间"
+      labels: ["benchmark_name", "payload_size"]
+      buckets: [0.001, 0.005, 0.01, 0.05, 0.1, 0.5, 1.0]
+    
+    performance_throughput_ops_per_second:
+      type: gauge
+      description: "性能吞吐量 (操作/秒)"
+      labels: ["operation_type"]
+
+# Grafana 仪表板配置
+grafana:
+  dashboards:
+    test_overview:
+      title: "🧪 测试概览仪表板"
+      panels:
+        - title: "测试执行状态"
+          type: stat
+          targets:
+            - expr: "sum(rate(test_success_total[5m]))"
+              legend: "成功率"
+        
+        - title: "测试覆盖率趋势"
+          type: graph
+          targets:
+            - expr: "code_coverage_percentage"
+              legend: "{{module}} 覆盖率"
+        
+        - title: "性能基准趋势"
+          type: graph
+          targets:
+            - expr: "performance_benchmark_duration_seconds"
+              legend: "{{benchmark_name}}"
+    
+    security_tests:
+      title: "🔐 安全测试监控"
+      panels:
+        - title: "安全测试通过率"
+          type: stat
+          targets:
+            - expr: "rate(test_success_total{test_type='security'}[5m])"
+        
+        - title: "Webhook 验证性能"
+          type: graph
+          targets:
+            - expr: "performance_benchmark_duration_seconds{benchmark_name=~'webhook.*'}"
+
+# 告警规则配置
+alerting:
+  rules:
+    # 测试失败告警
+    test_failure_alert:
+      alert: "TestFailureAlert"
+      expr: "increase(test_failure_total[5m]) > 0"
+      for: "1m"
+      labels:
+        severity: "critical"
+        team: "development"
+      annotations:
+        summary: "测试失败检测"
+        description: "{{ $labels.test_type }} 测试失败: {{ $labels.failure_reason }}"
+    
+    # 覆盖率下降告警
+    coverage_drop_alert:
+      alert: "CoverageDropAlert"
+      expr: "code_coverage_percentage < 50"
+      for: "5m"
+      labels:
+        severity: "warning"
+        team: "development"
+      annotations:
+        summary: "代码覆盖率下降"
+        description: "{{ $labels.module }} 模块覆盖率低于 50%: {{ $value }}%"
+    
+    # 性能退化告警
+    performance_degradation_alert:
+      alert: "PerformanceDegradationAlert"
+      expr: "performance_benchmark_duration_seconds > 0.1"
+      for: "2m"
+      labels:
+        severity: "warning"
+        team: "development"
+      annotations:
+        summary: "性能基准退化"
+        description: "{{ $labels.benchmark_name }} 性能超过阈值: {{ $value }}s"
+
+# Slack 通知配置
+notifications:
+  slack:
+    webhook_url: "${SLACK_WEBHOOK_URL}"
+    channels:
+      development: "#development"
+      alerts: "#alerts"
+    
+    templates:
+      test_failure:
+        title: "🚨 测试失败通知"
+        color: "danger"
+        fields:
+          - title: "测试类型"
+            value: "{{ .test_type }}"
+            short: true
+          - title: "失败原因"
+            value: "{{ .failure_reason }}"
+            short: true
+          - title: "时间"
+            value: "{{ .timestamp }}"
+            short: true
+      
+      coverage_report:
+        title: "📊 覆盖率报告"
+        color: "good"
+        fields:
+          - title: "整体覆盖率"
+            value: "{{ .overall_coverage }}%"
+            short: true
+          - title: "变化"
+            value: "{{ .coverage_change }}"
+            short: true
+
+# GitHub 集成配置
+github:
+  status_checks:
+    # 必需的状态检查
+    required_checks:
+      - "security-tests"
+      - "core-business-tests"
+      - "api-integration-tests"
+      - "comprehensive-tests"
+    
+    # 状态检查配置
+    contexts:
+      security_tests:
+        context: "tests/security"
+        description: "安全测试状态"
+        target_url: "${GITHUB_ACTIONS_URL}"
+      
+      coverage_check:
+        context: "coverage/overall"
+        description: "代码覆盖率检查"
+        target_url: "${CODECOV_URL}"
+
+# 测试报告配置
+reporting:
+  # 每日测试报告
+  daily_report:
+    enabled: true
+    schedule: "0 9 * * *"  # 每天上午9点
+    recipients:
+      - "team@company.com"
+    
+    content:
+      - test_summary
+      - coverage_trends
+      - performance_metrics
+      - failure_analysis
+  
+  # 周度质量报告
+  weekly_report:
+    enabled: true
+    schedule: "0 9 * * 1"  # 每周一上午9点
+    recipients:
+      - "team@company.com"
+      - "management@company.com"
+    
+    content:
+      - quality_metrics
+      - coverage_analysis
+      - performance_trends
+      - improvement_recommendations
+
+# 数据保留策略
+retention:
+  metrics:
+    short_term: "7d"    # 详细指标保留7天
+    long_term: "90d"    # 聚合指标保留90天
+  
+  test_results:
+    detailed: "30d"     # 详细测试结果保留30天
+    summary: "1y"       # 测试摘要保留1年
+  
+  performance_data:
+    benchmarks: "90d"   # 性能基准数据保留90天
+    trends: "1y"        # 性能趋势数据保留1年

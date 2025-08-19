@@ -165,6 +165,18 @@ all_priority_tests() {
     fi
 }
 
+# 质量改进分析命令
+quality_improvement() {
+    echo -e "${BLUE}📈 质量改进分析...${NC}"
+
+    if [ -f "./run-quality-improvement.sh" ]; then
+        ./run-quality-improvement.sh
+    else
+        echo -e "${YELLOW}⚠️  质量改进脚本不存在${NC}"
+        echo "质量改进功能需要完整的测试体系支持"
+    fi
+}
+
 # 导出函数
 export -f smart_commit
 export -f safe_push
@@ -175,10 +187,11 @@ export -f security_test
 export -f core_business_test
 export -f api_integration_test
 export -f all_priority_tests
+export -f quality_improvement
 
 echo -e "${GREEN}🛠️ 开发者命令已加载！${NC}"
 echo ""
-echo -e "${BLUE}可用命令:${NC}"
+echo -e "${BLUE}🔧 开发命令:${NC}"
 echo -e "  ${PURPLE}smart_commit \"消息\"${NC} - 智能提交（自动修复 + 提交）"
 echo -e "  ${PURPLE}safe_push${NC}           - 安全推送（诊断 + 推送）"
 echo -e "  ${PURPLE}dev_flow \"消息\"${NC}     - 完整流程（修复 + 提交 + 推送）"
@@ -190,4 +203,7 @@ echo -e "  ${PURPLE}security_test${NC}       - 运行安全测试（30秒）"
 echo -e "  ${PURPLE}core_business_test${NC}  - 运行核心业务逻辑测试（1分钟）"
 echo -e "  ${PURPLE}api_integration_test${NC} - 运行 API 集成测试（2分钟）"
 echo -e "  ${PURPLE}all_priority_tests${NC}  - 运行所有优先级测试（5分钟）"
+echo ""
+echo -e "${GREEN}📈 质量命令:${NC}"
+echo -e "  ${PURPLE}quality_improvement${NC} - 质量改进分析（10分钟）"
 echo ""

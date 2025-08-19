@@ -2,7 +2,9 @@
 
 🚀 **部署状态**: 强制触发部署 - $(date '+%Y-%m-%d %H:%M:%S')
 
-[文档入口](./docs/README.md) · [开发环境（dev compose）](#开发环境dev-compose) · ![CI](https://github.com/${GITHUB_REPOSITORY}/actions/workflows/ci.yml/badge.svg) · ![CD](https://github.com/${GITHUB_REPOSITORY}/actions/workflows/cd.yml/badge.svg)
+[文档入口](./docs/README.md) · [开发环境（dev compose）](#开发环境dev-compose) · [测试指南](./TESTING_GUIDE.md)
+
+![CI](https://github.com/${GITHUB_REPOSITORY}/actions/workflows/ci-build.yml/badge.svg) · ![Tests](https://github.com/${GITHUB_REPOSITORY}/actions/workflows/comprehensive-tests.yml/badge.svg) · ![Coverage](https://codecov.io/gh/${GITHUB_REPOSITORY}/branch/main/graph/badge.svg)
 
 ## 🚨 强制性代码质量规则
 
@@ -13,9 +15,37 @@
 📋 **提交前必须执行**：
 ```bash
 make fix && make check  # 修复格式问题并检查质量
+all_priority_tests     # 运行完整测试套件 (推荐)
 ```
 
 🔒 **自动执行**：Git hooks会在提交时自动验证，不合规代码将被拒绝
+
+## 🧪 测试体系
+
+本项目采用企业级三层测试架构，确保代码质量和系统稳定性：
+
+| 测试类型 | 数量 | 覆盖率 | 执行时间 | 命令 |
+|----------|------|--------|----------|------|
+| 🔐 **安全测试** | 19个 | 58% | 30秒 | `security_test` |
+| 🔄 **核心业务测试** | 22个 | 42% | 1分钟 | `core_business_test` |
+| 🌐 **API 集成测试** | 27个 | 48% | 2分钟 | `api_integration_test` |
+| 🚀 **综合测试** | 68个 | 多模块 | 5分钟 | `all_priority_tests` |
+
+### 快速测试命令
+```bash
+# 加载智能开发命令
+source scripts/dev-commands.sh
+
+# 运行所有测试 (推荐)
+all_priority_tests
+
+# 运行特定测试
+security_test           # 安全测试
+core_business_test      # 核心业务逻辑测试
+api_integration_test    # API 集成测试
+```
+
+📖 **详细指南**: [测试体系使用指南](./TESTING_GUIDE.md)
 
 ---
 
