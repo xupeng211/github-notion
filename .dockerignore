@@ -37,7 +37,8 @@ nosetests.xml
 coverage.xml
 *.cover
 .hypothesis/
-.pytest_cache/
+.mypy_cache/
+.ruff_cache/
 
 # 🔧 开发工具
 .vscode/
@@ -52,6 +53,8 @@ venv/
 .venv/
 ENV/
 env/
+.conda/
+.pyenv/
 
 # 🌍 环境变量
 .env
@@ -91,17 +94,44 @@ docker-compose*.yml
 .github/
 .pre-commit-config.yaml
 
-# 🔍 分析报告
+# 🔍 分析报告和临时文件
 *.json
 *.txt
 *.report
+build_diagnostics_*.md
+buildx-debug.log
+ci-docker-build-diagnosis.md
 
 # 📦 依赖文件 (保留必要的)
 !requirements.txt
 !requirements-dev.txt
 
-# 🗃️ 临时文件
+# 🗃️ 临时文件和备份
 *.tmp
 *.temp
 *.bak
 *.backup
+.cleanup-backup/
+
+# 🔧 IDE和编辑器缓存
+.vscode/
+.idea/
+*.sublime-*
+.atom/
+
+# 📈 性能分析和调试
+*.prof
+*.pstats
+.coverage.*
+.benchmarks/
+
+# 🔐 安全扫描结果
+.bandit
+.safety
+.semgrep/
+
+# 🏗️ 构建工具缓存
+node_modules/
+.npm/
+.yarn/
+.pnpm-store/

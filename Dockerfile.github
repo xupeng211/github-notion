@@ -1,7 +1,10 @@
-# 简化版 GitHub Actions Dockerfile
-# 专门针对 CI/CD 环境优化，最小化网络依赖
+# 多阶段构建 GitHub Actions Dockerfile
+# 优化构建上下文和层缓存，减少CI/CD构建时间
 
-FROM python:3.11-slim-bullseye
+# ================================
+# 阶段1: 依赖构建阶段
+# ================================
+FROM python:3.11-slim-bullseye AS dependencies
 
 # 设置工作目录
 WORKDIR /app
@@ -11,46 +14,67 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     PIP_NO_CACHE_DIR=1 \
     PIP_DISABLE_PIP_VERSION_CHECK=1 \
-    PIP_DEFAULT_TIMEOUT=600 \
-    PIP_RETRIES=10 \
+    PIP_DEFAULT_TIMEOUT=300 \
+    PIP_RETRIES=5 \
     DEBIAN_FRONTEND=noninteractive
 
-# 只安装必要的系统依赖
+# 安装系统依赖
 RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
     ca-certificates \
     && rm -rf /var/lib/apt/lists/* \
     && apt-get clean
 
-# 升级 pip 并配置网络优化
+# 升级 pip
 RUN python -m pip install --upgrade pip setuptools wheel
 
-# 复制 requirements 文件
+# 先复制依赖文件（利用Docker层缓存）
 COPY requirements.txt .
 
-# 安装核心依赖 - 分步安装减少失败风险
-RUN echo "安装核心依赖..." && \
+# 安装Python依赖（这一层会被缓存，除非requirements.txt改变）
+RUN echo "安装Python依赖..." && \
     pip install --no-cache-dir \
     --timeout 300 \
     --retries 5 \
     --prefer-binary \
-    fastapi uvicorn sqlalchemy requests && \
-    echo "✅ 核心依赖安装完成"
+    -r requirements.txt && \
+    echo "✅ 依赖安装完成"
 
-# 安装其他依赖
-RUN echo "安装其他依赖..." && \
-    pip install --no-cache-dir \
-    --timeout 300 \
-    --retries 5 \
-    --prefer-binary \
-    python-multipart python-dotenv && \
-    echo "✅ 其他依赖安装完成"
+# ================================
+# 阶段2: 运行时阶段
+# ================================
+FROM python:3.11-slim-bullseye AS runtime
 
-# 复制应用代码
-COPY . .
+# 设置工作目录
+WORKDIR /app
+
+# 设置运行时环境变量
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PYTHONPATH=/app
+
+# 安装运行时必需的系统依赖
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    curl \
+    ca-certificates \
+    && rm -rf /var/lib/apt/lists/* \
+    && apt-get clean
+
+# 从依赖阶段复制已安装的Python包
+COPY --from=dependencies /usr/local/lib/python3.11/site-packages/ /usr/local/lib/python3.11/site-packages/
+COPY --from=dependencies /usr/local/bin/ /usr/local/bin/
+
+# 复制应用代码（这一步在代码变更时才会重新执行）
+COPY app/ ./app/
+COPY *.py ./
 
 # 创建必要的目录
 RUN mkdir -p /app/data /app/logs
+
+# 创建非root用户（安全最佳实践）
+RUN groupadd -r appuser && useradd -r -g appuser appuser && \
+    chown -R appuser:appuser /app
+USER appuser
 
 # 健康检查
 HEALTHCHECK --interval=30s --timeout=15s --start-period=60s --retries=3 \
