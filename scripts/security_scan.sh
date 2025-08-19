@@ -172,13 +172,26 @@ else
     # 使用本地trivy
     echo "使用本地 trivy 进行扫描..."
     
-    # 生成详细报告
+    # 生成详细报告（使用策略文件）
     TRIVY_REPORT="trivy-report.json"
-    if trivy image --format json --output "$TRIVY_REPORT" "$IMG" 2>/dev/null; then
+    TRIVY_ARGS=""
+
+    # 添加策略文件参数
+    if [[ -f "security/trivy-policy.yaml" ]]; then
+        TRIVY_ARGS="$TRIVY_ARGS --config security/trivy-policy.yaml"
+        echo "✅ 使用策略文件: security/trivy-policy.yaml"
+    fi
+
+    if [[ -f "security/allowlist.yaml" ]]; then
+        TRIVY_ARGS="$TRIVY_ARGS --ignorefile security/allowlist.yaml"
+        echo "✅ 使用白名单文件: security/allowlist.yaml"
+    fi
+
+    if trivy image $TRIVY_ARGS --format json --output "$TRIVY_REPORT" "$IMG" 2>/dev/null; then
         echo -e "${GREEN}✅ Trivy报告生成: $TRIVY_REPORT${NC}"
 
         # 同时生成文本格式报告
-        trivy image --format table --output "trivy-report.txt" "$IMG" 2>/dev/null || true
+        trivy image $TRIVY_ARGS --format table --output "trivy-report.txt" "$IMG" 2>/dev/null || true
         
         # 解析漏洞统计
         if command -v jq >/dev/null 2>&1; then

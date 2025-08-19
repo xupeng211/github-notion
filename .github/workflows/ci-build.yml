@@ -278,11 +278,30 @@ jobs:
 
           echo "✅ Docker镜像构建成功"
 
-          # 7. 运行时冒烟验证
+          # 7. 生成SBOM
+          echo "📦 生成SBOM (Software Bill of Materials)..."
+          IMG="${REGISTRY_SERVER}/${CI_PROJECT_PATH}/app:${CI_COMMIT_SHA}"
+
+          # 尝试使用syft，退化到docker sbom
+          if command -v syft >/dev/null 2>&1; then
+            echo "使用syft生成SBOM..."
+            syft packages "$IMG" -o spdx-json > sbom.spdx.json
+          else
+            echo "syft不可用，使用docker sbom..."
+            docker run --rm -v /var/run/docker.sock:/var/run/docker.sock \
+              anchore/syft:latest packages "$IMG" -o spdx-json > sbom.spdx.json || \
+            docker sbom "$IMG" --format spdx-json > sbom.spdx.json || \
+            echo "SBOM生成失败，使用现有文件"
+          fi
+
+          echo "SBOM文件大小: $(stat -c%s sbom.spdx.json 2>/dev/null || echo 0) 字节"
+          echo "SBOM文件大小(可读): $(du -h sbom.spdx.json 2>/dev/null | cut -f1 || echo '0B')"
+
+          # 8. 运行时冒烟验证
           echo "🧪 执行运行时冒烟验证..."
           ./scripts/smoke_test.sh
 
-          # 8. 安全扫描
+          # 9. 安全扫描
           echo "🔒 执行安全扫描..."
           ./scripts/security_scan.sh
 
