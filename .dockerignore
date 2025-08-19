@@ -1,5 +1,6 @@
-# 🗂️ Git 相关
+# 🗂️ Git 相关 - 彻底排除
 .git
+.git/**
 .gitignore
 .gitattributes
 
@@ -37,6 +38,8 @@ nosetests.xml
 coverage.xml
 *.cover
 .hypothesis/
+.pytest_cache/
+__pycache__/
 .mypy_cache/
 .ruff_cache/
 
@@ -112,6 +115,15 @@ ci-docker-build-diagnosis.md
 *.bak
 *.backup
 .cleanup-backup/
+
+# 📊 数据和笔记本
+data/
+notebooks/
+*.ipynb
+
+# 🏗️ 构建产物
+dist/
+build/
 
 # 🔧 IDE和编辑器缓存
 .vscode/
