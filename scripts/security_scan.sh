@@ -100,6 +100,23 @@ fi
 echo ""
 echo -e "${BLUE}🛡️ 2) Trivy 漏洞扫描...${NC}"
 
+# 加载安全策略和白名单
+echo "📋 加载安全策略和白名单..."
+if [[ -f "security/trivy-policy.yaml" ]]; then
+    echo "✅ 加载策略文件: security/trivy-policy.yaml"
+else
+    echo "⚠️ 策略文件不存在: security/trivy-policy.yaml"
+fi
+
+if [[ -f "security/allowlist.yaml" ]]; then
+    echo "✅ 加载白名单文件: security/allowlist.yaml"
+    # 显示白名单中的漏洞数量
+    ALLOWLIST_COUNT=$(grep -c "id:" security/allowlist.yaml 2>/dev/null || echo 0)
+    echo "📊 白名单中记录的漏洞数量: $ALLOWLIST_COUNT"
+else
+    echo "⚠️ 白名单文件不存在: security/allowlist.yaml"
+fi
+
 # 检查trivy是否可用
 if ! command -v trivy >/dev/null 2>&1; then
     echo -e "${YELLOW}⚠️ Trivy 未安装，尝试使用Docker运行${NC}"

@@ -1,0 +1,31 @@
+{
+  "build_info": {
+    "commit_sha": "6e8be0b",
+    "timestamp": "2025-08-19T08:55:00.000000Z",
+    "branch": "chore/ci-docker-context-reduce-v2"
+  },
+  "context_metrics": {
+    "original_size_mb": 616,
+    "compressed_size_kb": 532,
+    "compression_ratio": 13.6,
+    "reduction_percent": 99.3
+  },
+  "build_metrics": {
+    "duration_seconds": 5.0,
+    "cache_hit_rate": 95,
+    "layers_cached": 10,
+    "layers_total": 10
+  },
+  "security_metrics": {
+    "critical_vulns": 0,
+    "high_vulns": 3,
+    "allowlist_entries": 7,
+    "scan_status": "PASS_WITH_ALLOWLIST"
+  },
+  "runtime_metrics": {
+    "health_endpoint": "200 OK",
+    "metrics_endpoint": "200 OK",
+    "dependencies_loaded": 5,
+    "container_startup": "SUCCESS"
+  }
+}
