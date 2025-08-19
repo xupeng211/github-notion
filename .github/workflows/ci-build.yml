@@ -182,11 +182,15 @@ jobs:
 
           echo "构建指标已保存到 build-metrics/metrics.json"
 
-      - name: Upload build metrics
+      - name: Upload build artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: build-metrics
-          path: build-metrics/
+          name: build-artifacts
+          path: |
+            build-metrics/
+            sbom.spdx.json
+            trivy-report.json
+            security/
           retention-days: 30
 
       - name: Run basic smoke tests
@@ -263,6 +267,14 @@ jobs:
             .
 
           echo "✅ Docker镜像构建成功"
+
+          # 7. 运行时冒烟验证
+          echo "🧪 执行运行时冒烟验证..."
+          ./scripts/smoke_test.sh
+
+          # 8. 安全扫描
+          echo "🔒 执行安全扫描..."
+          ./scripts/security_scan.sh
 
       - name: CI/CD Pipeline Summary
         run: |

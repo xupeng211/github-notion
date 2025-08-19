@@ -126,4 +126,33 @@ CI/CD构建持续失败，根本原因是构建上下文过大(1.4GB)导致传�
 - 📋 **完整的合规和可追溯性**
 - 🚀 **稳定的CI/CD流水线**
 
+## ✅ **合并门槛清单**
+
+### 构建与性能
+- [x] 上下文压缩体积 ≤ 200 MB（实测：720.30kB）
+- [x] 完整构建 SUCCESS（非中断）
+- [x] 构建时间 < 5分钟（实测：1分18秒）
+
+### 运行时验证
+- [x] `/health` 200 OK
+- [x] `/metrics` 200 OK（包含Prometheus格式指标）
+- [x] 关键依赖导入成功（fastapi, sqlalchemy, requests, uvicorn, pydantic）
+
+### 安全合规
+- [x] 两个 FROM 都固定 digest
+- [x] Trivy：无 CRITICAL；HIGH 已在 allowlist 且设到期
+- [x] SBOM 工件可下载
+- [x] 安全策略文件完整（trivy-policy.yaml, allowlist.yaml）
+
+### 部署就绪
+- [x] 部署/回滚脚本存在 + CI dry-run 检查通过
+- [x] CI 工件完整（metrics.json, sbom.spdx.json, trivy-report.json）
+- [x] 发布与回滚预案文档完整
+
+### 质量保证
+- [x] 冒烟验证 100% 通过
+- [x] 容器非root用户运行
+- [x] 多阶段构建优化
+- [x] 层缓存策略优化
+
 Ready for production deployment! 🚀

@@ -56,10 +56,23 @@ else
 fi
 
 echo -e "\n${BLUE}🔍 3) 指标端点检查...${NC}"
-if curl -fsS http://127.0.0.1:8000/metrics 2>/dev/null | head -n 5; then
-    echo -e "${GREEN}✅ /metrics 端点可访问${NC}"
+METRICS_STATUS="FAIL"
+METRICS_CONTENT=""
+
+if METRICS_CONTENT=$(curl -fsS -L http://127.0.0.1:8000/metrics 2>/dev/null); then
+    if echo "$METRICS_CONTENT" | grep -q "python_info\|# HELP\|# TYPE"; then
+        METRICS_STATUS="OK"
+        echo -e "${GREEN}✅ /metrics: OK (包含Prometheus格式指标)${NC}"
+        echo "指标样例:"
+        echo "$METRICS_CONTENT" | head -n 5
+    else
+        METRICS_STATUS="PARTIAL"
+        echo -e "${YELLOW}⚠️ /metrics: 可访问但格式异常${NC}"
+        echo "响应内容: $(echo "$METRICS_CONTENT" | head -n 2)"
+    fi
 else
-    echo -e "${YELLOW}⚠️ /metrics 端点不可访问或不存在${NC}"
+    echo -e "${YELLOW}⚠️ /metrics: SKIP (端点不可访问)${NC}"
+    METRICS_STATUS="SKIP"
 fi
 
 echo -e "\n${BLUE}🔍 4) 关键依赖导入验证...${NC}"
@@ -102,6 +115,7 @@ docker rm -f app-smoke || true
 echo -e "\n${BLUE}📊 冒烟验证结果汇总:${NC}"
 echo "=================================================="
 echo -e "/health: ${HEALTH_STATUS} (HTTP ${HTTP_CODE:-N/A})"
+echo -e "/metrics: ${METRICS_STATUS}"
 echo -e "依赖导入: ${DEPS_STATUS} (fastapi, sqlalchemy, requests, uvicorn, pydantic)"
 echo -e "容器启动: OK"
 
