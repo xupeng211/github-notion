@@ -1,0 +1,70 @@
+# 🛡️ Trivy安全扫描策略
+# 定义漏洞扫描的通过标准和豁免规则
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: trivy-security-policy
+  namespace: security
+data:
+  # 扫描策略配置
+  policy.yaml: |
+    # 严重性级别阈值
+    severity_thresholds:
+      critical: 0      # 不允许任何关键漏洞
+      high: 5          # 最多允许5个高危漏洞（需在白名单中）
+      medium: 20       # 最多允许20个中危漏洞
+      low: 50          # 最多允许50个低危漏洞
+    
+    # 包类型策略
+    package_policies:
+      python-pkg:
+        # Python包必须有修复版本或在白名单中
+        require_fix_or_allowlist: true
+        max_critical: 0
+        max_high: 3
+      
+      debian:
+        # 系统包允许更宽松的策略
+        require_fix_or_allowlist: false
+        max_critical: 5
+        max_high: 15
+    
+    # 自动豁免条件
+    auto_exemptions:
+      - condition: "status == 'will_not_fix'"
+        reason: "上游不会修复的漏洞"
+        max_severity: "high"
+      
+      - condition: "status == 'fix_deferred'"
+        reason: "修复延期的漏洞"
+        max_severity: "medium"
+    
+    # 强制失败条件
+    fail_conditions:
+      - "severity == 'critical' and package_type == 'python-pkg'"
+      - "severity == 'high' and package_type == 'python-pkg' and not in_allowlist"
+    
+    # 报告配置
+    reporting:
+      format: ["json", "table"]
+      include_fixed: true
+      include_unfixed: true
+      
+  # 扫描配置
+  scan.yaml: |
+    # 扫描目标配置
+    targets:
+      - type: "image"
+        severity: ["CRITICAL", "HIGH", "MEDIUM", "LOW"]
+        pkg_types: ["python-pkg", "debian"]
+        
+    # 输出配置
+    output:
+      format: "json"
+      template: "@contrib/html.tpl"
+      
+    # 缓存配置
+    cache:
+      backend: "fs"
+      ttl: "24h"

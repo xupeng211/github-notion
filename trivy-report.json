@@ -1,0 +1,69 @@
+{
+  "SchemaVersion": 2,
+  "ArtifactName": "ghcr.io/xupeng211/github-notion/app:6e8be0b",
+  "ArtifactType": "container_image",
+  "Metadata": {
+    "OS": {
+      "Family": "debian",
+      "Name": "11.11"
+    },
+    "ImageID": "sha256:ff1f24278c25d2b3ca86a52f080e490cc94d3c93c7806699cbb506618f024839",
+    "DiffIDs": [
+      "sha256:3b5eec8e4570d921d285fac58c7ec249e1625a710c93f9937d347cff5b5610d4"
+    ],
+    "RepoTags": [
+      "ghcr.io/xupeng211/github-notion/app:6e8be0b"
+    ],
+    "RepoDigests": [],
+    "ImageConfig": {
+      "architecture": "amd64",
+      "created": "2025-08-19T08:50:00.000000Z",
+      "os": "linux"
+    }
+  },
+  "Results": [
+    {
+      "Target": "Python",
+      "Class": "lang-pkgs",
+      "Type": "python-pkg",
+      "Vulnerabilities": [
+        {
+          "VulnerabilityID": "CVE-2024-6345",
+          "PkgName": "setuptools",
+          "InstalledVersion": "65.5.1",
+          "FixedVersion": "70.0.0",
+          "Severity": "HIGH",
+          "Title": "setuptools: Remote code execution via download functions",
+          "Description": "A vulnerability in setuptools allows remote code execution through package_index functionality.",
+          "References": [
+            "https://nvd.nist.gov/vuln/detail/CVE-2024-6345"
+          ]
+        },
+        {
+          "VulnerabilityID": "CVE-2025-47273",
+          "PkgName": "setuptools",
+          "InstalledVersion": "65.5.1",
+          "FixedVersion": "70.0.0",
+          "Severity": "HIGH",
+          "Title": "setuptools: Path traversal vulnerability",
+          "Description": "Path traversal vulnerability in setuptools PackageIndex functionality.",
+          "References": [
+            "https://nvd.nist.gov/vuln/detail/CVE-2025-47273"
+          ]
+        },
+        {
+          "VulnerabilityID": "CVE-2024-47874",
+          "PkgName": "starlette",
+          "InstalledVersion": "0.37.2",
+          "FixedVersion": "0.40.0",
+          "Severity": "HIGH",
+          "Title": "starlette: DoS via multipart/form-data",
+          "Description": "Denial of service vulnerability through multipart form data processing.",
+          "References": [
+            "https://nvd.nist.gov/vuln/detail/CVE-2024-47874"
+          ]
+        }
+      ]
+    }
+  ]
+}

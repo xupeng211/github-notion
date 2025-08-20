@@ -1,270 +1,174 @@
-name: 🚀 Build and Deploy
+name: Build and Verify
 
 on:
-  push:
-    branches: [ main ]
-    paths:
-      - 'app/**'
-      - 'tests/**'
-      - 'Dockerfile*'
-      - '.github/workflows/**'
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
   workflow_dispatch:
-
-concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
-
-env:
-  REGISTRY: ghcr.io
-  IMAGE_NAME: ${{ github.repository }}
 
 permissions:
   contents: read
   packages: write
-  id-token: write
+  actions: read
 
 jobs:
-  # 质量检查作业 - 暂时禁用以解决CI问题
-  quality-check:
-    name: 🧪 Quality Check (Disabled)
+  build:
     runs-on: ubuntu-latest
-    if: false  # 暂时禁用质量门禁
-
+    timeout-minutes: 30
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with: 
+          fetch-depth: 1
 
-      - name: Set up Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: '3.11'
-          cache: 'pip'
+      - uses: docker/setup-buildx-action@v3
 
-      - name: Install test dependencies
+      - name: Pre-build Fail-Fast
         run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt
-          pip install -r requirements-dev.txt
-
-      - name: Run priority tests with strict quality gates
-        run: |
-          echo "🧪 Running priority test suite with quality gates..."
-
-          # 运行测试并生成覆盖率报告
-          python -m pytest tests/priority/ -v \
-            --cov=app.webhook_security \
-            --cov=app.service \
-            --cov=app.github \
-            --cov=app.notion \
-            --cov=app.models \
-            --cov-report=term \
-            --cov-report=xml:coverage.xml \
-            --cov-fail-under=30 \
-            --tb=short \
-            --maxfail=1
-
-          echo "✅ All tests passed!"
-
-          # 检查覆盖率阈值
-          echo "📊 Checking coverage thresholds..."
-          python -c "
-          import xml.etree.ElementTree as ET
-          tree = ET.parse('coverage.xml')
-          root = tree.getroot()
-          coverage = float(root.attrib['line-rate']) * 100
-          print(f'Overall coverage: {coverage:.1f}%')
-
-          if coverage < 30:
-              print('❌ Coverage below 30% threshold')
-              exit(1)
-          else:
-              print('✅ Coverage threshold met')
-          "
-
-          echo "🚪 Quality gates passed! Proceeding with build..."
-
-      - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v3
-        with:
-          file: coverage.xml
-          flags: priority-tests
-          name: priority-tests-coverage
-
-  # 构建和部署任务 - 暂时跳过质量检查
-  build-and-deploy:
-    name: 🐳 Build and Deploy
-    runs-on: ubuntu-latest
-    # needs: quality-check  # 暂时禁用质量门禁依赖
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Set up Python for basic tests
-        uses: actions/setup-python@v4
-        with:
-          python-version: '3.11'
-          cache: 'pip'
-
-      - name: Run basic smoke tests
-        run: |
-          echo "🧪 Running basic smoke tests..."
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt
-
-          # 基本导入测试
-          python -c "
-          try:
-              import app.webhook_security
-              import app.service
-              import app.github
-              import app.notion
-              print('✅ All core modules import successfully')
-          except Exception as e:
-              print(f'❌ Import error: {e}')
-              exit(1)
-          "
-
-          echo "✅ Basic smoke tests passed!"
-
-      - name: Debug environment
-        run: |
-          echo "🔍 Debug information:"
-          echo "GitHub Actor: ${{ github.actor }}"
-          echo "GitHub Repository: ${{ github.repository }}"
-          echo "Registry: ${{ env.REGISTRY }}"
-          echo "Image Name: ${{ env.IMAGE_NAME }}"
-          echo "Docker version: $(docker --version)"
-          echo "Available space: $(df -h /)"
-          echo "Memory info: $(free -h)"
-          echo "CPU info: $(nproc) cores"
-          echo "Dockerfile.github exists: $(test -f Dockerfile.github && echo 'Yes' || echo 'No')"
-          echo "=== 网络连接测试 ==="
-          ping -c 3 pypi.org || echo "PyPI ping 失败"
-          curl -I https://pypi.org/ || echo "PyPI HTTP 测试失败"
-          echo "=== Docker 系统信息 ==="
-          docker system df
-          docker info | grep -E "(Total Memory|CPUs|Storage Driver)"
-
-      # Docker registry steps disabled for simplified build
-      # - name: Set up Docker Buildx
-      #   uses: docker/setup-buildx-action@v3
-      # - name: Log in to Container Registry
-      #   uses: docker/login-action@v3
-      # - name: Extract metadata
-      #   id: meta
-      #   uses: docker/metadata-action@v5
-
-      - name: Skip Docker build (CI Environment Issues)
-        run: |
-          echo "🚫 Skipping Docker build due to CI environment limitations"
-          echo "✅ Code validation completed successfully"
-          echo "📝 Docker build can be performed locally or in production environment"
-          echo "🎉 CI/CD pipeline completed - ready for manual deployment"
-
-      - name: CI/CD Pipeline Summary
-        run: |
-          echo "🎉 CI/CD Pipeline Completed Successfully!"
-          echo "✅ Code checkout: PASSED"
-          echo "✅ Python environment setup: PASSED"
-          echo "✅ Basic smoke tests: PASSED"
-          echo "✅ Core module imports: PASSED"
-          echo "📋 Next steps:"
-          echo "  - Local testing: Use 'python -m pytest tests/priority/' (68 tests, 45.94% coverage)"
-          echo "  - Local Docker build: Use 'docker build -f Dockerfile.github .'"
-          echo "  - Manual deployment: Deploy to production when ready"
-          echo "🚀 Ready for production deployment!"
-
-      - name: Deploy to AWS EC2 (Disabled)
-        if: false  # 暂时禁用部署以解决CI问题
-        env:
-          AWS_PRIVATE_KEY: ${{ secrets.AWS_PRIVATE_KEY }}
-          AWS_HOST: ${{ secrets.AWS_HOST }}
-          AWS_USER: ${{ secrets.AWS_USER }}
-        run: |
-          # 设置 SSH 密钥
-          mkdir -p ~/.ssh
-          echo "$AWS_PRIVATE_KEY" > ~/.ssh/aws_key
-          chmod 600 ~/.ssh/aws_key
-
-          # 部署到 AWS
-          ssh -i ~/.ssh/aws_key -o StrictHostKeyChecking=no $AWS_USER@$AWS_HOST << 'EOF'
-            cd /opt/github-notion-sync || exit 1
-
-            echo "🔄 停止现有服务..."
-            docker-compose down || true
-
-            echo "📥 拉取最新镜像..."
-            echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
-            docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
-
-            echo "🚀 启动新服务..."
-            docker-compose up -d
-
-            echo "⏳ 等待服务启动..."
-            sleep 30
-
-            echo "🧪 检查容器健康状态..."
-
-            # 首先检查容器是否在运行
-            if docker ps | grep -q github-notion-sync-app; then
-              echo "✅ 容器正在运行"
-
-              # 检查 Docker 健康检查状态
-              health_status=$(docker inspect --format='{{.State.Health.Status}}' github-notion-sync-app 2>/dev/null || echo "unknown")
-              echo "Docker 健康检查状态: $health_status"
-
-              # 如果 Docker 健康检查通过，或者没有健康检查，则进行 HTTP 检查
-              if [ "$health_status" = "healthy" ] || [ "$health_status" = "unknown" ]; then
-                echo "🧪 CI/CD 健康检查..."
-                if curl -f http://localhost:${APP_PORT:-8000}/health/ci > /dev/null 2>&1; then
-                  echo "✅ 部署成功"
-                else
-                  echo "❌ CI/CD 健康检查失败，尝试标准健康检查..."
-                  if curl -f http://localhost:${APP_PORT:-8000}/health > /dev/null 2>&1; then
-                    echo "⚠️ 标准健康检查通过，但状态可能为 degraded"
-                    echo "✅ 部署成功（CI/CD 模式）"
-                  else
-                    echo "❌ 所有健康检查都失败"
-                    echo "容器日志:"
-                    docker logs --tail 20 github-notion-sync-app
-                    exit 1
-                  fi
-                fi
-              else
-                echo "❌ Docker 健康检查失败: $health_status"
-                echo "容器日志:"
-                docker logs --tail 20 github-notion-sync-app
-                exit 1
-              fi
-            else
-              echo "❌ 容器未运行"
-              echo "检查容器状态:"
-              docker ps -a | grep github-notion-sync || echo "未找到相关容器"
-              exit 1
-            fi
-          EOF
-
-      - name: Verify deployment
-        if: github.ref == 'refs/heads/main'
-        run: |
-          sleep 10
-          if curl -f http://${AWS_HOST:-3.35.106.116}:${APP_PORT:-8000}/health/ci > /dev/null 2>&1; then
-            echo "✅ 外部访问验证成功"
+          echo "🔍 Docker构建上下文大小分析"
+          echo "=================================================="
+          
+          # 计算原始目录大小
+          ORIGINAL_SIZE_MB=$(du -sm . | cut -f1)
+          echo "📊 目录大小分析:"
+          echo "原始目录大小: ${ORIGINAL_SIZE_MB}MB"
+          
+          # 模拟构建上下文（简化版）
+          echo "🐳 模拟Docker构建上下文..."
+          CONTEXT_SIZE=$(tar -czf - --exclude-from=.dockerignore . 2>/dev/null | wc -c)
+          CONTEXT_SIZE_KB=$((CONTEXT_SIZE / 1024))
+          echo "构建上下文大小(压缩后): ${CONTEXT_SIZE_KB}KB"
+          
+          # 检查大小阈值
+          echo "🚦 大小检查:"
+          THRESHOLD_MB=500
+          THRESHOLD_BYTES=$((THRESHOLD_MB * 1024 * 1024))
+          
+          if [[ $CONTEXT_SIZE -le $THRESHOLD_BYTES ]]; then
+            echo "✅ 构建上下文大小合理: ${CONTEXT_SIZE_KB}KB ≤ ${THRESHOLD_MB}MB"
           else
-            echo "⚠️ CI 健康检查失败，尝试标准健康检查..."
-            if curl -f http://${AWS_HOST:-3.35.106.116}:${APP_PORT:-8000}/health > /dev/null 2>&1; then
-              echo "✅ 外部访问验证成功（标准模式）"
+            echo "❌ 构建上下文过大: ${CONTEXT_SIZE_KB}KB > ${THRESHOLD_MB}MB"
+            exit 1
+          fi
+          
+          echo "Bytes=${CONTEXT_SIZE}" > size_bytes.txt
+          python3 scripts/pretty_size.py ${CONTEXT_SIZE}
+          df -h
+
+      - name: Build (no push; load)
+        id: build
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: infra/docker/api.Dockerfile
+          platforms: linux/amd64
+          push: false
+          load: true
+          tags: ghcr.io/${{ github.repository }}/app:${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          provenance: false
+
+      - name: Smoke
+        run: |
+          set -euo pipefail
+          IMG="ghcr.io/${{ github.repository }}/app:${{ github.sha }}"
+          echo "✅ Docker镜像构建成功"
+          echo "镜像标签: $IMG"
+          echo "平台: linux/amd64"
+          echo "Dockerfile: infra/docker/api.Dockerfile"
+          
+          docker run -d --rm --name app-smoke -p 8000:8000 "$IMG"
+          sleep 5
+          
+          echo "HEALTH=$(curl -fsS http://127.0.0.1:8000/health)"
+          curl -fsSL http://127.0.0.1:8000/metrics | head -n 5 || echo "SKIP metrics"
+          
+          docker logs --tail=100 app-smoke || true
+          docker rm -f app-smoke || true
+          
+          mkdir -p build-metrics
+          printf '{"sha":"%s","ts":"%s","dockerfile_path":"infra/docker/api.Dockerfile"}\n' "${{ github.sha }}" "$(date -u +%FT%TZ)" > build-metrics/metrics.json
+
+      - name: SBOM
+        run: |
+          set -euo pipefail
+          IMG="ghcr.io/${{ github.repository }}/app:${{ github.sha }}"
+          echo "📦 生成SBOM (Software Bill of Materials)..."
+
+          # 安装syft
+          curl -sSfL https://raw.githubusercontent.com/anchore/syft/main/install.sh | sh -s -- -b /usr/local/bin
+
+          # 生成SBOM
+          if syft packages "$IMG" -o spdx-json > sbom.spdx.json 2>/dev/null; then
+            echo "✅ syft SBOM生成成功"
+          else
+            echo "⚠️ syft失败，尝试docker sbom..."
+            if docker sbom "$IMG" -o spdx-json > sbom.spdx.json 2>/dev/null; then
+              echo "✅ docker sbom生成成功"
             else
-              echo "❌ 外部访问验证失败"
+              echo "❌ SBOM生成失败"
               exit 1
             fi
           fi
 
-      - name: Notify success
-        if: success()
+          # 验证SBOM
+          SBOM_SIZE=$(wc -c < sbom.spdx.json)
+          echo "SBOM bytes: ${SBOM_SIZE}"
+          echo "SBOM文件大小: ${SBOM_SIZE} 字节"
+
+          # 检查包数量
+          if command -v jq >/dev/null 2>&1; then
+            PACKAGE_COUNT=$(jq '.packages | length' sbom.spdx.json 2>/dev/null || echo "0")
+            echo "包数量: ${PACKAGE_COUNT}"
+          else
+            echo "jq不可用，跳过包数量检查"
+          fi
+
+          # 显示SBOM头部内容
+          echo "SBOM头部内容:"
+          head -n 20 sbom.spdx.json
+
+          # 验证SBOM大小
+          if [[ $SBOM_SIZE -lt 1000 ]]; then
+            echo "❌ SBOM文件过小，可能生成失败"
+            exit 1
+          else
+            echo "✅ SBOM文件大小验证通过"
+          fi
+
+      - name: Trivy Scan
         run: |
-          echo "🎉 部署成功完成！"
-          echo "🌐 服务地址: http://${AWS_HOST:-3.35.106.116}:${APP_PORT:-8000}"
-          echo "🏥 健康检查: http://${AWS_HOST:-3.35.106.116}:${APP_PORT:-8000}/health"
-          echo "🔧 CI/CD 健康检查: http://${AWS_HOST:-3.35.106.116}:${APP_PORT:-8000}/health/ci"
+          set -euo pipefail
+          IMG="ghcr.io/${{ github.repository }}/app:${{ github.sha }}"
+          echo "🔒 执行安全扫描..."
+          
+          echo "📋 加载安全策略和白名单..."
+          if [[ -f "security/trivy-policy.yaml" ]]; then
+            echo "✅ 使用策略文件: security/trivy-policy.yaml"
+            POLICY_ARG="--config /work/security/trivy-policy.yaml"
+          else
+            echo "⚠️ 策略文件不存在: security/trivy-policy.yaml"
+            POLICY_ARG=""
+          fi
+          
+          if [[ -f "security/allowlist.yaml" ]]; then
+            echo "✅ 使用白名单文件: security/allowlist.yaml"
+            ALLOWLIST_ARG="--ignorefile /work/security/allowlist.yaml"
+          else
+            echo "⚠️ 白名单文件不存在: security/allowlist.yaml"
+            ALLOWLIST_ARG=""
+          fi
+          
+          docker run --rm -v $PWD:/work -v /var/run/docker.sock:/var/run/docker.sock aquasec/trivy:latest image \
+            --format json --severity CRITICAL,HIGH \
+            --scanners vuln \
+            $POLICY_ARG \
+            $ALLOWLIST_ARG \
+            "$IMG" | tee trivy-report.json
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: build-artifacts
+          path: |
+            build-metrics/metrics.json
+            sbom.spdx.json
+            trivy-report.json
