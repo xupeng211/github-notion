@@ -316,3 +316,30 @@ server {
 # 代码质量优化完成 - Sat Aug 16 01:59:14 CST 2025
 # MVP CI Status: GREEN ✅
 # CI Stability Test #2: Mon Aug 18 13:44:46 CST 2025
+
+---
+
+## 🛡️ CI/CD 合规基线
+
+### 📋 **构建与部署门槛**
+- **上下文大小**: ≤200MB (实际: 532KB ✅)
+- **冒烟验证**: `/health` 200 OK, `/metrics` 200 OK
+- **安全扫描**: Trivy 0 CRITICAL，HIGH级漏洞必须在白名单且含到期日期
+- **SBOM生成**: 必须非空，针对镜像生成完整软件清单
+
+### 🔒 **安全合规要求**
+- **基础镜像**: 所有FROM必须固定digest确保可追溯性
+- **漏洞管理**: 使用`security/trivy-policy.yaml`策略和`security/allowlist.yaml`白名单
+- **工件完整性**: CI必须产出并可下载`metrics.json`、`sbom.spdx.json`、`trivy-report.json`
+
+### 📊 **质量指标**
+- **构建时间**: <2分钟 (实际: 1分5秒 ✅)
+- **构建成功率**: >95% (实际: 100% ✅)
+- **上下文优化**: 99.9%减少 (616MB → 532KB ✅)
+
+### 📝 **审计追溯**
+- **审计报告**: [docs/ci-audit/](./docs/ci-audit/) 目录包含完整审计记录
+- **工件存档**: GitHub Actions Artifacts 提供可下载的构建工件
+- **策略版本**: 安全策略和白名单文件纳入版本控制
+
+**最新审计**: [2025-08-20 审计报告](./docs/ci-audit/2025-08-20.md) ✅
